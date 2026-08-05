@@ -26,43 +26,24 @@ func NewDeterministic(interests config.Interests) *Deterministic {
 	return &Deterministic{interests: interests}
 }
 
-// Extract labels the article with the interest topics whose words appear in it.
-func (d *Deterministic) Extract(_ context.Context, a domain.Article) (Extraction, error) {
+// Assess labels the article with the interest topics whose words appear in it,
+// and scores it by the priority of the best match.
+func (d *Deterministic) Assess(_ context.Context, a domain.Article) (Assessment, error) {
 	haystack := strings.ToLower(a.Title + " " + a.FullText)
 
 	var categories []string
+	best := 0
 	for _, topic := range d.interests.Topics {
-		if mentions(haystack, topic) {
-			categories = append(categories, topic.Topic)
+		if !mentions(haystack, topic) {
+			continue
 		}
+		categories = append(categories, topic.Topic)
+
+		// Priority 1 is worth most; each step down costs 15 points.
+		best = max(best, 90-(topic.Priority-1)*15)
 	}
 	if len(categories) == 0 {
 		categories = []string{"Uncategorized"}
-	}
-
-	return Extraction{
-		Categories: categories,
-		Entities:   []string{},
-		Tone:       "neutral",
-	}, nil
-}
-
-// Score rewards matching the highest-priority interests, with a small stable
-// jitter so results are not all identical.
-func (d *Deterministic) Score(_ context.Context, a domain.Article, e Extraction) (Score, error) {
-	matched := make(map[string]bool, len(e.Categories))
-	for _, c := range e.Categories {
-		matched[c] = true
-	}
-
-	best := 0
-	for _, topic := range d.interests.Topics {
-		if !matched[topic.Topic] {
-			continue
-		}
-		// Priority 1 is worth most; each step down costs 15 points.
-		value := 90 - (topic.Priority-1)*15
-		best = max(best, value)
 	}
 
 	// Deterministic jitter keyed on the URL: enough to break ties, never enough
@@ -71,15 +52,18 @@ func (d *Deterministic) Score(_ context.Context, a domain.Article, e Extraction)
 	h.Write([]byte(a.URL))
 	best += int(h.Sum32() % 5)
 
-	return Score{
-		Value:  domain.RelevanceScore(min(best, 100)),
-		Reason: fmt.Sprintf("offline analyzer: matched %s", strings.Join(e.Categories, ", ")),
+	return Assessment{
+		Categories: categories,
+		Entities:   []string{},
+		Tone:       "neutral",
+		Score:      domain.RelevanceScore(min(best, 100)),
+		Reason:     fmt.Sprintf("offline analyzer: matched %s", strings.Join(categories, ", ")),
 	}, nil
 }
 
 // Summarize returns the opening of the article. It is a placeholder, and says
 // so, rather than inventing prose no model wrote.
-func (d *Deterministic) Summarize(_ context.Context, a domain.Article, _ Extraction) (string, error) {
+func (d *Deterministic) Summarize(_ context.Context, a domain.Article, _ Assessment) (string, error) {
 	const maxRunes = 400
 
 	text := strings.Join(strings.Fields(a.FullText), " ")

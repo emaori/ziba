@@ -13,26 +13,20 @@ import (
 
 // stubAnalyzer records what it was asked and returns what the test tells it to.
 type stubAnalyzer struct {
-	extraction Extraction
-	score      Score
+	assessment Assessment
 	summary    string
 
-	extractErr   error
-	scoreErr     error
+	assessErr    error
 	summarizeErr error
 
 	summarizeCalls int
 }
 
-func (s *stubAnalyzer) Extract(context.Context, domain.Article) (Extraction, error) {
-	return s.extraction, s.extractErr
+func (s *stubAnalyzer) Assess(context.Context, domain.Article) (Assessment, error) {
+	return s.assessment, s.assessErr
 }
 
-func (s *stubAnalyzer) Score(context.Context, domain.Article, Extraction) (Score, error) {
-	return s.score, s.scoreErr
-}
-
-func (s *stubAnalyzer) Summarize(context.Context, domain.Article, Extraction) (string, error) {
+func (s *stubAnalyzer) Summarize(context.Context, domain.Article, Assessment) (string, error) {
 	s.summarizeCalls++
 	return s.summary, s.summarizeErr
 }
@@ -56,9 +50,13 @@ func TestAnalyzeSummarizesOnlyAboveThreshold(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stub := &stubAnalyzer{
-				extraction: Extraction{Categories: []string{"Go"}, Tone: "tutorial"},
-				score:      Score{Value: tt.score, Reason: "because"},
-				summary:    "a summary",
+				assessment: Assessment{
+					Categories: []string{"Go"},
+					Tone:       "tutorial",
+					Score:      tt.score,
+					Reason:     "because",
+				},
+				summary: "a summary",
 			}
 			p := New(stub, 60, testLogger())
 
@@ -99,8 +97,7 @@ func TestAnalyzeSummarizesOnlyAboveThreshold(t *testing.T) {
 // A failing summary must not throw away a perfectly good score.
 func TestAnalyzeKeepsScoreWhenSummaryFails(t *testing.T) {
 	stub := &stubAnalyzer{
-		extraction:   Extraction{Categories: []string{"AI"}},
-		score:        Score{Value: 88, Reason: "matches AI"},
+		assessment:   Assessment{Categories: []string{"AI"}, Score: 88, Reason: "matches AI"},
 		summarizeErr: errors.New("model unavailable"),
 	}
 	p := New(stub, 60, testLogger())
@@ -117,25 +114,17 @@ func TestAnalyzeKeepsScoreWhenSummaryFails(t *testing.T) {
 	}
 }
 
-func TestAnalyzePropagatesStageErrors(t *testing.T) {
-	tests := []struct {
-		name string
-		stub *stubAnalyzer
-	}{
-		{"extraction fails", &stubAnalyzer{extractErr: errors.New("boom")}},
-		{"scoring fails", &stubAnalyzer{scoreErr: errors.New("boom")}},
-	}
+// Assessment failing aborts the article: everything after it depends on the
+// score, so there is nothing worth storing.
+func TestAnalyzePropagatesAssessmentError(t *testing.T) {
+	stub := &stubAnalyzer{assessErr: errors.New("boom")}
+	p := New(stub, 60, testLogger())
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := New(tt.stub, 60, testLogger())
-			if _, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com/a"}); err == nil {
-				t.Error("Analyze returned no error, want one")
-			}
-			if tt.stub.summarizeCalls != 0 {
-				t.Error("summarize was called after an earlier stage failed")
-			}
-		})
+	if _, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com/a"}); err == nil {
+		t.Error("Analyze returned no error, want one")
+	}
+	if stub.summarizeCalls != 0 {
+		t.Error("summarize was called after assessment failed")
 	}
 }
 
@@ -155,33 +144,26 @@ func TestDeterministicIsDeterministic(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	first, err := analyzer.Extract(ctx, article)
+	first, err := analyzer.Assess(ctx, article)
 	if err != nil {
-		t.Fatalf("Extract returned error: %v", err)
+		t.Fatalf("Assess returned error: %v", err)
 	}
-	second, _ := analyzer.Extract(ctx, article)
+	second, _ := analyzer.Assess(ctx, article)
 
 	if len(first.Categories) != 1 || first.Categories[0] != "Go programming" {
 		t.Errorf("Categories = %v, want [Go programming]", first.Categories)
 	}
-	if len(second.Categories) != len(first.Categories) {
-		t.Error("Extract is not deterministic")
+	if first.Score != second.Score || len(first.Categories) != len(second.Categories) {
+		t.Error("Assess is not deterministic")
 	}
-
-	scoreA, _ := analyzer.Score(ctx, article, first)
-	scoreB, _ := analyzer.Score(ctx, article, first)
-	if scoreA.Value != scoreB.Value {
-		t.Errorf("Score is not deterministic: %d then %d", scoreA.Value, scoreB.Value)
-	}
-	if scoreA.Value < 60 {
-		t.Errorf("Score = %d, want the top-priority match to clear the threshold", scoreA.Value)
+	if first.Score < 60 {
+		t.Errorf("Score = %d, want the top-priority match to clear the threshold", first.Score)
 	}
 
 	// An article matching nothing must not score well.
 	unrelated := domain.Article{URL: "https://example.com/x", Title: "Roman traffic", FullText: "Cars."}
-	extraction, _ := analyzer.Extract(ctx, unrelated)
-	score, _ := analyzer.Score(ctx, unrelated, extraction)
-	if score.Value >= 60 {
-		t.Errorf("Score = %d for an unrelated article, want below threshold", score.Value)
+	assessment, _ := analyzer.Assess(ctx, unrelated)
+	if assessment.Score >= 60 {
+		t.Errorf("Score = %d for an unrelated article, want below threshold", assessment.Score)
 	}
 }

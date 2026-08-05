@@ -95,10 +95,15 @@ make process ARGS=-offline      # no model, no network, no cost
 make process ARGS="-batch 10"   # analyze fewer articles in one run
 ```
 
-Each article goes through three stages: extraction says what it is about,
-scoring rates it against the interests, and summarization writes a summary aimed
-at this reader. Only the third stage uses the capable model, and only for
-articles above the threshold — that split is where most of the cost is saved.
+Each article goes through two stages. **Assessment** says what the article is
+about and rates it against the interests, in a single call on the fast model.
+**Summarization** writes a summary aimed at this reader, on the capable model,
+and only for articles above the threshold.
+
+Both halves of that split exist for cost. Input tokens are almost the entire
+bill, and the article text dominates them — so assessment sends it once rather
+than once per question, and the expensive model never sees an article that was
+not worth reading.
 
 Articles below the threshold keep their score and stay browsable in the archive.
 They are simply not summarized and not promoted: the AI curates, it does not

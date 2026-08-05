@@ -13,12 +13,15 @@ import (
 	"github.com/emaori/ziba/internal/domain"
 )
 
-// Model defaults. Extraction and scoring are mechanical judgements made on
-// every collected article, so they run on the fast model; summarization only
-// ever sees articles above threshold, so it can afford the capable one. That
-// split is what keeps a daily run cheap.
+// Model defaults. Assessment is a mechanical judgement made on every collected
+// article, so it runs on the fast model; summarization only ever sees articles
+// above threshold, so it can afford the capable one. That split is what keeps a
+// daily run cheap.
+//
+// These are aliases rather than dated snapshot ids: same model, and they do not
+// need editing when a new snapshot ships.
 const (
-	DefaultFastModel    = "claude-haiku-4-5-20251001"
+	DefaultFastModel    = "claude-haiku-4-5"
 	DefaultCapableModel = "claude-sonnet-5"
 )
 
@@ -58,10 +61,14 @@ func NewClaude(opts ClaudeOptions) (*Claude, error) {
 	}, nil
 }
 
-// extractionSchema is the shape the model must answer in. Declaring it means
+// assessmentSchema is the shape the model must answer in. Declaring it means
 // the response is parseable by construction, instead of being prose that has to
 // be coaxed into JSON.
-var extractionSchema = map[string]any{
+//
+// The field order matters: the model fills the structure in order, so naming
+// the subject before rating it means the score is reached with the subject
+// already established rather than in the same breath.
+var assessmentSchema = map[string]any{
 	"type": "object",
 	"properties": map[string]any{
 		"categories": map[string]any{
@@ -82,14 +89,6 @@ var extractionSchema = map[string]any{
 			"enum":        []string{"news", "analysis", "opinion", "tutorial", "announcement", "interview", "review"},
 			"description": "What kind of piece this is.",
 		},
-	},
-	"required":             []string{"categories", "entities", "tone"},
-	"additionalProperties": false,
-}
-
-var scoreSchema = map[string]any{
-	"type": "object",
-	"properties": map[string]any{
 		"score": map[string]any{
 			"type":        "integer",
 			"minimum":     0,
@@ -101,35 +100,18 @@ var scoreSchema = map[string]any{
 			"description": "One sentence explaining the score, naming the interest it matches or misses.",
 		},
 	},
-	"required":             []string{"score", "reason"},
+	"required":             []string{"categories", "entities", "tone", "score", "reason"},
 	"additionalProperties": false,
 }
 
-// Extract implements Extractor.
-func (c *Claude) Extract(ctx context.Context, a domain.Article) (Extraction, error) {
-	const system = `You classify articles for a personal reading assistant.
-Identify what the article is about, factually and without judging its quality.
-Answer only with the requested structure.`
+// Assess implements Assessor: one call that identifies the article and rates
+// it. Sending the article text once instead of twice is where most of the
+// running cost of Ziba was saved.
+func (c *Claude) Assess(ctx context.Context, a domain.Article) (Assessment, error) {
+	system := fmt.Sprintf(`You classify and rate articles for one specific reader.
 
-	var result struct {
-		Categories []string `json:"categories"`
-		Entities   []string `json:"entities"`
-		Tone       string   `json:"tone"`
-	}
-	if err := c.ask(ctx, c.fastModel, 1024, system, articlePrompt(a), extractionSchema, &result); err != nil {
-		return Extraction{}, err
-	}
-
-	return Extraction{
-		Categories: result.Categories,
-		Entities:   result.Entities,
-		Tone:       result.Tone,
-	}, nil
-}
-
-// Score implements Scorer.
-func (c *Claude) Score(ctx context.Context, a domain.Article, e Extraction) (Score, error) {
-	system := fmt.Sprintf(`You rate how relevant an article is to one specific reader.
+First identify what the article is about, factually and without judging its
+quality. Then rate how relevant it is to this reader.
 
 The reader's interests, most important first:
 
@@ -141,27 +123,33 @@ interest scores low even when it is excellent in general.
 
 Answer only with the requested structure.`, c.interests.Describe())
 
-	prompt := fmt.Sprintf("Categories: %s\nEntities: %s\nType: %s\n\n%s",
-		strings.Join(e.Categories, ", "), strings.Join(e.Entities, ", "), e.Tone, articlePrompt(a))
-
 	var result struct {
-		Score  int    `json:"score"`
-		Reason string `json:"reason"`
+		Categories []string `json:"categories"`
+		Entities   []string `json:"entities"`
+		Tone       string   `json:"tone"`
+		Score      int      `json:"score"`
+		Reason     string   `json:"reason"`
 	}
-	if err := c.ask(ctx, c.fastModel, 1024, system, prompt, scoreSchema, &result); err != nil {
-		return Score{}, err
+	if err := c.ask(ctx, c.fastModel, 1024, system, articlePrompt(a), assessmentSchema, &result); err != nil {
+		return Assessment{}, err
 	}
 
 	// The schema constrains this, but the database has a check constraint and a
 	// rejected insert is a worse failure than a clamped score.
-	value := min(max(result.Score, 0), 100)
+	score := min(max(result.Score, 0), 100)
 
-	return Score{Value: domain.RelevanceScore(value), Reason: result.Reason}, nil
+	return Assessment{
+		Categories: result.Categories,
+		Entities:   result.Entities,
+		Tone:       result.Tone,
+		Score:      domain.RelevanceScore(score),
+		Reason:     result.Reason,
+	}, nil
 }
 
 // Summarize implements Summarizer. This is the only stage that runs on the
 // capable model, and only for articles above threshold.
-func (c *Claude) Summarize(ctx context.Context, a domain.Article, e Extraction) (string, error) {
+func (c *Claude) Summarize(ctx context.Context, a domain.Article, _ Assessment) (string, error) {
 	system := fmt.Sprintf(`You write short summaries for one specific reader.
 
 The reader's interests, most important first:

@@ -2,9 +2,9 @@
 // about, how relevant it is, and — only when it clears the threshold — a
 // summary written for this reader.
 //
-// The three stages are separate interfaces on purpose. They are the seam that
+// The two stages are separate interfaces on purpose. They are the seam that
 // lets tests run without a network and without cost, and lets the expensive
-// stage use a different model from the cheap ones.
+// stage use a different model from the cheap one.
 package pipeline
 
 import (
@@ -16,40 +16,37 @@ import (
 	"github.com/emaori/ziba/internal/domain"
 )
 
-// Extraction is what an article is about: the cheap first pass.
-type Extraction struct {
+// Assessment is the cheap first pass: what an article is about, how relevant
+// it is to the configured interests, and why it scored what it scored.
+//
+// Identifying the subject and rating it were once two stages, matching the
+// functional documentation. They were merged because each stage sent the whole
+// article text and input tokens are almost the entire cost of a run — paying
+// for the same text twice doubled the bill for no benefit. Judging relevance
+// with the subject already in mind is, if anything, the better order.
+type Assessment struct {
 	Categories []string
 	Entities   []string
 	Tone       string
+	Score      domain.RelevanceScore
+	Reason     string
 }
 
-// Score is how relevant an article is, and why.
-type Score struct {
-	Value  domain.RelevanceScore
-	Reason string
-}
-
-// Extractor identifies what an article is about.
-type Extractor interface {
-	Extract(ctx context.Context, a domain.Article) (Extraction, error)
-}
-
-// Scorer rates an article against the configured interests.
-type Scorer interface {
-	Score(ctx context.Context, a domain.Article, e Extraction) (Score, error)
+// Assessor identifies and rates an article in one pass.
+type Assessor interface {
+	Assess(ctx context.Context, a domain.Article) (Assessment, error)
 }
 
 // Summarizer writes a summary aimed at this reader.
 type Summarizer interface {
-	Summarize(ctx context.Context, a domain.Article, e Extraction) (string, error)
+	Summarize(ctx context.Context, a domain.Article, as Assessment) (string, error)
 }
 
-// Analyzer is everything the pipeline needs from a model provider. Splitting it
-// into three interfaces and joining them here means an implementation can
-// satisfy all three, while a test can replace just one.
+// Analyzer is everything the pipeline needs from a model provider. Keeping the
+// two stages as separate interfaces and joining them here means an
+// implementation can satisfy both, while a test can replace just one.
 type Analyzer interface {
-	Extractor
-	Scorer
+	Assessor
 	Summarizer
 }
 
@@ -74,30 +71,25 @@ func New(analyzer Analyzer, threshold int, log *slog.Logger) *Pipeline {
 // Analyze returns the article enriched with categories, entities, tone, score
 // and — above threshold — a summary.
 func (p *Pipeline) Analyze(ctx context.Context, a domain.Article) (domain.Article, error) {
-	extraction, err := p.analyzer.Extract(ctx, a)
+	assessment, err := p.analyzer.Assess(ctx, a)
 	if err != nil {
-		return a, fmt.Errorf("extract %s: %w", a.URL, err)
+		return a, fmt.Errorf("assess %s: %w", a.URL, err)
 	}
 
-	score, err := p.analyzer.Score(ctx, a, extraction)
-	if err != nil {
-		return a, fmt.Errorf("score %s: %w", a.URL, err)
-	}
-
-	a.Categories = extraction.Categories
-	a.Entities = extraction.Entities
-	a.Tone = extraction.Tone
-	a.Score = score.Value
-	a.ScoreReason = score.Reason
+	a.Categories = assessment.Categories
+	a.Entities = assessment.Entities
+	a.Tone = assessment.Tone
+	a.Score = assessment.Score
+	a.ScoreReason = assessment.Reason
 	a.AnalyzedAt = time.Now().UTC()
 
-	if score.Value < p.threshold {
+	if assessment.Score < p.threshold {
 		p.log.Debug("below threshold, not summarized",
-			"url", a.URL, "score", score.Value, "threshold", p.threshold)
+			"url", a.URL, "score", assessment.Score, "threshold", p.threshold)
 		return a, nil
 	}
 
-	summary, err := p.analyzer.Summarize(ctx, a, extraction)
+	summary, err := p.analyzer.Summarize(ctx, a, assessment)
 	if err != nil {
 		// The article keeps its score and stays in the digest; only the summary
 		// is missing, and that is worth far less than losing the analysis.
