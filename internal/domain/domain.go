@@ -28,11 +28,31 @@ type Source struct {
 	URL     string
 	Enabled bool
 
-	// Website carries the settings only a scraped site needs, and is nil for
-	// every other type. Settings live here rather than in the database because
+	// Website and Newsletter carry the settings only their own type needs, and
+	// are nil otherwise. Settings live here rather than in the database because
 	// the configuration file is their source of truth; storing them would give
 	// them two.
-	Website *WebsiteOptions
+	Website    *WebsiteOptions
+	Newsletter *NewsletterOptions
+}
+
+// NewsletterOptions describes a mailbox of newsletters.
+//
+// Newsletters are read as link aggregators: the email is a list of links with
+// short blurbs, and the value is in the articles it points at. Credentials are
+// named here but never written here — the file holds the name of an environment
+// variable, so a source list stays safe to commit.
+type NewsletterOptions struct {
+	Folder      string
+	UsernameEnv string
+	PasswordEnv string
+
+	// UnreadOnly restricts collection to messages not yet seen, which is what
+	// makes a nightly run cheap on a mailbox that has years of history.
+	UnreadOnly bool
+
+	// MaxMessages caps how many emails one run reads.
+	MaxMessages int
 }
 
 // WebsiteOptions tunes how a site is scraped for article links.
@@ -50,12 +70,27 @@ type WebsiteOptions struct {
 	MaxLinks int
 }
 
+// ItemKind says whether a collected item is destined to become an article.
+type ItemKind string
+
+const (
+	// ItemKindArticle is the default: the item becomes an Article.
+	ItemKindArticle ItemKind = "article"
+
+	// ItemKindProvenance is kept for the record but never becomes an Article.
+	// A newsletter is the case this exists for: what belongs in Ziba are the
+	// articles it links to, while the email itself only answers "where did this
+	// come from".
+	ItemKindProvenance ItemKind = "provenance"
+)
+
 // RawItem is a freshly collected element, before any AI processing. Its text
 // may be missing or partial: feeds often carry only an excerpt, and the full
 // text is retrieved in a later step.
 type RawItem struct {
 	ID          int64
 	SourceID    int64
+	Kind        ItemKind
 	Title       string
 	URL         string
 	Author      string

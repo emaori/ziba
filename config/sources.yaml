@@ -45,3 +45,19 @@ sources:
       # This site serves its markup, so rendering is off. Set `render: true`
       # for sites that build theirs in the browser — it works, but it is much
       # slower and needs the sidecar running.
+
+  # A newsletter mailbox. Credentials are never written here: name the
+  # environment variables that hold them and set those in .env.
+  #
+  # Newsletters are read as link aggregators — the email is kept only as
+  # provenance, and what enters Ziba are the articles it links to.
+  #
+  # - name: "Newsletters"
+  #   type: newsletter
+  #   url: "imaps://imap.example.com:993/"
+  #   newsletter:
+  #     folder: "INBOX"
+  #     username_env: ZIBA_IMAP_USER
+  #     password_env: ZIBA_IMAP_PASSWORD
+  #     unread_only: true      # default; keeps a nightly run cheap
+  #     max_messages: 50

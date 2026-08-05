@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
+
+	neturl "net/url"
 
 	"gopkg.in/yaml.v3"
 
@@ -30,6 +33,9 @@ type SourceEntry struct {
 
 	// Website applies to scraped sites only.
 	Website *WebsiteEntry `yaml:"website"`
+
+	// Newsletter applies to mailboxes only.
+	Newsletter *NewsletterEntry `yaml:"newsletter"`
 }
 
 // WebsiteEntry is the `website:` block of a scraped source.
@@ -37,6 +43,15 @@ type WebsiteEntry struct {
 	LinkPattern string `yaml:"link_pattern"`
 	Render      bool   `yaml:"render"`
 	MaxLinks    int    `yaml:"max_links"`
+}
+
+// NewsletterEntry is the `newsletter:` block of a mailbox source.
+type NewsletterEntry struct {
+	Folder      string `yaml:"folder"`
+	UsernameEnv string `yaml:"username_env"`
+	PasswordEnv string `yaml:"password_env"`
+	UnreadOnly  *bool  `yaml:"unread_only"`
+	MaxMessages int    `yaml:"max_messages"`
 }
 
 // LoadSources reads and validates the sources file.
@@ -81,6 +96,32 @@ func LoadSources(path string) ([]domain.Source, error) {
 	return sources, nil
 }
 
+// addressFor validates and canonicalizes a source's address according to what
+// kind of thing it names.
+func addressFor(sourceType domain.SourceType, raw string) (string, error) {
+	if sourceType != domain.SourceTypeNewsletter {
+		return domain.NormalizeURL(raw)
+	}
+
+	parsed, err := neturl.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return "", fmt.Errorf("parse mailbox address %q: %w", raw, err)
+	}
+	switch parsed.Scheme {
+	case "imaps", "imap":
+	default:
+		return "", fmt.Errorf("mailbox address %q must use imaps:// or imap://", raw)
+	}
+	if parsed.Host == "" {
+		return "", fmt.Errorf("mailbox address %q has no host", raw)
+	}
+	if parsed.User != nil {
+		return "", fmt.Errorf("mailbox address %q must not contain credentials — "+
+			"name environment variables with username_env and password_env instead", raw)
+	}
+	return parsed.String(), nil
+}
+
 func (e SourceEntry) toDomain() (domain.Source, error) {
 	if e.Name == "" {
 		return domain.Source{}, fmt.Errorf("name is required")
@@ -93,7 +134,9 @@ func (e SourceEntry) toDomain() (domain.Source, error) {
 		return domain.Source{}, fmt.Errorf("unknown type %q", e.Type)
 	}
 
-	url, err := domain.NormalizeURL(e.URL)
+	// Only web sources have web addresses. A mailbox is named by an IMAP
+	// address, which the web normalizer would rightly reject.
+	url, err := addressFor(sourceType, e.URL)
 	if err != nil {
 		return domain.Source{}, err
 	}
@@ -108,6 +151,44 @@ func (e SourceEntry) toDomain() (domain.Source, error) {
 		Type:    sourceType,
 		URL:     url,
 		Enabled: enabled,
+	}
+
+	if e.Newsletter != nil {
+		if sourceType != domain.SourceTypeNewsletter {
+			return domain.Source{}, fmt.Errorf("a newsletter block only applies to type newsletter, not %q", e.Type)
+		}
+		if e.Newsletter.UsernameEnv == "" || e.Newsletter.PasswordEnv == "" {
+			return domain.Source{}, fmt.Errorf("username_env and password_env are required")
+		}
+		// Credentials are named, never written down. Catching an empty variable
+		// here means the run fails at startup with the variable's name, rather
+		// than as an authentication error from the server.
+		for _, name := range []string{e.Newsletter.UsernameEnv, e.Newsletter.PasswordEnv} {
+			if os.Getenv(name) == "" {
+				return domain.Source{}, fmt.Errorf("environment variable %s is empty", name)
+			}
+		}
+
+		unreadOnly := true
+		if e.Newsletter.UnreadOnly != nil {
+			unreadOnly = *e.Newsletter.UnreadOnly
+		}
+		folder := e.Newsletter.Folder
+		if folder == "" {
+			folder = "INBOX"
+		}
+
+		source.Newsletter = &domain.NewsletterOptions{
+			Folder:      folder,
+			UsernameEnv: e.Newsletter.UsernameEnv,
+			PasswordEnv: e.Newsletter.PasswordEnv,
+			UnreadOnly:  unreadOnly,
+			MaxMessages: e.Newsletter.MaxMessages,
+		}
+	}
+
+	if sourceType == domain.SourceTypeNewsletter && e.Newsletter == nil {
+		return domain.Source{}, fmt.Errorf("a newsletter source needs a newsletter block")
 	}
 
 	if e.Website != nil {

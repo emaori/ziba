@@ -87,6 +87,32 @@ addresses. A scraped source yields links only — each one then goes through the
 same full-text retrieval as everything else, so a scraped article and a feed
 article are identical downstream.
 
+**`newsletter`** reads a mailbox over IMAP. Newsletters are treated as link
+aggregators, which is what they are: the email is a list of links with blurbs,
+and the value is in the articles it points at.
+
+```yaml
+  - name: "Newsletters"
+    type: newsletter
+    url: "imaps://imap.example.com:993/"
+    newsletter:
+      folder: "INBOX"
+      username_env: ZIBA_IMAP_USER      # names the variable, never the value
+      password_env: ZIBA_IMAP_PASSWORD
+      unread_only: true
+```
+
+Credentials are named, not written: the file holds the *name* of an environment
+variable, so the source list stays safe to commit, and an address containing
+credentials is rejected outright. An unset variable fails at startup naming the
+variable, rather than surfacing later as an authentication error.
+
+Each email yields the editorial links it carries — social buttons, unsubscribe
+footers, "view in browser" headers and sponsor slots are filtered out — plus the
+email itself stored as **provenance**: kept so a link has an origin, never shown
+as an article. The filtering is rule-based today; the functional documentation
+calls for AI to do this eventually, and `editorialLinks` is where that would go.
+
 `render: true` fetches the page through the **`ziba-playwright`** sidecar, a
 headless browser, for sites that build their markup in the browser. It is much
 slower and needs the sidecar running (`make up` starts it), so leave it off

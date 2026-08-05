@@ -67,12 +67,16 @@ func (s *Store) SaveRawItems(ctx context.Context, items []domain.RawItem) (int, 
 
 	batch := &pgx.Batch{}
 	for _, item := range items {
+		kind := item.Kind
+		if kind == "" {
+			kind = domain.ItemKindArticle
+		}
 		batch.Queue(`
-			INSERT INTO raw_items (source_id, title, url, author, published_at, collected_at, text)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO raw_items (source_id, title, url, author, published_at, collected_at, text, kind)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			ON CONFLICT (source_id, url) DO NOTHING`,
 			item.SourceID, item.Title, item.URL, item.Author,
-			nullableTime(item.PublishedAt), item.CollectedAt, item.Text)
+			nullableTime(item.PublishedAt), item.CollectedAt, item.Text, string(kind))
 	}
 
 	// One round trip for the whole batch instead of one per item.
@@ -92,12 +96,17 @@ func (s *Store) SaveRawItems(ctx context.Context, items []domain.RawItem) (int, 
 
 // UnprocessedRawItems returns items that have not yet become articles, oldest
 // first, up to limit.
+//
+// Provenance items are excluded: a newsletter is kept so that a link has an
+// origin, but it is not itself reading material and must never reach the
+// archive as an article.
 func (s *Store) UnprocessedRawItems(ctx context.Context, limit int) ([]domain.RawItem, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, source_id, title, url, author,
 		       COALESCE(published_at, collected_at), collected_at, text
 		FROM raw_items
 		WHERE processed_at IS NULL
+		  AND kind = 'article'
 		ORDER BY collected_at
 		LIMIT $1`, limit)
 	if err != nil {

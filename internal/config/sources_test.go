@@ -89,6 +89,76 @@ sources:
 	}
 }
 
+func TestLoadNewsletterSource(t *testing.T) {
+	t.Setenv("ZIBA_TEST_IMAP_USER", "reader")
+	t.Setenv("ZIBA_TEST_IMAP_PASSWORD", "secret")
+
+	path := writeSources(t, `
+sources:
+  - name: "Newsletters"
+    type: newsletter
+    url: "imaps://imap.example.com:993/"
+    newsletter:
+      folder: "Newsletters"
+      username_env: ZIBA_TEST_IMAP_USER
+      password_env: ZIBA_TEST_IMAP_PASSWORD
+      max_messages: 20
+`)
+
+	sources, err := LoadSources(path)
+	if err != nil {
+		t.Fatalf("LoadSources returned error: %v", err)
+	}
+	if len(sources) != 1 || sources[0].Newsletter == nil {
+		t.Fatal("newsletter options were not loaded")
+	}
+
+	opts := sources[0].Newsletter
+	if opts.Folder != "Newsletters" {
+		t.Errorf("Folder = %q, want %q", opts.Folder, "Newsletters")
+	}
+	// Reading unseen messages only is what keeps a nightly run cheap on a
+	// mailbox with years of history, so it must be the default.
+	if !opts.UnreadOnly {
+		t.Error("UnreadOnly = false, want true by default")
+	}
+	// A mailbox address is not a web address and must survive intact.
+	if want := "imaps://imap.example.com:993/"; sources[0].URL != want {
+		t.Errorf("URL = %q, want %q", sources[0].URL, want)
+	}
+}
+
+func TestLoadNewsletterSourceRejects(t *testing.T) {
+	t.Setenv("ZIBA_TEST_IMAP_USER", "reader")
+	t.Setenv("ZIBA_TEST_IMAP_PASSWORD", "secret")
+
+	const block = `
+    newsletter:
+      username_env: ZIBA_TEST_IMAP_USER
+      password_env: ZIBA_TEST_IMAP_PASSWORD
+`
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{"web address", "sources:\n  - name: N\n    type: newsletter\n    url: \"https://example.com\"" + block},
+		{"credentials in the address", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://user:pass@imap.example.com\"" + block},
+		{"no host", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://\"" + block},
+		{"missing block", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://imap.example.com\"\n"},
+		{"block on the wrong type", "sources:\n  - name: N\n    type: rss\n    url: \"https://example.com/feed\"" + block},
+		{"unset variable", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://imap.example.com\"\n" +
+			"    newsletter:\n      username_env: ZIBA_TEST_NOT_SET\n      password_env: ZIBA_TEST_IMAP_PASSWORD\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := LoadSources(writeSources(t, tt.content)); err == nil {
+				t.Error("LoadSources returned no error, want one")
+			}
+		})
+	}
+}
+
 func TestLoadSourcesMissingFile(t *testing.T) {
 	if _, err := LoadSources(filepath.Join(t.TempDir(), "absent.yaml")); err == nil {
 		t.Error("LoadSources returned no error for a missing file, want one")

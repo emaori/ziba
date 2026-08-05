@@ -69,6 +69,7 @@ func collectCmd(ctx context.Context, args []string) error {
 	registry := collect.NewRegistry(
 		collect.NewRSS(client, log),
 		collect.NewWebsite(client, renderer, log),
+		collect.NewNewsletter(log),
 	)
 
 	if err := runCollection(ctx, db, registry, log, enabled); err != nil {
