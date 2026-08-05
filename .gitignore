@@ -1,0 +1,13 @@
+# Build output
+/bin/
+/ziba
+
+# Local configuration and secrets
+.env
+*.local.yaml
+
+# Test and coverage output
+coverage.out
+
+# OS noise
+.DS_Store
