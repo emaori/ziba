@@ -60,9 +60,15 @@ type Article struct {
 	PublishedAt time.Time
 	CollectedAt time.Time
 	FullText    string
+
+	// Filled in by the AI pipeline.
 	Categories  []string
+	Entities    []string
+	Tone        string
 	Summary     string
 	Score       RelevanceScore
+	ScoreReason string
+	AnalyzedAt  time.Time
 }
 
 // Digest is the daily selection of the most relevant articles, ranked by score.

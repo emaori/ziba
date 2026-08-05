@@ -84,6 +84,30 @@ Neither stage is all-or-nothing. A source that is down is logged and the others
 continue; a page that cannot be fetched still produces an article, carrying the
 excerpt the feed provided, and can be improved later.
 
+## Processing
+
+`config/interests.yaml` describes what is worth reading, and sets the threshold
+an article must reach to be summarized and to appear in the digest.
+
+```sh
+make process                    # analyze articles not yet seen
+make process ARGS=-offline      # no model, no network, no cost
+make process ARGS="-batch 10"   # analyze fewer articles in one run
+```
+
+Each article goes through three stages: extraction says what it is about,
+scoring rates it against the interests, and summarization writes a summary aimed
+at this reader. Only the third stage uses the capable model, and only for
+articles above the threshold — that split is where most of the cost is saved.
+
+Articles below the threshold keep their score and stay browsable in the archive.
+They are simply not summarized and not promoted: the AI curates, it does not
+censor.
+
+`-offline` swaps the model for a deterministic keyword matcher. It is a poor
+curator and says so in its output, but it makes the whole flow runnable while
+developing everything downstream.
+
 ## Migrations are plain numbered `.sql` files under `internal/store/migrations/`,
 embedded in the binary. `migrate` applies whatever has not been applied yet and
 is safe to re-run; each migration runs in a transaction, and an advisory lock
@@ -98,6 +122,7 @@ config/             hand-edited YAML: sources (interests to come)
 internal/domain/    core types: Source, Collector, RawItem, Article, Digest
 internal/config/    runtime configuration and YAML loading
 internal/collect/   one Collector per source type, plus full-text retrieval
+internal/pipeline/  AI stages: extraction, scoring, summarization
 internal/store/     PostgreSQL pool, migrations, queries
 ```
 
@@ -105,7 +130,6 @@ Packages are added as they gain real content. Still to come:
 
 | Package | Responsibility |
 |---|---|
-| `internal/pipeline` | AI stages: extraction, scoring, summarization |
 | `internal/web` | HTTP handlers and templates |
 
 `internal/domain` is imported by all of them and imports none of them, which is

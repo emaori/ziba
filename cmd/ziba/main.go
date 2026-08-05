@@ -54,6 +54,8 @@ func run(args []string) error {
 		return migrateCmd(ctx)
 	case "collect":
 		return collectCmd(ctx, args[1:])
+	case "process":
+		return processCmd(ctx, args[1:])
 	default:
 		return fmt.Errorf("unknown command %q: %w", args[0], errUsage)
 	}
@@ -96,5 +98,6 @@ commands:
   version   print the build version
   migrate   apply pending database migrations
   collect   read every enabled source and store what is new
+  process   run the AI pipeline over articles not yet analyzed
 `)
 }

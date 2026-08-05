@@ -155,6 +155,52 @@ func (s *Store) MarkRawItemsProcessed(ctx context.Context, ids []int64) error {
 	return nil
 }
 
+// UnanalyzedArticles returns articles the AI pipeline has not seen yet, oldest
+// first, up to limit.
+func (s *Store) UnanalyzedArticles(ctx context.Context, limit int) ([]domain.Article, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, source_id, url, title, author,
+		       COALESCE(published_at, collected_at), collected_at, full_text
+		FROM articles
+		WHERE processed_at IS NULL
+		ORDER BY collected_at
+		LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query unanalyzed articles: %w", err)
+	}
+
+	articles, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.Article, error) {
+		var a domain.Article
+		err := row.Scan(&a.ID, &a.SourceID, &a.URL, &a.Title, &a.Author,
+			&a.PublishedAt, &a.CollectedAt, &a.FullText)
+		return a, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read unanalyzed articles: %w", err)
+	}
+	return articles, nil
+}
+
+// SaveAnalysis stores what the pipeline produced for an article. Setting
+// processed_at is what takes the article out of the backlog, so it is written
+// in the same statement as the results: either both land or neither does.
+func (s *Store) SaveAnalysis(ctx context.Context, a domain.Article) error {
+	tag, err := s.pool.Exec(ctx, `
+		UPDATE articles
+		SET categories = $2, entities = $3, tone = $4,
+		    summary = $5, score = $6, score_reason = $7, processed_at = $8
+		WHERE id = $1`,
+		a.ID, a.Categories, a.Entities, a.Tone,
+		a.Summary, int16(a.Score), a.ScoreReason, a.AnalyzedAt)
+	if err != nil {
+		return fmt.Errorf("save analysis for article %d: %w", a.ID, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("save analysis: article %d not found", a.ID)
+	}
+	return nil
+}
+
 // CountArticles returns how many articles are stored. Used for reporting.
 func (s *Store) CountArticles(ctx context.Context) (int64, error) {
 	var n int64

@@ -21,7 +21,7 @@ SSH_HOST ?= homeserver
 DB_PORT  ?= 5432
 
 .PHONY: build run test fmt vet tidy check clean \
-        dev up down restart ps logs db-psql db-tunnel migrate collect
+        dev up down restart ps logs db-psql db-tunnel migrate collect process
 
 ## build: compile the binary into bin/
 build:
@@ -95,6 +95,10 @@ db-tunnel:
 ## migrate: apply pending migrations, reading credentials from .env
 migrate: .env
 	set -a; . ./.env; set +a; go run ./cmd/$(BINARY) migrate
+
+## process: run the AI pipeline, e.g. make process ARGS=-offline
+process: .env
+	set -a; . ./.env; set +a; go run ./cmd/$(BINARY) process $(ARGS)
 
 ## collect: read every enabled source, e.g. make collect ARGS=-no-fetch
 collect: .env

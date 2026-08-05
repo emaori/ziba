@@ -1,0 +1,32 @@
+# What is worth reading. Hand-edited, changes rarely.
+#
+# threshold: the relevance score (0-100) an article must reach to be summarized
+#            and to appear in the daily digest. Below it an article is still
+#            collected and browsable in the archive — the AI curates, it does
+#            not censor. Raising this makes the digest shorter and cheaper.
+#
+# priority:  1 is the most important. Used to rank interests against each other.
+# note:      free text. This is the most useful field: it describes taste in a
+#            way a keyword list cannot.
+
+threshold: 60
+
+interests:
+  - topic: "AI and machine learning"
+    priority: 1
+    subtopics: ["LLMs", "AI agents", "ML infrastructure"]
+    note: "Practical applications above pure theory. Not interested in funding rounds."
+
+  - topic: "Go programming"
+    priority: 2
+    subtopics: ["concurrency", "standard library", "tooling"]
+    note: "Beginner: intermediate material is ideal, deep runtime internals less so."
+
+  - topic: "Software architecture"
+    priority: 2
+    subtopics: ["self-hosting", "databases", "system design"]
+    note: "Concrete write-ups from people who built the thing."
+
+  - topic: "Italian and international news"
+    priority: 3
+    note: "Analysis and context rather than breaking news."
