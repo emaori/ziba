@@ -113,6 +113,30 @@ censor.
 curator and says so in its output, but it makes the whole flow runnable while
 developing everything downstream.
 
+## Reading
+
+```sh
+make digest    # build today's selection from what cleared the threshold
+make serve     # http://localhost:8080
+```
+
+Four screens: the daily digest, browsing by category, the archive, and the
+article reader. Pages are rendered on the server with `html/template` and a
+single stylesheet — no build step, no JavaScript toolchain, everything embedded
+in the binary.
+
+The digest is **stored, not recomputed**: `ziba digest` selects what cleared the
+threshold on a given day and freezes the ranking, so a past day keeps the shape
+it had when it was read even after interests or thresholds change. Re-running it
+for the same day replaces that day's selection.
+
+The archive holds everything, including articles that never cleared the
+threshold. That is the point: the AI curates, it does not censor.
+
+Article text is stored as plain text with one paragraph per line, and the reader
+escapes it when rendering. Nothing a collected page contains can inject markup
+into the interface — worth preserving if the templates are changed.
+
 ## Migrations are plain numbered `.sql` files under `internal/store/migrations/`,
 embedded in the binary. `migrate` applies whatever has not been applied yet and
 is safe to re-run; each migration runs in a transaction, and an advisory lock
@@ -127,15 +151,10 @@ config/             hand-edited YAML: sources (interests to come)
 internal/domain/    core types: Source, Collector, RawItem, Article, Digest
 internal/config/    runtime configuration and YAML loading
 internal/collect/   one Collector per source type, plus full-text retrieval
-internal/pipeline/  AI stages: extraction, scoring, summarization
+internal/pipeline/  AI stages: assessment and summarization
 internal/store/     PostgreSQL pool, migrations, queries
+internal/web/       HTTP handlers, templates and stylesheet
 ```
-
-Packages are added as they gain real content. Still to come:
-
-| Package | Responsibility |
-|---|---|
-| `internal/web` | HTTP handlers and templates |
 
 `internal/domain` is imported by all of them and imports none of them, which is
 what keeps the dependencies acyclic.

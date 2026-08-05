@@ -1,0 +1,214 @@
+/* Ziba — one stylesheet, no framework, no build step.
+   Sized for reading: a single column that stays comfortable on a phone and
+   does not sprawl on a desktop. */
+
+:root {
+  --ink: #1b1b1a;
+  --ink-soft: #5f5f5c;
+  --rule: #dedcd6;
+  --paper: #fbfaf7;
+  --card: #ffffff;
+  --accent: #8a4b2a;
+  --measure: 42rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e9e7e2;
+    --ink-soft: #a3a099;
+    --rule: #33322f;
+    --paper: #17171a;
+    --card: #1e1e21;
+    --accent: #d99873;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0 1rem 4rem;
+  background: var(--paper);
+  color: var(--ink);
+  font: 1rem/1.6 Georgia, "Iowan Old Style", "Times New Roman", serif;
+}
+
+main, .masthead, .categories, footer { max-width: var(--measure); margin: 0 auto; }
+
+a { color: var(--accent); }
+
+/* Masthead ---------------------------------------------------------------- */
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem 0 1rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+.wordmark {
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.masthead nav a {
+  margin-left: 1rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+/* Category strip ---------------------------------------------------------- */
+
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.85rem;
+}
+
+.categories a { text-decoration: none; color: var(--ink-soft); }
+.categories a:hover { color: var(--accent); }
+.categories .count { color: var(--rule); }
+
+/* Headings ---------------------------------------------------------------- */
+
+.page-title {
+  margin: 2rem 0 1.5rem;
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+
+.page-title .subtitle {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+/* Article card ------------------------------------------------------------ */
+
+.card {
+  margin: 0 0 1.25rem;
+  padding: 1.25rem;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+
+.card h2 { margin: 0.4rem 0 0.6rem; font-size: 1.25rem; line-height: 1.25; }
+.card h2 a { color: var(--ink); text-decoration: none; }
+.card h2 a:hover { color: var(--accent); }
+.card .summary { margin: 0 0 1rem; color: var(--ink-soft); }
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+.tag {
+  padding: 0.15rem 0.5rem;
+  background: var(--accent);
+  color: var(--paper);
+  border-radius: 2px;
+}
+
+.score {
+  margin-left: auto;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  cursor: help;
+}
+
+/* Buttons ----------------------------------------------------------------- */
+
+.actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1rem 0 0; }
+
+.button {
+  display: inline-block;
+  padding: 0.45rem 0.9rem;
+  background: var(--accent);
+  color: var(--paper);
+  border-radius: 3px;
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.button.secondary {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule);
+}
+
+/* Reader ------------------------------------------------------------------ */
+
+.reader h1 { margin: 0.6rem 0 0.3rem; font-size: 2rem; line-height: 1.15; }
+.reader .byline { margin: 0 0 1.5rem; color: var(--ink-soft); font-style: italic; }
+
+.summary-box {
+  margin: 0 0 2rem;
+  padding: 1rem 1.25rem;
+  background: var(--card);
+  border-left: 3px solid var(--accent);
+}
+
+.summary-box h2 {
+  margin: 0 0 0.5rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+}
+
+.summary-box p { margin: 0 0 0.5rem; }
+.summary-box .why { font-size: 0.85rem; color: var(--ink-soft); }
+
+/* The reading column itself: slightly larger type, generous line height. */
+.body { font-size: 1.08rem; line-height: 1.75; }
+.body p { margin: 0 0 1.15rem; }
+
+.entities, .note, .pager {
+  margin: 2rem 0 0;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
+.pager { display: flex; gap: 0.6rem; }
+
+footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+code {
+  padding: 0.1rem 0.35rem;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-size: 0.85em;
+}

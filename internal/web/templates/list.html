@@ -1,0 +1,21 @@
+{{define "content"}}
+  <h1 class="page-title">
+    {{.Title}}
+    <span class="subtitle">{{len .Articles}} articles</span>
+  </h1>
+  {{if .Articles}}
+    {{range .Articles}}{{template "card" .}}{{end}}
+  {{else}}
+    <p class="note">Nothing here yet.</p>
+  {{end}}
+  {{if .PageSize}}
+    <p class="pager">
+      {{if gt .Offset 0}}
+        <a class="button secondary" href="/archive?offset=0">Newest</a>
+      {{end}}
+      {{if eq (len .Articles) .PageSize}}
+        <a class="button" href="/archive?offset={{add .Offset .PageSize}}">Older →</a>
+      {{end}}
+    </p>
+  {{end}}
+{{end}}

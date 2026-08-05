@@ -21,7 +21,7 @@ SSH_HOST ?= homeserver
 DB_PORT  ?= 5432
 
 .PHONY: build run test fmt vet tidy check clean \
-        dev up down restart ps logs db-psql db-tunnel migrate collect process
+        dev up down restart ps logs db-psql db-tunnel migrate collect process digest serve
 
 ## build: compile the binary into bin/
 build:
@@ -99,6 +99,14 @@ migrate: .env
 ## process: run the AI pipeline, e.g. make process ARGS=-offline
 process: .env
 	set -a; . ./.env; set +a; go run ./cmd/$(BINARY) process $(ARGS)
+
+## digest: build today's selection, e.g. make digest ARGS="-date 2026-08-04"
+digest: .env
+	set -a; . ./.env; set +a; go run ./cmd/$(BINARY) digest $(ARGS)
+
+## serve: run the web interface on http://localhost:8080
+serve: .env
+	set -a; . ./.env; set +a; go run ./cmd/$(BINARY) serve $(ARGS)
 
 ## collect: read every enabled source, e.g. make collect ARGS=-no-fetch
 collect: .env

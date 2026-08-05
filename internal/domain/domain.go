@@ -52,8 +52,14 @@ type RelevanceScore int
 // the same story under different headlines, and the same headline may be reused
 // by different articles.
 type Article struct {
-	ID          int64
-	SourceID    int64
+	ID       int64
+	SourceID int64
+
+	// SourceName is filled in by queries that join the source, because every
+	// screen that shows an article shows where it came from. It is display
+	// data, not part of the article's identity.
+	SourceName string
+
 	Title       string
 	URL         string
 	Author      string

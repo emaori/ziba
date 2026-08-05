@@ -1,0 +1,30 @@
+{{define "content"}}
+{{with .Article}}
+<article class="reader">
+  <p class="meta">
+    {{range .Categories}}<span class="tag">{{.}}</span>{{end}}
+    <span class="source">{{.SourceName}}</span>
+    <span class="date">{{shortDate .PublishedAt}}</span>
+    {{if .Tone}}<span class="tone">{{.Tone}}</span>{{end}}
+  </p>
+  <h1>{{.Title}}</h1>
+  {{if .Author}}<p class="byline">{{.Author}}</p>{{end}}
+  {{if .Summary}}
+    <aside class="summary-box">
+      <h2>Summary</h2>
+      <p>{{.Summary}}</p>
+      {{if .ScoreReason}}<p class="why">Scored {{.Score}} — {{.ScoreReason}}</p>{{end}}
+    </aside>
+  {{end}}
+  <div class="body">
+    {{range paragraphs .FullText}}<p>{{.}}</p>{{end}}
+  </div>
+  {{if .Entities}}
+    <p class="entities">Mentions: {{join .Entities ", "}}</p>
+  {{end}}
+  <p class="actions">
+    <a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>
+  </p>
+</article>
+{{end}}
+{{end}}

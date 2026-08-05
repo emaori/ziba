@@ -1,0 +1,57 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} — Ziba</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="masthead">
+    <a class="wordmark" href="/">Ziba</a>
+    <nav>
+      <a href="/">Today</a>
+      <a href="/archive">Archive</a>
+    </nav>
+  </header>
+
+  {{if .Categories}}
+  <nav class="categories">
+    {{range .Categories}}
+      <a href="/category/{{.Name}}">{{.Name}} <span class="count">{{.Count}}</span></a>
+    {{end}}
+  </nav>
+  {{end}}
+
+  <main>
+    {{template "content" .}}
+  </main>
+
+  <footer>
+    <p>Ziba — personal content aggregator</p>
+  </footer>
+</body>
+</html>
+{{end}}
+
+{{/* The article card from the functional wireframe: category, source and date,
+     then the title, the summary, and the two ways to read it. */}}
+{{define "card"}}
+<article class="card">
+  <p class="meta">
+    {{range .Categories}}<span class="tag">{{.}}</span>{{end}}
+    <span class="source">{{.SourceName}}</span>
+    <span class="date">{{shortDate .PublishedAt}}</span>
+    {{if .Score}}<span class="score" title="{{.ScoreReason}}">{{.Score}}</span>{{end}}
+  </p>
+
+  <h2><a href="/article/{{.ID}}">{{.Title}}</a></h2>
+
+  {{if .Summary}}<p class="summary">{{.Summary}}</p>{{end}}
+
+  <p class="actions">
+    <a class="button" href="/article/{{.ID}}">Read in Ziba</a>
+    <a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>
+  </p>
+</article>
+{{end}}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	readability "github.com/go-shiori/go-readability"
+	"golang.org/x/net/html"
 
 	"github.com/emaori/ziba/internal/domain"
 )
@@ -53,7 +54,7 @@ func (f *FullText) Article(ctx context.Context, item domain.RawItem) (domain.Art
 		return article, fmt.Errorf("full text for %s: %w", item.URL, err)
 	}
 
-	if text := strings.TrimSpace(extracted.TextContent); text != "" {
+	if text := readableText(extracted); text != "" {
 		article.FullText = text
 	}
 	// The feed is the more trustworthy source of a title; the page only fills
@@ -101,8 +102,64 @@ func plainText(s string) string {
 	if err != nil {
 		return s
 	}
-	if text := strings.TrimSpace(article.TextContent); text != "" {
+	if text := readableText(article); text != "" {
 		return text
 	}
 	return s
+}
+
+// blockElements end a line of text. Walking the extracted tree and breaking on
+// these is what preserves paragraphs.
+var blockElements = map[string]bool{
+	"p": true, "div": true, "section": true, "article": true, "br": true,
+	"li": true, "ul": true, "ol": true, "blockquote": true, "pre": true,
+	"h1": true, "h2": true, "h3": true, "h4": true, "h5": true, "h6": true,
+	"figcaption": true, "table": true, "tr": true, "hr": true,
+}
+
+// readableText turns extracted content into plain text with one paragraph per
+// line.
+//
+// The library's own TextContent concatenates every text node, which for most
+// pages produces a single unbroken run of ten thousand characters — technically
+// the article, but unreadable. Walking the tree and breaking on block elements
+// keeps the structure that makes prose legible.
+//
+// The result is still plain text, not markup. That is deliberate: the reader
+// escapes what it renders, so a hostile page cannot inject anything into it.
+func readableText(article readability.Article) string {
+	if article.Node == nil {
+		return strings.TrimSpace(article.TextContent)
+	}
+
+	var raw strings.Builder
+	var walk func(*html.Node)
+	walk = func(n *html.Node) {
+		switch n.Type {
+		case html.TextNode:
+			raw.WriteString(n.Data)
+		case html.ElementNode:
+			if n.Data == "script" || n.Data == "style" {
+				return
+			}
+			if blockElements[n.Data] {
+				raw.WriteByte('\n')
+				defer raw.WriteByte('\n')
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			walk(c)
+		}
+	}
+	walk(article.Node)
+
+	// Collapse the whitespace inside each line, and drop the empty ones that
+	// nested block elements inevitably produce.
+	var lines []string
+	for _, line := range strings.Split(raw.String(), "\n") {
+		if collapsed := strings.Join(strings.Fields(line), " "); collapsed != "" {
+			lines = append(lines, collapsed)
+		}
+	}
+	return strings.Join(lines, "\n")
 }

@@ -1,0 +1,21 @@
+{{define "content"}}
+  {{if .Digest.Articles}}
+    <h1 class="page-title">
+      Today
+      <span class="subtitle">{{shortDate .Digest.Date}} · {{len .Digest.Articles}} articles</span>
+    </h1>
+    {{range .Digest.Articles}}{{template "card" .}}{{end}}
+    <p class="note">
+      Everything else collected today is in the <a href="/archive">archive</a>.
+    </p>
+  {{else}}
+    <h1 class="page-title">Nothing selected yet</h1>
+    <p class="note">
+      No digest has been generated. Collect and process some articles, then run
+      <code>ziba digest</code> to build the selection for today.
+    </p>
+    <p class="note">
+      The <a href="/archive">archive</a> shows everything collected so far.
+    </p>
+  {{end}}
+{{end}}
