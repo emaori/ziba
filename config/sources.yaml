@@ -16,3 +16,9 @@ sources:
   - name: "Go Blog"
     type: rss
     url: "https://go.dev/blog/feed.atom"
+
+  # Carries the full article text in the feed, so full-text retrieval usually
+  # has nothing left to add.
+  - name: "IEEE Spectrum"
+    type: rss
+    url: "https://spectrum.ieee.org/feeds/feed.rss"
