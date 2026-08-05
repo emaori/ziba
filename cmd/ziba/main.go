@@ -52,6 +52,8 @@ func run(args []string) error {
 		return nil
 	case "migrate":
 		return migrateCmd(ctx)
+	case "collect":
+		return collectCmd(ctx, args[1:])
 	default:
 		return fmt.Errorf("unknown command %q: %w", args[0], errUsage)
 	}
@@ -64,13 +66,13 @@ func migrateCmd(ctx context.Context) error {
 		return err
 	}
 
-	pool, err := store.Open(ctx, cfg.DatabaseURL)
+	db, err := store.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
-	defer pool.Close()
+	defer db.Close()
 
-	applied, err := store.Migrate(ctx, pool)
+	applied, err := db.Migrate(ctx)
 	if err != nil {
 		return err
 	}
@@ -93,5 +95,6 @@ usage:
 commands:
   version   print the build version
   migrate   apply pending database migrations
+  collect   read every enabled source and store what is new
 `)
 }

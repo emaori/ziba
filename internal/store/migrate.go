@@ -35,7 +35,7 @@ type migration struct {
 // Migrate applies every migration that has not been applied yet, in version
 // order, and returns the names of the ones it applied. It is safe to call on
 // every start: with nothing to do it is a no-op.
-func Migrate(ctx context.Context, pool *pgxpool.Pool) ([]string, error) {
+func (s *Store) Migrate(ctx context.Context) ([]string, error) {
 	migrations, err := loadMigrations()
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) ([]string, error) {
 
 	// Everything below runs on one connection, because an advisory lock belongs
 	// to the session that took it.
-	conn, err := pool.Acquire(ctx)
+	conn, err := s.pool.Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("acquire connection: %w", err)
 	}

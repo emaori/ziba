@@ -9,9 +9,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Open connects to PostgreSQL and verifies the connection is usable. The
-// returned pool is safe for concurrent use and must be closed by the caller.
-func Open(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+// Store is the entry point to the database. It wraps a connection pool, which
+// is safe for concurrent use, so a single Store is shared by the whole program.
+type Store struct {
+	pool *pgxpool.Pool
+}
+
+// Open connects to PostgreSQL and verifies the connection is usable. The caller
+// must Close the returned Store.
+func Open(ctx context.Context, databaseURL string) (*Store, error) {
 	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("connect to database: %w", err)
@@ -24,5 +30,10 @@ func Open(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 		pool.Close()
 		return nil, fmt.Errorf("ping database: %w", err)
 	}
-	return pool, nil
+	return &Store{pool: pool}, nil
+}
+
+// Close releases every connection. It is safe to call more than once.
+func (s *Store) Close() {
+	s.pool.Close()
 }

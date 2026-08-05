@@ -21,7 +21,7 @@ SSH_HOST ?= homeserver
 DB_PORT  ?= 5432
 
 .PHONY: build run test fmt vet tidy check clean \
-        dev up down restart ps logs db-psql db-tunnel migrate
+        dev up down restart ps logs db-psql db-tunnel migrate collect
 
 ## build: compile the binary into bin/
 build:
@@ -95,3 +95,7 @@ db-tunnel:
 ## migrate: apply pending migrations, reading credentials from .env
 migrate: .env
 	set -a; . ./.env; set +a; go run ./cmd/$(BINARY) migrate
+
+## collect: read every enabled source, e.g. make collect ARGS=-no-fetch
+collect: .env
+	set -a; . ./.env; set +a; go run ./cmd/$(BINARY) collect $(ARGS)

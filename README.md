@@ -61,6 +61,29 @@ loopback — hence the tunnel. The two setups both use port 5432 locally, so the
 tunnel and the local stack cannot run at the same time; stop one before the
 other. Override with `DB_PORT` or `SSH_HOST` if either changes.
 
+## Collecting
+
+Sources are listed in `config/sources.yaml`, hand-edited. Adding one is adding
+three lines; `enabled: false` stops reading a source without losing the articles
+already collected from it. Removing a source from the file disables it rather
+than deleting it, for the same reason.
+
+```sh
+make collect                    # read every enabled source, then fetch full text
+make collect ARGS=-no-fetch     # only collect raw items
+make collect ARGS="-batch 20"   # process fewer items in one run
+```
+
+A run does two things. First it reads every enabled source in parallel and
+stores what it finds as raw items, skipping anything already collected — feeds
+republish their whole window on every poll, so this is what makes re-running
+harmless. Then it takes unprocessed raw items, follows each link, extracts the
+readable body of the page and stores it as an article.
+
+Neither stage is all-or-nothing. A source that is down is logged and the others
+continue; a page that cannot be fetched still produces an article, carrying the
+excerpt the feed provided, and can be improved later.
+
 ## Migrations are plain numbered `.sql` files under `internal/store/migrations/`,
 embedded in the binary. `migrate` applies whatever has not been applied yet and
 is safe to re-run; each migration runs in a transaction, and an advisory lock
@@ -71,8 +94,10 @@ prevents two processes from migrating at once. To add one, create the next
 
 ```
 cmd/ziba/           main entry point; subcommand dispatch only
+config/             hand-edited YAML: sources (interests to come)
 internal/domain/    core types: Source, Collector, RawItem, Article, Digest
-internal/config/    runtime configuration
+internal/config/    runtime configuration and YAML loading
+internal/collect/   one Collector per source type, plus full-text retrieval
 internal/store/     PostgreSQL pool, migrations, queries
 ```
 
@@ -80,7 +105,6 @@ Packages are added as they gain real content. Still to come:
 
 | Package | Responsibility |
 |---|---|
-| `internal/collect` | One `Collector` implementation per source type |
 | `internal/pipeline` | AI stages: extraction, scoring, summarization |
 | `internal/web` | HTTP handlers and templates |
 

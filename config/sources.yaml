@@ -1,0 +1,18 @@
+# The sources Ziba reads. Hand-edited: adding a source is adding four lines.
+#
+# type:    rss | website | newsletter | pdf   (only rss is implemented so far)
+# enabled: optional, defaults to true — set false to stop reading a source
+#          without losing the articles already collected from it.
+
+sources:
+  - name: "Il Post"
+    type: rss
+    url: "https://www.ilpost.it/feed/"
+
+  - name: "Hacker News — front page"
+    type: rss
+    url: "https://hnrss.org/frontpage"
+
+  - name: "Go Blog"
+    type: rss
+    url: "https://go.dev/blog/feed.atom"

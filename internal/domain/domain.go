@@ -33,6 +33,7 @@ type Source struct {
 // may be missing or partial: feeds often carry only an excerpt, and the full
 // text is retrieved in a later step.
 type RawItem struct {
+	ID          int64
 	SourceID    int64
 	Title       string
 	URL         string
