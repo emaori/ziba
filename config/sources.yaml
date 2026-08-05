@@ -1,7 +1,6 @@
 # The sources Ziba reads. Hand-edited: adding a source is adding four lines.
 #
-# type:    rss | website | newsletter | pdf
-#          (rss and website are implemented; newsletter and pdf are not yet)
+# type:    rss | website | newsletter    (pdf is deferred to v2)
 # enabled: optional, defaults to true — set false to stop reading a source
 #          without losing the articles already collected from it.
 #
