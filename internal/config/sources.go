@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"regexp"
 
 	"gopkg.in/yaml.v3"
 
@@ -26,6 +27,16 @@ type SourceEntry struct {
 	// The pointer distinguishes "absent" from "explicitly false", which a plain
 	// bool cannot do.
 	Enabled *bool `yaml:"enabled"`
+
+	// Website applies to scraped sites only.
+	Website *WebsiteEntry `yaml:"website"`
+}
+
+// WebsiteEntry is the `website:` block of a scraped source.
+type WebsiteEntry struct {
+	LinkPattern string `yaml:"link_pattern"`
+	Render      bool   `yaml:"render"`
+	MaxLinks    int    `yaml:"max_links"`
 }
 
 // LoadSources reads and validates the sources file.
@@ -92,10 +103,33 @@ func (e SourceEntry) toDomain() (domain.Source, error) {
 		enabled = *e.Enabled
 	}
 
-	return domain.Source{
+	source := domain.Source{
 		Name:    e.Name,
 		Type:    sourceType,
 		URL:     url,
 		Enabled: enabled,
-	}, nil
+	}
+
+	if e.Website != nil {
+		if sourceType != domain.SourceTypeWebsite {
+			return domain.Source{}, fmt.Errorf("a website block only applies to type website, not %q", e.Type)
+		}
+		// Compiling here means a bad expression is caught when the file is
+		// loaded, not hours later when the scheduler runs.
+		if e.Website.LinkPattern != "" {
+			if _, err := regexp.Compile(e.Website.LinkPattern); err != nil {
+				return domain.Source{}, fmt.Errorf("link_pattern: %w", err)
+			}
+		}
+		if e.Website.MaxLinks < 0 {
+			return domain.Source{}, fmt.Errorf("max_links cannot be negative")
+		}
+		source.Website = &domain.WebsiteOptions{
+			LinkPattern: e.Website.LinkPattern,
+			Render:      e.Website.Render,
+			MaxLinks:    e.Website.MaxLinks,
+		}
+	}
+
+	return source, nil
 }

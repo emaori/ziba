@@ -23,9 +23,9 @@ make check        # fmt + vet + test — run before committing
 
 ## Running the stack
 
-Everything the application needs runs in Docker. Today that is PostgreSQL;
-`ziba-api`, the Playwright sidecar and Caddy join the same file as they arrive,
-and the commands below do not change.
+Everything the application needs runs in Docker: PostgreSQL and the
+`ziba-playwright` browser sidecar. `ziba-api` and Caddy join the same file as
+they arrive, and the commands below do not change.
 
 ```sh
 cp .env.example .env    # then set a real password
@@ -67,6 +67,32 @@ Sources are listed in `config/sources.yaml`, hand-edited. Adding one is adding
 three lines; `enabled: false` stops reading a source without losing the articles
 already collected from it. Removing a source from the file disables it rather
 than deleting it, for the same reason.
+
+Two source types work today. **`rss`** reads a feed. **`website`** scrapes a page
+for article links, which is how sites that publish no feed are read:
+
+```yaml
+  - name: "ANSA — Tecnologia"
+    type: website
+    url: "https://www.ansa.it/sito/notizie/tecnologia/tecnologia.shtml"
+    website:
+      link_pattern: "/[0-9]{4}/[0-9]{2}/[0-9]{2}/"   # articles, not navigation
+      max_links: 25
+      render: false                                   # see below
+```
+
+`link_pattern` is the setting that matters: without it you collect a site's menu
+alongside its articles, and most sites put a date or a section in article
+addresses. A scraped source yields links only — each one then goes through the
+same full-text retrieval as everything else, so a scraped article and a feed
+article are identical downstream.
+
+`render: true` fetches the page through the **`ziba-playwright`** sidecar, a
+headless browser, for sites that build their markup in the browser. It is much
+slower and needs the sidecar running (`make up` starts it), so leave it off
+unless a site genuinely needs it. A source that asks for rendering with no
+sidecar configured fails with a message saying so, rather than quietly
+collecting an empty page.
 
 ```sh
 make collect                    # read every enabled source, then fetch full text

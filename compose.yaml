@@ -30,5 +30,32 @@ services:
       retries: 5
       start_period: 10s
 
+  # Headless Chromium, for sites that build their markup in the browser.
+  #
+  # A separate container is not an architectural boundary — Ziba is a monolith —
+  # but it keeps Chromium's crashes and its appetite for memory out of the main
+  # process, which is the whole reason it is here.
+  ziba-playwright:
+    image: ghcr.io/browserless/chromium:latest
+    container_name: ziba-playwright
+    restart: unless-stopped
+    environment:
+      # One page at a time is plenty: collection visits a handful of sites on a
+      # nightly schedule, and each extra concurrent browser costs real memory.
+      CONCURRENT: "1"
+      TIMEOUT: "60000"
+      TOKEN: ""
+    ports:
+      - "127.0.0.1:${RENDER_PORT:-3000}:3000"
+    healthcheck:
+      # /pressure reports whether the browser pool can accept work, which is the
+      # question. The root path answers 404, so checking it would mark a
+      # perfectly healthy container as broken.
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/pressure > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
 volumes:
   ziba-db-data:

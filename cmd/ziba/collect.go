@@ -17,6 +17,10 @@ import (
 // short enough that one bad source does not stall the run.
 const httpTimeout = 30 * time.Second
 
+// renderTimeout bounds a request to the browser sidecar, which has to start a
+// page and wait for its scripts before it can answer.
+const renderTimeout = 90 * time.Second
+
 // collectCmd reads every enabled source, stores what is new, and turns the new
 // raw items into articles by retrieving their full text.
 func collectCmd(ctx context.Context, args []string) error {
@@ -56,7 +60,16 @@ func collectCmd(ctx context.Context, args []string) error {
 	}
 
 	client := collect.NewHTTPClient(httpTimeout)
-	registry := collect.NewRegistry(collect.NewRSS(client, log))
+
+	// Rendering takes longer than a plain fetch: a browser has to start, load
+	// the page and wait for its scripts.
+	renderClient := collect.NewHTTPClient(renderTimeout)
+	renderer := collect.NewRenderer(renderClient, cfg.RenderURL)
+
+	registry := collect.NewRegistry(
+		collect.NewRSS(client, log),
+		collect.NewWebsite(client, renderer, log),
+	)
 
 	if err := runCollection(ctx, db, registry, log, enabled); err != nil {
 		return err

@@ -31,6 +31,10 @@ type Config struct {
 	// Empty means the pipeline's own defaults.
 	FastModel    string
 	CapableModel string
+
+	// RenderURL points at the browser sidecar. Empty disables rendering, which
+	// only matters for sources that ask for it.
+	RenderURL string
 }
 
 // Load reads the configuration from the environment.
@@ -42,6 +46,7 @@ func Load() (Config, error) {
 		AnthropicAPIKey: os.Getenv("ANTHROPIC_API_KEY"),
 		FastModel:       os.Getenv("ZIBA_FAST_MODEL"),
 		CapableModel:    os.Getenv("ZIBA_CAPABLE_MODEL"),
+		RenderURL:       os.Getenv("ZIBA_RENDER_URL"),
 	}
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("ZIBA_DATABASE_URL is not set")

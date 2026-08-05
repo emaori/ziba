@@ -27,6 +27,27 @@ type Source struct {
 	Type    SourceType
 	URL     string
 	Enabled bool
+
+	// Website carries the settings only a scraped site needs, and is nil for
+	// every other type. Settings live here rather than in the database because
+	// the configuration file is their source of truth; storing them would give
+	// them two.
+	Website *WebsiteOptions
+}
+
+// WebsiteOptions tunes how a site is scraped for article links.
+type WebsiteOptions struct {
+	// LinkPattern is a regular expression an article address must match. It is
+	// the difference between collecting a site's articles and collecting its
+	// navigation: most sites encode a date or a section in article addresses.
+	LinkPattern string
+
+	// Render fetches the page through the browser sidecar instead of over plain
+	// HTTP, for sites that build their markup in the browser.
+	Render bool
+
+	// MaxLinks caps how many articles one visit collects.
+	MaxLinks int
 }
 
 // RawItem is a freshly collected element, before any AI processing. Its text
