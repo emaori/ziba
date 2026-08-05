@@ -3,9 +3,15 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/emaori/ziba/internal/config"
+	"github.com/emaori/ziba/internal/store"
 )
 
 // version is overridden at build time via -ldflags (see the Makefile).
@@ -35,13 +41,47 @@ func run(args []string) error {
 		return errUsage
 	}
 
+	// Ctrl-C and the signal Docker sends on stop cancel the context, so a
+	// command in the middle of network or database work can stop cleanly.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	switch args[0] {
 	case "version":
 		fmt.Println(version)
 		return nil
+	case "migrate":
+		return migrateCmd(ctx)
 	default:
 		return fmt.Errorf("unknown command %q: %w", args[0], errUsage)
 	}
+}
+
+// migrateCmd brings the database schema up to date.
+func migrateCmd(ctx context.Context) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+
+	pool, err := store.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	applied, err := store.Migrate(ctx, pool)
+	if err != nil {
+		return err
+	}
+	if len(applied) == 0 {
+		fmt.Println("schema is up to date")
+		return nil
+	}
+	for _, name := range applied {
+		fmt.Printf("applied %s\n", name)
+	}
+	return nil
 }
 
 func usage() {
@@ -52,5 +92,6 @@ usage:
 
 commands:
   version   print the build version
+  migrate   apply pending database migrations
 `)
 }
