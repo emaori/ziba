@@ -58,6 +58,8 @@ func run(args []string) error {
 		return processCmd(ctx, args[1:])
 	case "digest":
 		return digestCmd(ctx, args[1:])
+	case "run":
+		return runCmd(ctx, args[1:])
 	case "serve":
 		return serveCmd(ctx, args[1:])
 	default:
@@ -104,6 +106,7 @@ commands:
   collect   read every enabled source and store what is new
   process   run the AI pipeline over articles not yet analyzed
   digest    build the selection for a day
-  serve     run the web interface
+  run       do the whole chain once: collect, retrieve, analyze, select
+  serve     run the web interface, and the schedule alongside it
 `)
 }

@@ -1,0 +1,16 @@
+# Keep the build context small, and keep secrets out of it entirely.
+.env
+*.local.yaml
+
+.git
+.gitignore
+
+bin/
+coverage.out
+
+README.md
+compose.yaml
+Dockerfile
+Makefile
+
+.DS_Store

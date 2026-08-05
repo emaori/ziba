@@ -165,10 +165,64 @@ censor.
 curator and says so in its output, but it makes the whole flow runnable while
 developing everything downstream.
 
+## Running it unattended
+
+`ziba serve` runs the web interface **and the schedule** in one process. All the
+timing lives in the binary — there is no cron entry and no systemd timer to
+install.
+
+```sh
+make deploy      # build the image and bring the whole stack up
+make app-logs    # watch it work
+make run-once    # do the whole chain now, without waiting for a timer
+```
+
+`make deploy` targets the **local** Docker engine, like every other Compose
+target here. Deploying to the homeserver is `DOCKER_CONTEXT=homeserver`, and has
+not been done yet.
+
+Two things the container needs that are easy to forget: `ca-certificates`,
+without which every HTTPS source fails, and `tzdata` plus a `TZ` setting —
+the digest is scheduled in *local* time, and a container that only knows UTC
+would build it at the wrong hour. Both are in the image; `TZ` is in `.env`.
+
+The container migrates the schema on startup. Migrations are idempotent and
+protected by a lock, and there is no opportunity to run them by hand in a
+container, so that is both safe and the only sensible moment.
+
+```sh
+make serve                       # interface + schedule
+make serve ARGS=-no-schedule     # interface only
+make run-once                    # the whole chain now, then exit
+```
+
+Two clocks, on purpose:
+
+| Setting | Default | What it does |
+|---|---|---|
+| `ZIBA_COLLECT_EVERY` | `6h` | Collect, retrieve full text, analyze. `0` disables the schedule entirely. |
+| `ZIBA_DIGEST_AT` | `06:30` | Build the day's selection, local time. |
+
+Feeds move through the day, so a front page collected once is a front page
+mostly missed — that wants an interval. The selection is a morning thing: it
+should be waiting when you arrive, not rebuilt under you while you read. The
+digest time is wall-clock, so it survives the clocks changing.
+
+Both values are parsed at startup, so a typo fails immediately rather than at
+half past six some morning. A scheduled run that fails is logged and the
+schedule continues; nothing is watching, and one bad night must not stop the
+next one. Without an API key the server still starts and still collects — it
+just skips analysis and says so.
+
+If the process was down at the appointed time, it builds that day's selection
+when it comes back — the one failure a reader would actually notice. It checks
+first, so an ordinary restart later in the day leaves a selection you may
+already be reading alone.
+
 ## Reading
 
 ```sh
-make digest    # build today's selection from what cleared the threshold
+make digest    # build today's selection by hand
 make serve     # http://localhost:8080
 ```
 
@@ -205,8 +259,13 @@ internal/config/    runtime configuration and YAML loading
 internal/collect/   one Collector per source type, plus full-text retrieval
 internal/pipeline/  AI stages: assessment and summarization
 internal/store/     PostgreSQL pool, migrations, queries
+internal/job/       the scheduled work, and the scheduler that drives it
 internal/web/       HTTP handlers, templates and stylesheet
 ```
+
+`internal/job` exists so the commands and the schedule run exactly the same
+code. A nightly run that differs from what you get by typing the command is a
+bug waiting for a quiet night to happen.
 
 `internal/domain` is imported by all of them and imports none of them, which is
 what keeps the dependencies acyclic.

@@ -75,6 +75,21 @@ func (s *Store) GenerateDigest(ctx context.Context, date time.Time, threshold do
 	return int(tag.RowsAffected()), nil
 }
 
+// HasDigest reports whether a selection has already been built for a day.
+//
+// The scheduler asks this on startup: a process that was down at the appointed
+// time should still build the day's selection, but one that merely restarted
+// afterwards must not rebuild a selection the reader may already be reading.
+func (s *Store) HasDigest(ctx context.Context, date time.Time) (bool, error) {
+	var exists bool
+	err := s.pool.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM digests WHERE date = $1::date)`, date).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check digest for %s: %w", date.Format(time.DateOnly), err)
+	}
+	return exists, nil
+}
+
 // LatestDigest returns the most recent stored digest with its articles in rank
 // order. It reports pgx.ErrNoRows when none has been generated yet.
 func (s *Store) LatestDigest(ctx context.Context) (domain.Digest, error) {

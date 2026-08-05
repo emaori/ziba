@@ -5,6 +5,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 // DefaultSourcesPath is where the hand-edited source list lives unless
@@ -35,6 +36,12 @@ type Config struct {
 	// RenderURL points at the browser sidecar. Empty disables rendering, which
 	// only matters for sources that ask for it.
 	RenderURL string
+
+	// CollectEvery is how often the unattended schedule collects and analyzes.
+	CollectEvery time.Duration
+
+	// DigestAt is when it builds the day's selection.
+	DigestAt TimeOfDay
 }
 
 // Load reads the configuration from the environment.
@@ -51,6 +58,27 @@ func Load() (Config, error) {
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("ZIBA_DATABASE_URL is not set")
 	}
+
+	// The schedule is parsed here rather than where it is used, so a mistyped
+	// value fails at startup instead of at half past six some morning.
+	cfg.CollectEvery = DefaultCollectEvery
+	if raw := os.Getenv("ZIBA_COLLECT_EVERY"); raw != "" {
+		every, err := time.ParseDuration(raw)
+		if err != nil {
+			return Config{}, fmt.Errorf("ZIBA_COLLECT_EVERY: %w", err)
+		}
+		if every > 0 && every < time.Minute {
+			return Config{}, fmt.Errorf("ZIBA_COLLECT_EVERY: %s is too often; use a minute or more", every)
+		}
+		cfg.CollectEvery = every
+	}
+
+	digestAt, err := ParseTimeOfDay(envOr("ZIBA_DIGEST_AT", DefaultDigestAt))
+	if err != nil {
+		return Config{}, fmt.Errorf("ZIBA_DIGEST_AT: %w", err)
+	}
+	cfg.DigestAt = digestAt
+
 	return cfg, nil
 }
 

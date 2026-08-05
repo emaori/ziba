@@ -21,7 +21,7 @@ SSH_HOST ?= homeserver
 DB_PORT  ?= 5432
 
 .PHONY: build run test fmt vet tidy check clean \
-        dev up down restart ps logs db-psql db-tunnel migrate collect process digest serve
+        dev image deploy up down restart ps logs app-logs db-psql db-tunnel migrate collect process digest run-once serve
 
 ## build: compile the binary into bin/
 build:
@@ -56,6 +56,17 @@ clean:
 
 ## dev: bring the whole local stack up and migrate — one command to start working
 dev: up migrate
+
+## image: build the application image
+image:
+	$(COMPOSE) build ziba-api
+
+## deploy: rebuild the image and bring the stack up (local by default)
+deploy: image up
+
+## app-logs: follow the application's log only
+app-logs:
+	$(COMPOSE) logs -f ziba-api
 
 ## up: start every service and wait until each reports healthy
 up: .env
@@ -104,7 +115,11 @@ process: .env
 digest: .env
 	set -a; . ./.env; set +a; go run ./cmd/$(BINARY) digest $(ARGS)
 
-## serve: run the web interface on http://localhost:8080
+## run-once: do the whole chain once — collect, retrieve, analyze, select
+run-once: .env
+	set -a; . ./.env; set +a; go run ./cmd/$(BINARY) run $(ARGS)
+
+## serve: run the web interface and the schedule on http://localhost:8080
 serve: .env
 	set -a; . ./.env; set +a; go run ./cmd/$(BINARY) serve $(ARGS)
 

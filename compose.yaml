@@ -30,6 +30,44 @@ services:
       retries: 5
       start_period: 10s
 
+  # Ziba itself: the web interface and the schedule, in one process.
+  ziba-api:
+    build:
+      context: .
+      args:
+        VERSION: ${ZIBA_VERSION:-dev}
+    image: ziba-api:local
+    container_name: ziba-api
+    restart: unless-stopped
+    depends_on:
+      ziba-db:
+        condition: service_healthy
+      ziba-playwright:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # These override whatever .env holds, because inside the network the
+      # other services are reached by name, not on loopback. The values in .env
+      # are for running the binary outside Docker during development.
+      ZIBA_DATABASE_URL: postgres://${POSTGRES_USER:-ziba}:${POSTGRES_PASSWORD}@ziba-db:5432/ziba?sslmode=disable
+      ZIBA_RENDER_URL: http://ziba-playwright:3000
+      # The digest is scheduled in local time, so the container has to know
+      # which local. Without this it would run on UTC.
+      TZ: ${TZ:-Europe/Rome}
+    volumes:
+      # The hand-edited files, mounted read-only: editing them and restarting is
+      # the whole workflow, no rebuild involved.
+      - ./config:/app/config:ro
+    ports:
+      - "127.0.0.1:${ZIBA_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
   # Headless Chromium, for sites that build their markup in the browser.
   #
   # A separate container is not an architectural boundary — Ziba is a monolith —
