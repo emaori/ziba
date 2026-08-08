@@ -28,7 +28,7 @@
              {{if not .Nav.Last.IsZero}}max="{{isoDate .Nav.Last}}"{{end}}>
     </label>
 
-    {{/* Kept for anyone whose browser does not run the script below. */}}
+    {{/* Kept for anyone whose browser does not run app.js. */}}
     <button class="button secondary" type="submit">Show</button>
 
     {{if .Nav.Next.IsZero}}
@@ -50,12 +50,4 @@
       {{end}}
     </p>
   {{end}}
-
-  {{/* Progressive enhancement, and the only script in Ziba: picking a date
-       navigates immediately instead of requiring the button. Without it the
-       form still works — the button is right there. */}}
-  <script>
-    document.querySelector('.daypick input[type=date]')
-      .addEventListener('change', function () { this.form.submit(); });
-  </script>
 {{end}}

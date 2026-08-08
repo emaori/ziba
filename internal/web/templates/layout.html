@@ -31,6 +31,9 @@
   <footer>
     <p>Ziba — personal content aggregator</p>
   </footer>
+
+  {{/* Deferred, and purely an enhancement: every page works without it. */}}
+  <script src="/static/app.js" defer></script>
 </body>
 </html>
 {{end}}
@@ -65,9 +68,15 @@
 {{define "archiveButton"}}
 <form class="inline" method="post" action="/article/{{.ID}}/{{if .Archived}}unarchive{{else}}archive{{end}}">
   {{if .Archived}}
-    <button class="button secondary" type="submit" title="Put this back in the reading list">↩ Unread</button>
+    <button class="button secondary" type="submit"
+            title="Put this back in the reading list"
+            data-alt-label="✓ Mark read"
+            data-alt-title="Take this out of the reading list">↩ Unread</button>
   {{else}}
-    <button class="button secondary" type="submit" title="Take this out of the reading list">✓ Mark read</button>
+    <button class="button secondary" type="submit"
+            title="Take this out of the reading list"
+            data-alt-label="↩ Unread"
+            data-alt-title="Put this back in the reading list">✓ Mark read</button>
   {{end}}
 </form>
 {{end}}

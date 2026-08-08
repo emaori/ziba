@@ -144,6 +144,11 @@ func (s *Server) handleArticle(w http.ResponseWriter, r *http.Request) {
 // It answers a form post and redirects, rather than rendering. That is the
 // post-redirect-get pattern, and it is what stops the browser's back button and
 // refresh from silently repeating the action.
+//
+// Unless the post came from the page's own script, which asks for no reply at
+// all: reloading to change one button threw the reader back to the top of the
+// page. The redirect remains the answer to a plain form post, so the button
+// still works with the script absent.
 func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
@@ -161,8 +166,17 @@ func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Header.Get(asyncHeader) != "" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	http.Redirect(w, r, backTo(r), http.StatusSeeOther)
 }
+
+// asyncHeader marks a post made by app.js rather than by submitting a form.
+// Only a same-origin script can set it — a cross-site form post cannot add a
+// header — so honouring it does not widen what a hostile page can do here.
+const asyncHeader = "X-Ziba-Async"
 
 // backTo works out where to send the reader after they press a button.
 //

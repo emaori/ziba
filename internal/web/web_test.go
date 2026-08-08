@@ -183,7 +183,11 @@ func TestReaderEscapesArticleText(t *testing.T) {
 
 	// The test is whether a tag survives, not whether the words do: once the
 	// angle brackets are escaped, "onerror=" is inert text on the page.
-	for _, tag := range []string{"<script", "<img"} {
+	//
+	// Matched against what was injected rather than against "<script" alone,
+	// because the layout legitimately loads one script of its own and a blanket
+	// check would fail on that instead of on a real hole.
+	for _, tag := range []string{"<script>alert", "<img"} {
 		if strings.Contains(body, tag) {
 			t.Errorf("%q was rendered as markup, not escaped", tag)
 		}
@@ -446,5 +450,91 @@ func TestEmptyDayPointsSomewhere(t *testing.T) {
 	}
 	if !strings.Contains(body, `/day?date=2026-08-06`) {
 		t.Error("an empty day offers no way to a day that has something")
+	}
+}
+
+// Marking read from the page's own script must not answer with a redirect: the
+// reload is the whole thing being avoided.
+func TestArchiveAsyncGetsNoRedirect(t *testing.T) {
+	store := &fakeStore{}
+	handler := newTestServer(t, store)
+
+	req := httptest.NewRequest(http.MethodPost, "/article/42/archive", nil)
+	req.Header.Set("X-Ziba-Async", "1")
+	req.Header.Set("Referer", "http://example.com/")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("status = %d, want 204", rec.Code)
+	}
+	if location := rec.Header().Get("Location"); location != "" {
+		t.Errorf("async post was redirected to %q, want no redirect", location)
+	}
+	if len(store.archivedCalls) != 1 || !store.archivedCalls[0] {
+		t.Errorf("archivedCalls = %v, want one archive", store.archivedCalls)
+	}
+}
+
+// The script is an enhancement, so the plain form post must keep redirecting.
+func TestArchiveWithoutScriptStillRedirects(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{})
+
+	rec := post(t, handler, "/article/42/archive", "http://example.com/interest/AI")
+
+	if rec.Code != http.StatusSeeOther {
+		t.Errorf("status = %d, want 303", rec.Code)
+	}
+	if want := "/interest/AI"; rec.Header().Get("Location") != want {
+		t.Errorf("Location = %q, want %q", rec.Header().Get("Location"), want)
+	}
+}
+
+// The script swaps the button between its two states, and takes both labels
+// from the markup rather than keeping its own copy. If the template stops
+// emitting them the enhancement silently blanks the button.
+func TestArchiveButtonCarriesBothLabels(t *testing.T) {
+	article := sampleArticle()
+	handler := newTestServer(t, &fakeStore{
+		article:  article,
+		articles: []domain.Article{article},
+	})
+
+	for _, path := range []string{"/interest/Robotics", "/article/42"} {
+		_, body := get(t, handler, path)
+		for _, want := range []string{
+			`data-alt-label="↩ Unread"`,
+			`data-alt-title="Put this back in the reading list"`,
+		} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: button is missing %s", path, want)
+			}
+		}
+	}
+
+	// And the other way round for an article already read.
+	read := sampleArticle()
+	read.ArchivedAt = time.Now()
+	handler = newTestServer(t, &fakeStore{article: read})
+
+	_, body := get(t, handler, "/article/42")
+	if !strings.Contains(body, `data-alt-label="✓ Mark read"`) {
+		t.Error("an archived article's button does not offer the way back")
+	}
+}
+
+// The enhancement is loaded on every page, and is the only script.
+func TestScriptIsLoadedAndDeferred(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{article: sampleArticle()})
+
+	_, body := get(t, handler, "/article/42")
+
+	if !strings.Contains(body, `<script src="/static/app.js" defer></script>`) {
+		t.Error("app.js is not loaded, or not deferred")
+	}
+	// Inline script would defeat the point of having one file, and is the thing
+	// that quietly accumulates.
+	if strings.Count(body, "<script") != 1 {
+		t.Error("page carries more than one script")
 	}
 }

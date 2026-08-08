@@ -184,6 +184,13 @@ form.inline .button { font: inherit; cursor: pointer; border: 1px solid var(--ru
   border-radius: 3px;
 }
 
+/* Marked read without leaving the page. The card stays where it is — removing
+   it would shift everything below out from under the cursor — but recedes, so
+   a glance down the page shows what has been dealt with. It disappears from
+   the reading lists on the next load, and until then the button undoes it. */
+.card.read { opacity: 0.45; }
+.card.read:hover, .card.read:focus-within { opacity: 1; }
+
 .card h2 { margin: 0.4rem 0 0.6rem; font-size: 1.25rem; line-height: 1.25; }
 .card h2 a { color: var(--ink); text-decoration: none; }
 .card h2 a:hover { color: var(--accent); }
