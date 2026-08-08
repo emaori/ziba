@@ -28,6 +28,21 @@ var nonEditorialHosts = []string{
 	"apple.com/app-store", "play.google.com",
 }
 
+// videoHosts carry real editorial content, but none of it is text. Following
+// one yields a page of player markup and a description, which is not an article
+// however it is scored.
+//
+// This is a temporary exclusion, not a judgement: video is a planned source with
+// its own collector, and when that exists these links should be collected as
+// video rather than dropped.
+var videoHosts = []string{
+	"youtube.com", "youtu.be", "vimeo.com", "twitch.tv", "dailymotion.com",
+}
+
+// skippedHosts is the two lists above as one, built once rather than joined on
+// every link tested.
+var skippedHosts = append(append([]string{}, nonEditorialHosts...), videoHosts...)
+
 // nonEditorialPaths mark list management and boilerplate rather than content.
 var nonEditorialPaths = []string{
 	"unsubscribe", "optout", "opt-out", "opt_out", "preferences", "manage-subscription",
@@ -115,7 +130,7 @@ func editorialLink(n *html.Node, seen map[string]bool) (extractedLink, bool) {
 
 func isNonEditorial(u *url.URL) bool {
 	host := strings.ToLower(strings.TrimPrefix(u.Hostname(), "www."))
-	for _, blocked := range nonEditorialHosts {
+	for _, blocked := range skippedHosts {
 		if host == blocked || strings.HasSuffix(host, "."+blocked) ||
 			strings.HasPrefix(host+u.Path, blocked) {
 			return true

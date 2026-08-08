@@ -202,6 +202,52 @@ sources:
 	}
 }
 
+func TestLoadRoundupSource(t *testing.T) {
+	sources, err := LoadSources(writeSources(t, `
+sources:
+  - name: "Weekly digest"
+    type: rss
+    url: "https://example.com/rss"
+    roundup: true
+  - name: "Ordinary feed"
+    type: rss
+    url: "https://example.com/feed"
+`))
+	if err != nil {
+		t.Fatalf("LoadSources returned error: %v", err)
+	}
+	if !sources[0].Roundup {
+		t.Error("Roundup = false for a source marked roundup: true")
+	}
+	// The default matters more than the flag: every other feed must keep
+	// behaving as it did.
+	if sources[1].Roundup {
+		t.Error("Roundup = true for a source that never mentioned it")
+	}
+}
+
+func TestLoadSourcesRejectsRoundupOnMailbox(t *testing.T) {
+	t.Setenv("TEST_IMAP_USER", "reader")
+	t.Setenv("TEST_IMAP_PASS", "secret")
+
+	_, err := LoadSources(writeSources(t, `
+sources:
+  - name: "Mailbox"
+    type: newsletter
+    url: "imaps://mail.example.com"
+    roundup: true
+    newsletter:
+      username_env: TEST_IMAP_USER
+      password_env: TEST_IMAP_PASS
+`))
+	if err == nil {
+		t.Fatal("LoadSources accepted roundup on a newsletter, want it rejected")
+	}
+	if !strings.Contains(err.Error(), "roundup applies to type rss") {
+		t.Errorf("error %q does not explain that roundup is for feeds", err)
+	}
+}
+
 func TestLoadSourcesMissingFile(t *testing.T) {
 	if _, err := LoadSources(filepath.Join(t.TempDir(), "absent.yaml")); err == nil {
 		t.Error("LoadSources returned no error for a missing file, want one")

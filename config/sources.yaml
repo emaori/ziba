@@ -41,9 +41,13 @@ sources:
   # Its feed carries 277 entries reaching back to April 2021, so without a
   # cutoff it arrives with five years of backlog. Two weeks rather than the
   # default one, because it publishes in weekly batches.
+  # A weekly link digest, not an article feed: every entry is one issue, and the
+  # issue page lists ten other people's articles. Marked as a roundup so Ziba
+  # reads it for its links rather than storing the table of contents.
   - name: ".NET Ketchup"
     type: rss
     url: "https://dotnetketchup.com/rss"
+    roundup: true
     collect_from: 14d
 
   # Communications of the ACM — the eight subject feeds.

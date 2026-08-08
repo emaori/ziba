@@ -103,28 +103,64 @@ func (s *Store) SaveRawItems(ctx context.Context, items []domain.RawItem) (int, 
 // origin, but it is not itself reading material and must never reach the
 // archive as an article.
 func (s *Store) UnprocessedRawItems(ctx context.Context, limit int) ([]domain.RawItem, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT id, source_id, title, url, author,
-		       COALESCE(published_at, collected_at), collected_at, text
-		FROM raw_items
-		WHERE processed_at IS NULL
-		  AND kind = 'article'
-		ORDER BY collected_at
-		LIMIT $1`, limit)
+	return s.queueOf(ctx, domain.ItemKindArticle, limit)
+}
+
+// UnexpandedRoundups returns the collected issues of link digests that have not
+// yet been opened, oldest first, up to limit.
+//
+// They queue separately from articles because they are drained by a different
+// stage: opening one produces articles rather than consuming them.
+func (s *Store) UnexpandedRoundups(ctx context.Context, limit int) ([]domain.RawItem, error) {
+	return s.queueOf(ctx, domain.ItemKindRoundup, limit)
+}
+
+// queueOf reads one kind's backlog.
+//
+// The kind is written into the statement rather than bound as a parameter, and
+// deliberately so: each queue has a partial index that names the kind as a
+// constant, and an index like that is only usable when the query names it as a
+// constant too. The value comes from a package constant chosen here, never from
+// input, so there is nothing to inject.
+func (s *Store) queueOf(ctx context.Context, kind domain.ItemKind, limit int) ([]domain.RawItem, error) {
+	var query string
+	switch kind {
+	case domain.ItemKindArticle:
+		query = queueQuery("article")
+	case domain.ItemKindRoundup:
+		query = queueQuery("roundup")
+	default:
+		return nil, fmt.Errorf("no queue for item kind %q", kind)
+	}
+
+	rows, err := s.pool.Query(ctx, query, limit)
 	if err != nil {
-		return nil, fmt.Errorf("query unprocessed items: %w", err)
+		return nil, fmt.Errorf("query unprocessed %s items: %w", kind, err)
 	}
 
 	items, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.RawItem, error) {
-		var item domain.RawItem
+		item := domain.RawItem{Kind: kind}
 		err := row.Scan(&item.ID, &item.SourceID, &item.Title, &item.URL, &item.Author,
 			&item.PublishedAt, &item.CollectedAt, &item.Text)
 		return item, err
 	})
 	if err != nil {
-		return nil, fmt.Errorf("read unprocessed items: %w", err)
+		return nil, fmt.Errorf("read unprocessed %s items: %w", kind, err)
 	}
 	return items, nil
+}
+
+// queueQuery builds the backlog statement for one kind. Only queueOf calls it,
+// and only with a literal.
+func queueQuery(kind string) string {
+	return `
+		SELECT id, source_id, title, url, author,
+		       COALESCE(published_at, collected_at), collected_at, text
+		FROM raw_items
+		WHERE processed_at IS NULL
+		  AND kind = '` + kind + `'
+		ORDER BY collected_at
+		LIMIT $1`
 }
 
 // SaveArticle stores an article and reports whether it was new. An article

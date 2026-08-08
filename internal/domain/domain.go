@@ -42,6 +42,14 @@ type Source struct {
 	// CollectFrom bounds how much history a source contributes.
 	CollectFrom CollectFrom
 
+	// Roundup marks a feed whose entries are not articles but issues of a link
+	// digest: each entry points at a page that lists other people's articles.
+	// Such a feed is read one level deeper — the entry is kept as provenance and
+	// the links it leads to become the articles.
+	//
+	// It cannot be detected reliably from the feed itself, so it is configured.
+	Roundup bool
+
 	// Newsletter carries the settings only a mailbox needs, and is nil
 	// otherwise. Settings live here rather than in the database because the
 	// configuration file is their source of truth; storing them would give them
@@ -145,6 +153,12 @@ const (
 	// articles it links to, while the email itself only answers "where did this
 	// come from".
 	ItemKindProvenance ItemKind = "provenance"
+
+	// ItemKindRoundup is a page that lists other people's articles: one issue of
+	// a link digest. It is not reading material either, but unlike provenance it
+	// still has work to do — it is fetched once so the links can be pulled out
+	// of it, and becomes provenance in spirit thereafter.
+	ItemKindRoundup ItemKind = "roundup"
 )
 
 // RawItem is a freshly collected element, before any AI processing.

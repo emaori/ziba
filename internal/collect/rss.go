@@ -76,8 +76,16 @@ func (c *RSS) toRawItem(src domain.Source, entry *gofeed.Item, now time.Time) (d
 		published = entry.UpdatedParsed.UTC()
 	}
 
+	// A roundup feed's entries are issues, not articles: they are marked so the
+	// expansion stage opens them instead of the full-text stage storing them.
+	kind := domain.ItemKindArticle
+	if src.Roundup {
+		kind = domain.ItemKindRoundup
+	}
+
 	return domain.RawItem{
 		SourceID:    src.ID,
+		Kind:        kind,
 		Title:       strings.TrimSpace(entry.Title),
 		URL:         url,
 		Author:      firstAuthor(entry),

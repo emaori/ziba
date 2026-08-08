@@ -33,6 +33,16 @@ func collectCmd(ctx context.Context, args []string) error {
 		return nil
 	}
 
+	// Before the full text, because opening one issue of a link digest is what
+	// produces the items the next stage retrieves.
+	opened, queued, err := s.runner.Expand(ctx, *batchSize)
+	if err != nil {
+		return err
+	}
+	if opened > 0 {
+		fmt.Printf("opened %d roundups, queued %d articles\n", opened, queued)
+	}
+
 	processed, created, err := s.runner.Hydrate(ctx, *batchSize)
 	if err != nil {
 		return err

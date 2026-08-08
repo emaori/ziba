@@ -39,6 +39,7 @@ type Runner struct {
 	store     *store.Store
 	registry  *collect.Registry
 	fullText  *collect.FullText
+	roundup   *collect.Roundup
 	pipeline  *pipeline.Pipeline
 	threshold domain.RelevanceScore
 	interests []string
@@ -73,6 +74,7 @@ func New(cfg config.Config, sources []domain.Source, interests config.Interests,
 			collect.NewNewsletter(log),
 		),
 		fullText:  collect.NewFullText(client),
+		roundup:   collect.NewRoundup(client),
 		pipeline:  p,
 		threshold: domain.RelevanceScore(interests.Threshold),
 		interests: interestNames(interests),
@@ -133,6 +135,53 @@ func (r *Runner) Collect(ctx context.Context) (CollectResult, error) {
 			"found", len(res.Items), "new", inserted, "too_old", tooOld)
 	}
 	return result, nil
+}
+
+// Expand opens the collected issues of link digests and queues the articles
+// they point at.
+//
+// It sits between collection and full text because it produces work for the
+// stage after it: one issue becomes ten raw items, which the next Hydrate then
+// turns into articles. An issue that yields nothing is still marked done —
+// a week with no links worth keeping is a normal week, not a failure to retry.
+func (r *Runner) Expand(ctx context.Context, batch int) (opened, queued int, err error) {
+	issues, err := r.store.UnexpandedRoundups(ctx, batch)
+	if err != nil {
+		return 0, 0, err
+	}
+	if len(issues) == 0 {
+		return 0, 0, nil
+	}
+
+	done := make([]int64, 0, len(issues))
+	for _, issue := range issues {
+		if ctx.Err() != nil {
+			break
+		}
+
+		links, err := r.roundup.Links(ctx, issue)
+		if err != nil {
+			// Leave it unprocessed: unlike a missing article body, there is no
+			// partial result worth keeping, and the next run should try again.
+			r.log.Warn("roundup unavailable", "url", issue.URL, "error", err)
+			continue
+		}
+
+		inserted, err := r.store.SaveRawItems(ctx, links)
+		if err != nil {
+			return len(done), queued, err
+		}
+
+		r.log.Info("roundup expanded", "issue", issue.Title,
+			"links", len(links), "new", inserted)
+		queued += inserted
+		done = append(done, issue.ID)
+	}
+
+	if err := r.store.MarkRawItemsProcessed(ctx, done); err != nil {
+		return len(done), queued, err
+	}
+	return len(done), queued, nil
 }
 
 // Hydrate turns collected items into articles by retrieving their full text.
@@ -258,6 +307,14 @@ func (r *Runner) Daily(ctx context.Context, batch int) error {
 	}
 	r.log.Info("collection finished",
 		"sources", collected.Sources, "new", collected.New, "failed", collected.Failed)
+
+	opened, queued, err := r.Expand(ctx, batch)
+	if err != nil {
+		return fmt.Errorf("expand roundups: %w", err)
+	}
+	if opened > 0 {
+		r.log.Info("roundups finished", "issues", opened, "articles_queued", queued)
+	}
 
 	processed, created, err := r.Hydrate(ctx, batch)
 	if err != nil {

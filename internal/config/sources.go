@@ -38,6 +38,12 @@ type SourceEntry struct {
 	// the default grace.
 	CollectFrom string `yaml:"collect_from"`
 
+	// Roundup marks a feed that publishes issues of a link digest rather than
+	// articles: each entry points at a page listing other people's writing.
+	// Ziba then reads that page for its links instead of storing it. Applies to
+	// RSS only.
+	Roundup bool `yaml:"roundup"`
+
 	// Newsletter applies to mailboxes only.
 	Newsletter *NewsletterEntry `yaml:"newsletter"`
 }
@@ -159,11 +165,17 @@ func (e SourceEntry) toDomain() (domain.Source, error) {
 		return domain.Source{}, fmt.Errorf("collect_from: %w", err)
 	}
 
+	if e.Roundup && sourceType != domain.SourceTypeRSS {
+		return domain.Source{}, fmt.Errorf("roundup applies to type rss, not %q — "+
+			"a newsletter is already read for its links", e.Type)
+	}
+
 	source := domain.Source{
 		Name:        e.Name,
 		Type:        sourceType,
 		URL:         url,
 		Enabled:     enabled,
+		Roundup:     e.Roundup,
 		CollectFrom: collectFrom,
 	}
 

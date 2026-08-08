@@ -58,9 +58,12 @@ func (f *FullText) Article(ctx context.Context, item domain.RawItem) (domain.Art
 		article.FullText = text
 	}
 	// The feed is the more trustworthy source of a title; the page only fills
-	// in what is missing.
-	if article.Title == "" {
-		article.Title = strings.TrimSpace(extracted.Title)
+	// in what is missing — or what is not really a title. A roundup links each
+	// article twice, once behind its headline and once behind the bare address,
+	// and when the address comes first that is the text we are left holding.
+	if title := strings.TrimSpace(extracted.Title); title != "" &&
+		(article.Title == "" || looksLikeURL(article.Title)) {
+		article.Title = title
 	}
 	if article.Author == "" {
 		article.Author = strings.TrimSpace(extracted.Byline)
@@ -89,6 +92,17 @@ func (f *FullText) extract(ctx context.Context, rawURL string) (readability.Arti
 		return readability.Article{}, fmt.Errorf("extract readable content: %w", err)
 	}
 	return article, nil
+}
+
+// looksLikeURL reports whether a title is really just an address. Anchor text
+// is not always a headline, and "https://example.com/writing/some-slug" tells a
+// reader nothing that the link itself does not.
+func looksLikeURL(title string) bool {
+	title = strings.TrimSpace(title)
+	if strings.ContainsAny(title, " \t") {
+		return false
+	}
+	return strings.HasPrefix(title, "http://") || strings.HasPrefix(title, "https://")
 }
 
 // plainText reduces feed content, which is usually HTML, to something readable.
