@@ -660,3 +660,22 @@ func TestMarkReadSitsWhereItShould(t *testing.T) {
 		t.Error("the rule pushing the control to the right edge is gone")
 	}
 }
+
+// An article whose page could not be fetched — paywalled, or refusing the
+// request — must say so rather than showing an empty reading column.
+func TestReaderExplainsMissingText(t *testing.T) {
+	article := sampleArticle()
+	article.FullText = ""
+	handler := newTestServer(t, &fakeStore{article: article})
+
+	_, body := get(t, handler, "/article/42")
+
+	if !strings.Contains(body, "could not be retrieved") {
+		t.Error("an article with no text renders a blank column with no explanation")
+	}
+	// And an article that does have text must not be told it has none.
+	handler = newTestServer(t, &fakeStore{article: sampleArticle()})
+	if _, body := get(t, handler, "/article/42"); strings.Contains(body, "could not be retrieved") {
+		t.Error("an article with text claims its text is missing")
+	}
+}

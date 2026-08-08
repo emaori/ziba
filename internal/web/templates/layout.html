@@ -55,7 +55,7 @@
 
   <div class="actions">
     <a class="button" href="/article/{{.ID}}">Read in Ziba</a>
-    <a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>
+    {{if .HasOriginal}}<a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>{{end}}
     {{template "archiveButton" .}}
   </div>
 </article>

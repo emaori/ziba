@@ -2,6 +2,7 @@ package collect
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,11 @@ import (
 
 	"github.com/emaori/ziba/internal/domain"
 )
+
+// ErrNotArticle marks a link that turned out not to lead to reading material.
+// It is not a failure: the item was collected correctly and there is simply
+// nothing to store, so the caller should move on rather than retry.
+var ErrNotArticle = errors.New("not an article")
 
 // maxArticleBytes caps how much of a page is read. Some pages are enormous, and
 // an article that needs more than this is not an article.
@@ -47,7 +53,42 @@ func (f *FullText) Article(ctx context.Context, item domain.RawItem) (domain.Art
 		FullText:    plainText(item.Text),
 	}
 
-	extracted, err := f.extract(ctx, item.URL)
+	// A newsletter that is itself the article has a synthetic address and its
+	// text already in hand. There is nothing to fetch, and trying would only
+	// produce a warning about an unsupported scheme.
+	if !strings.HasPrefix(item.URL, "http://") && !strings.HasPrefix(item.URL, "https://") {
+		return article, nil
+	}
+
+	extracted, landed, err := f.extract(ctx, item.URL)
+
+	// Where the link actually landed becomes the article's identity.
+	//
+	// Newsletters rarely link straight at an article. They link at a click
+	// tracker that redirects, and that tracker's address is unique to the
+	// recipient and often to the send — so storing it would give the same
+	// article a different identity every time it arrived, which is precisely
+	// what identity-by-address exists to prevent.
+	//
+	// Applied before the error is considered, because the two are independent:
+	// a tracker resolves to a real address even when the page it names then
+	// refuses us. Keeping the tracker in that case would be the worst of both,
+	// an article filed under an address that identifies nothing and cannot be
+	// retried.
+	if landed != "" && landed != item.URL {
+		article.URL = landed
+	}
+
+	// The link filters ran on the address in the email, which for most
+	// newsletters is a tracker that reveals nothing. Now that the destination is
+	// known, judge it too — otherwise a video reaches the archive simply by
+	// having been linked through a redirect.
+	if landed != "" {
+		if parsed, perr := url.Parse(landed); perr == nil && isNonEditorial(parsed) {
+			return article, fmt.Errorf("%w: %s", ErrNotArticle, landed)
+		}
+	}
+
 	if err != nil {
 		// Not fatal: the article is stored with the excerpt, and can be
 		// retried later.
@@ -71,17 +112,20 @@ func (f *FullText) Article(ctx context.Context, item domain.RawItem) (domain.Art
 	return article, nil
 }
 
-func (f *FullText) extract(ctx context.Context, rawURL string) (readability.Article, error) {
+// extract fetches a page and returns its readable content along with the
+// address the request finally landed on, which is not the one asked for
+// whenever a redirect was followed.
+func (f *FullText) extract(ctx context.Context, rawURL string) (readability.Article, string, error) {
 	resp, err := get(ctx, f.client, rawURL)
 	if err != nil {
-		return readability.Article{}, err
+		// A refused page still tells us where the redirects ended.
+		return readability.Article{}, landingOf(resp), err
 	}
 	defer resp.Body.Close()
 
-	parsed, err := url.Parse(rawURL)
-	if err != nil {
-		return readability.Article{}, fmt.Errorf("parse url: %w", err)
-	}
+	// The client follows redirects, and resp.Request is the last one made.
+	parsed := resp.Request.URL
+	landed := landingOf(resp)
 
 	// LimitReader, not the whole body: a malformed or hostile page must not be
 	// able to exhaust memory.
@@ -89,9 +133,22 @@ func (f *FullText) extract(ctx context.Context, rawURL string) (readability.Arti
 
 	article, err := readability.FromReader(body, parsed)
 	if err != nil {
-		return readability.Article{}, fmt.Errorf("extract readable content: %w", err)
+		return readability.Article{}, landed, fmt.Errorf("extract readable content: %w", err)
 	}
-	return article, nil
+	return article, landed, nil
+}
+
+// landingOf reports the normalized address a response came from, or "" when
+// there is nothing usable to report.
+func landingOf(resp *http.Response) string {
+	if resp == nil || resp.Request == nil || resp.Request.URL == nil {
+		return ""
+	}
+	landed, err := domain.NormalizeURL(resp.Request.URL.String())
+	if err != nil {
+		return ""
+	}
+	return landed
 }
 
 // looksLikeURL reports whether a title is really just an address. Anchor text

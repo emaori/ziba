@@ -5,6 +5,7 @@ package domain
 
 import (
 	"context"
+	"strings"
 	"time"
 )
 
@@ -234,6 +235,15 @@ type Article struct {
 
 // Archived reports whether the reader has marked this article read.
 func (a Article) Archived() bool { return !a.ArchivedAt.IsZero() }
+
+// HasOriginal reports whether there is somewhere else to read this.
+//
+// Usually there is, and the reader offers it. An essay sent by email has no
+// external original — the email is the article — and its address is the
+// synthetic one that identifies the message, which no browser can open.
+func (a Article) HasOriginal() bool {
+	return strings.HasPrefix(a.URL, "http://") || strings.HasPrefix(a.URL, "https://")
+}
 
 // Digest is the daily selection of the most relevant articles, ranked by score.
 // Only the date part of Date is meaningful.

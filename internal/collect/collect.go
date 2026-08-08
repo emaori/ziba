@@ -25,6 +25,12 @@ const userAgent = "Ziba/1.0 (personal content aggregator)"
 const maxParallelSources = 4
 
 // get performs a GET carrying the Ziba user agent and honouring ctx.
+//
+// On a bad status it returns both the error and the response, with the body
+// already closed. That is unusual, and deliberate: the response records where
+// the request finally landed after redirects, which is worth knowing even when
+// the page itself was refused — a newsletter's click tracker resolves to a real
+// article address whether or not that article lets us read it.
 func get(ctx context.Context, client *http.Client, url string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -38,7 +44,7 @@ func get(ctx context.Context, client *http.Client, url string) (*http.Response, 
 	}
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, fmt.Errorf("get %s: unexpected status %s", url, resp.Status)
+		return resp, fmt.Errorf("get %s: unexpected status %s", url, resp.Status)
 	}
 	return resp, nil
 }

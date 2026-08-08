@@ -9,6 +9,7 @@ package job
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -201,6 +202,14 @@ func (r *Runner) Hydrate(ctx context.Context, batch int) (processed, created int
 		}
 
 		article, err := r.fullText.Article(ctx, item)
+		if errors.Is(err, collect.ErrNotArticle) {
+			// A link that leads somewhere we do not store — a video, most
+			// often, reached through a newsletter's redirect. Mark it done and
+			// move on: there is nothing to keep and nothing to retry.
+			r.log.Info("skipping link", "url", item.URL, "reason", err)
+			done = append(done, item.ID)
+			continue
+		}
 		if err != nil {
 			// The article is still usable with the feed excerpt, so this is a
 			// warning: the run continues and stores what it has.

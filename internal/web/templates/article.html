@@ -16,7 +16,7 @@
        Both copies stay in step: the script toggles every control for the
        article, not just the one that was clicked. */}}
   <div class="actions">
-    <a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>
+    {{if .HasOriginal}}<a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>{{end}}
     {{template "archiveButton" .}}
   </div>
 
@@ -29,12 +29,23 @@
   {{end}}
   <div class="body">
     {{range paragraphs .FullText}}<p>{{.}}</p>{{end}}
+    {{/* A page behind a paywall, or one that refused the request, leaves the
+         article with nothing to read. Saying so beats a blank column: the
+         article is still worth knowing about, and the original still opens. */}}
+    {{if not .FullText}}
+      <p class="note">
+        The text of this article could not be retrieved — the page may be behind
+        a paywall, or may have refused the request. Use
+        <a href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>
+        to read it at the source.
+      </p>
+    {{end}}
   </div>
   {{if .Entities}}
     <p class="entities">Mentions: {{join .Entities ", "}}</p>
   {{end}}
   <div class="actions">
-    <a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>
+    {{if .HasOriginal}}<a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>{{end}}
     {{template "archiveButton" .}}
   </div>
 </article>

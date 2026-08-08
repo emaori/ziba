@@ -27,10 +27,13 @@ const maxMessageBytes = 4 << 20 // 4 MiB
 
 // Newsletter collects from a mailbox.
 //
-// Newsletters are not articles: they are lists of links with short blurbs. So
-// this collector returns the links, which then go through the same pipeline as
-// everything else, plus the email itself marked as provenance — kept so that
-// "where did this come from" has an answer, never shown as an article.
+// A mailbox holds two kinds of newsletter, and they need opposite treatment.
+// Most are lists of links with short blurbs: the collector returns the links,
+// which go through the same pipeline as everything else, and keeps the email as
+// provenance so that "where did this come from" has an answer. Some are a piece
+// of writing sent by email, whose links are citations inside its sentences; for
+// those the email is the article and the links are left alone. Which is which
+// is decided by isEssay.
 type Newsletter struct {
 	log *slog.Logger
 }
@@ -43,8 +46,8 @@ func NewNewsletter(log *slog.Logger) *Newsletter {
 // Type implements domain.Collector.
 func (c *Newsletter) Type() domain.SourceType { return domain.SourceTypeNewsletter }
 
-// Collect reads the mailbox and returns the editorial links it found, together
-// with one provenance item per email.
+// Collect reads the mailbox and returns, for each email, either its editorial
+// links plus the email as provenance, or the email itself as an article.
 func (c *Newsletter) Collect(ctx context.Context, src domain.Source) ([]domain.RawItem, error) {
 	opts := src.Newsletter
 	if opts == nil {
@@ -160,7 +163,8 @@ func (c *Newsletter) connect(src domain.Source, opts *domain.NewsletterOptions) 
 	return client, nil
 }
 
-// itemsFromMessage turns one email into a provenance item plus its links.
+// itemsFromMessage turns one email into either a provenance item plus its
+// links, or a single article when the email is itself the writing.
 func (c *Newsletter) itemsFromMessage(src domain.Source, msg *imapclient.FetchMessageBuffer) ([]domain.RawItem, error) {
 	var body []byte
 	for _, section := range msg.BodySection {
@@ -179,9 +183,9 @@ func (c *Newsletter) itemsFromMessage(src domain.Source, msg *imapclient.FetchMe
 
 	now := time.Now().UTC()
 
-	// The email itself, kept for the record. Its address is synthetic because a
-	// message has none: it exists to make the item unique, not to be followed.
-	provenance := domain.RawItem{
+	// The email itself. Its address is synthetic because a message has none: it
+	// exists to make the item unique, not to be followed.
+	item := domain.RawItem{
 		SourceID:    src.ID,
 		Kind:        domain.ItemKindProvenance,
 		Title:       subject,
@@ -192,8 +196,18 @@ func (c *Newsletter) itemsFromMessage(src domain.Source, msg *imapclient.FetchMe
 		Text:        text,
 	}
 
+	// An essay is the article, and its links are citations rather than
+	// recommendations. Collecting them turns one piece of writing into a dozen
+	// entries titled with fragments of its own sentences — "Simon Wilison
+	// concluded", "irrational exuberance" — while the writing itself is never
+	// shown at all.
+	if isEssay(text, links) {
+		item.Kind = domain.ItemKindArticle
+		return []domain.RawItem{item}, nil
+	}
+
 	items := make([]domain.RawItem, 0, len(links)+1)
-	items = append(items, provenance)
+	items = append(items, item)
 
 	for _, link := range links {
 		items = append(items, domain.RawItem{
