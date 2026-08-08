@@ -53,11 +53,11 @@
 
   {{if .Summary}}<p class="summary">{{.Summary}}</p>{{end}}
 
-  <p class="actions">
+  <div class="actions">
     <a class="button" href="/article/{{.ID}}">Read in Ziba</a>
     <a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>
     {{template "archiveButton" .}}
-  </p>
+  </div>
 </article>
 {{end}}
 

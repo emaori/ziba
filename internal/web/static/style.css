@@ -33,7 +33,7 @@ body {
   font: 1rem/1.6 Georgia, "Iowan Old Style", "Times New Roman", serif;
 }
 
-main, .masthead, .tabs, .days, footer { max-width: var(--measure); margin: 0 auto; }
+main, .masthead, .tabs, footer { max-width: var(--measure); margin: 0 auto; }
 
 a { color: var(--accent); }
 
@@ -132,22 +132,14 @@ a { color: var(--accent); }
 
 .daypick .step.off { color: var(--rule); }
 
-/* One interest's leading article on the home page. */
-.interest-block { margin-bottom: 2.5rem; }
-.interest-heading {
-  margin: 0 0 0.6rem;
-  font-size: 0.78rem;
-  font-family: system-ui, sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--ink-soft);
-}
-.interest-heading a { text-decoration: none; color: inherit; }
-.interest-heading a:hover { color: var(--accent); }
+/* The mark-read control is a form wrapping a button, but it has to sit in the
+   row of links as though it were one of them. Making the form a flex box of its
+   own gives the button the form's full height, so all three controls line up.
 
-/* The mark-read control is a form, but must sit in the row of buttons. */
-form.inline { display: inline; margin: 0; }
-form.inline .button { font: inherit; cursor: pointer; border: 1px solid var(--rule); }
+   It must not set a font: `.button` already states one, and overriding it with
+   `inherit` picked up the body's serif at full size — which is why this control
+   used to stand a few pixels taller than the links beside it. */
+form.inline { display: flex; margin: 0; }
 
 .read-marker {
   margin: 0 0 1rem;
@@ -226,18 +218,44 @@ form.inline .button { font: inherit; cursor: pointer; border: 1px solid var(--ru
 
 /* Buttons ----------------------------------------------------------------- */
 
-.actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1rem 0 0; }
+/* stretch, so a control's height comes from the tallest in the row rather than
+   from whether it happens to be a link or a button. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.6rem;
+  margin: 1rem 0 0;
+}
 
+/* One appearance for both the links and the button. A <button> brings its own
+   border, font and line height from the browser, so each is stated here rather
+   than left to differ. */
 .button {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 0.45rem 0.9rem;
   background: var(--accent);
   color: var(--paper);
+  border: 1px solid transparent;
   border-radius: 3px;
   font-family: system-ui, sans-serif;
   font-size: 0.85rem;
+  line-height: 1.2;
   text-decoration: none;
+  cursor: pointer;
 }
+
+/* In the reader the row is followed immediately by the summary, which without
+   this sits flush against the buttons. The card needs no such gap: its row is
+   the last thing in the box, and the box already has padding. */
+.reader .actions { margin-bottom: 1rem; }
+
+/* Marking read sits apart from the ways of opening the article: same line,
+   pushed to the right edge. It is a different kind of act — it dismisses rather
+   than opens — and the gap says so. The same idiom as the score in the card's
+   meta row above, and the same on every page that shows the control. */
+.actions form.inline { margin-left: auto; }
 
 .button.secondary {
   background: transparent;

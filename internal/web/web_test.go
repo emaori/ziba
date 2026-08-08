@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	nethtml "golang.org/x/net/html"
 
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
@@ -558,5 +559,104 @@ func TestReaderRepeatsActionsAtTop(t *testing.T) {
 	// the article text starts.
 	if strings.Index(body, `action="/article/42/archive"`) > strings.Index(body, `class="body"`) {
 		t.Error("the first mark-read control is below the article text")
+	}
+}
+
+// The mark-read control must really be inside the row of buttons.
+//
+// Checking the markup as a string is not enough, and missing that cost three
+// attempts at "aligning" a control that was never in the row: the form used to
+// sit inside a <p>, which cannot contain one. A browser closes the paragraph
+// and reparents the form next to it, so the source read correctly while the
+// page rendered with the button on its own line below. Parsing here reproduces
+// exactly that, because x/net/html implements the same algorithm.
+func TestActionsRowActuallyContainsTheForm(t *testing.T) {
+	article := sampleArticle()
+	handler := newTestServer(t, &fakeStore{
+		article:  article,
+		articles: []domain.Article{article},
+		digest:   domain.Digest{Date: time.Now(), Articles: []domain.Article{article}},
+	})
+
+	for _, path := range []string{"/", "/interest/Robotics", "/article/42"} {
+		_, body := get(t, handler, path)
+
+		doc, err := nethtml.Parse(strings.NewReader(body))
+		if err != nil {
+			t.Fatalf("%s: parsing the page failed: %v", path, err)
+		}
+
+		forms := 0
+		var walk func(*nethtml.Node, bool)
+		walk = func(n *nethtml.Node, inActions bool) {
+			if n.Type == nethtml.ElementNode {
+				if n.Data == "form" && hasClass(n, "inline") {
+					forms++
+					if !inActions {
+						t.Errorf("%s: the mark-read form is not inside .actions "+
+							"— an invalid nesting the browser will rearrange", path)
+					}
+				}
+				if hasClass(n, "actions") {
+					inActions = true
+				}
+			}
+			for c := n.FirstChild; c != nil; c = c.NextSibling {
+				walk(c, inActions)
+			}
+		}
+		walk(doc, false)
+
+		if forms == 0 {
+			t.Errorf("%s: found no mark-read form at all", path)
+		}
+	}
+}
+
+func hasClass(n *nethtml.Node, want string) bool {
+	for _, a := range n.Attr {
+		if a.Key == "class" {
+			for _, c := range strings.Fields(a.Val) {
+				if c == want {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// Marking read is last in its row and pushed to the right edge, on every page
+// that shows it. It is a different kind of act from the ways of opening an
+// article, and sits apart from them. This is a choice, not an accident of
+// template order, so both halves of it are asserted.
+func TestMarkReadSitsWhereItShould(t *testing.T) {
+	article := sampleArticle()
+	handler := newTestServer(t, &fakeStore{
+		article:  article,
+		articles: []domain.Article{article},
+		digest:   domain.Digest{Date: time.Now(), Articles: []domain.Article{article}},
+	})
+
+	for _, path := range []string{"/", "/interest/Robotics", "/article/42"} {
+		_, body := get(t, handler, path)
+
+		form := strings.Index(body, `<form class="inline"`)
+		link := strings.Index(body, `Open original`)
+		if form < 0 || link < 0 {
+			t.Fatalf("%s: expected both controls, got form=%d link=%d", path, form, link)
+		}
+		if form < link {
+			t.Errorf("%s: mark-read comes before the open-original link, want it last", path)
+		}
+	}
+
+	// Last in the markup only puts it at the right edge because of this rule.
+	css, err := assets.ReadFile("static/style.css")
+	if err != nil {
+		t.Fatalf("reading the stylesheet: %v", err)
+	}
+	if !strings.Contains(string(css), ".actions form.inline { margin-left: auto; }") {
+		t.Error("the rule pushing the control to the right edge is gone")
 	}
 }
