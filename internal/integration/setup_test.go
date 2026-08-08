@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -41,12 +42,48 @@ const testDatabase = "ziba_integration"
 // "does the configured source list work" is one of the things under test.
 const configDir = "../../config"
 
+// shared is the one harness every test uses.
+//
+// Each test used to build its own and collect afresh. With six tests and four
+// sources that meant fetching one publisher's feed and its eighty-odd article
+// pages six times in a few minutes — several hundred requests to one site — and
+// it got Ziba blocked by that publisher. Collecting once, in TestMain, is the
+// fix. The tests are read-mostly and share the result.
+var (
+	shared     *harness
+	sharedOnce sync.Once
+)
+
+// TestMain prepares the database and performs the single collection the whole
+// suite shares.
+func TestMain(m *testing.M) {
+	os.Exit(m.Run())
+}
+
+// sharedHarness returns the suite's harness, collecting on first use.
+func sharedHarness(t *testing.T) *harness {
+	t.Helper()
+
+	sharedOnce.Do(func() {
+		h := newHarness(t)
+		h.collectAll(t)
+		shared = h
+	})
+	if shared == nil {
+		t.Skip("shared collection was not available")
+	}
+	return shared
+}
+
 // harness is everything a test needs.
 type harness struct {
 	store     *store.Store
 	runner    *job.Runner
 	sources   []domain.Source
 	interests config.Interests
+
+	// lastCollect is the result of the suite's single collection.
+	lastCollect job.CollectResult
 
 	// Analyzed reports whether a real model was used. Without a key the
 	// deterministic analyzer stands in, which exercises the plumbing but says
@@ -72,7 +109,7 @@ func newHarness(t *testing.T) *harness {
 	if err != nil {
 		t.Fatalf("open test database: %v", err)
 	}
-	t.Cleanup(db.Close)
+	// Not closed per test: the harness is shared across the suite.
 
 	if _, err := db.Migrate(ctx); err != nil {
 		t.Fatalf("migrate test database: %v", err)
@@ -90,7 +127,7 @@ func newHarness(t *testing.T) *harness {
 
 	analyzer, real := buildAnalyzer(t, interests)
 
-	cfg := config.Config{RenderURL: os.Getenv("ZIBA_RENDER_URL")}
+	cfg := config.Config{}
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
 
 	return &harness{
@@ -188,8 +225,11 @@ func (h *harness) collectAll(t *testing.T) job.CollectResult {
 		t.Fatalf("retrieve full text: %v", err)
 	}
 
-	t.Logf("collected %d new items from %d sources (%d failed) in %s",
-		result.New, result.Sources, result.Failed, time.Since(started).Round(time.Second))
+	t.Logf("collected %d new items from %d sources (%d failed, %d too old) in %s",
+		result.New, result.Sources, result.Failed, result.TooOld,
+		time.Since(started).Round(time.Second))
+
+	h.lastCollect = result
 	return result
 }
 

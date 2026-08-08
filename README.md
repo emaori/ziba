@@ -11,7 +11,7 @@ code works, not what the product should do.
 ## Requirements
 
 - Go 1.26 or newer
-- Docker with Compose (PostgreSQL and the Playwright sidecar)
+- Docker with Compose (PostgreSQL)
 
 ## Getting started
 
@@ -23,9 +23,9 @@ make check        # fmt + vet + test — run before committing
 
 ## Running the stack
 
-Everything the application needs runs in Docker: PostgreSQL and the
-`ziba-playwright` browser sidecar. `ziba-api` and Caddy join the same file as
-they arrive, and the commands below do not change.
+Everything the application needs runs in Docker: the application and
+PostgreSQL. Caddy joins the same file when remote access is set up, and the
+commands below do not change.
 
 ```sh
 cp .env.example .env    # then set a real password
@@ -68,57 +68,13 @@ three lines; `enabled: false` stops reading a source without losing the articles
 already collected from it. Removing a source from the file disables it rather
 than deleting it, for the same reason.
 
-Two source types work today. **`rss`** reads a feed. **`website`** scrapes a page
-for article links, which is how sites that publish no feed are read:
+Two source types work today: **`rss`** reads a feed, and **`newsletter`** reads
+a mailbox.
 
-```yaml
-  - name: "ANSA — Tecnologia"
-    type: website
-    url: "https://www.ansa.it/sito/notizie/tecnologia/tecnologia.shtml"
-    website:
-      link_pattern: "/[0-9]{4}/[0-9]{2}/[0-9]{2}/"   # articles, not navigation
-      max_links: 25
-      render: false                                   # see below
-```
-
-`link_pattern` is the setting that matters: without it you collect a site's menu
-alongside its articles, and most sites put a date or a section in article
-addresses. A scraped source yields links only — each one then goes through the
-same full-text retrieval as everything else, so a scraped article and a feed
-article are identical downstream.
-
-**`newsletter`** reads a mailbox over IMAP. Newsletters are treated as link
-aggregators, which is what they are: the email is a list of links with blurbs,
-and the value is in the articles it points at.
-
-```yaml
-  - name: "Newsletters"
-    type: newsletter
-    url: "imaps://imap.example.com:993/"
-    newsletter:
-      folder: "INBOX"
-      username_env: ZIBA_IMAP_USER      # names the variable, never the value
-      password_env: ZIBA_IMAP_PASSWORD
-      unread_only: true
-```
-
-Credentials are named, not written: the file holds the *name* of an environment
-variable, so the source list stays safe to commit, and an address containing
-credentials is rejected outright. An unset variable fails at startup naming the
-variable, rather than surfacing later as an authentication error.
-
-Each email yields the editorial links it carries — social buttons, unsubscribe
-footers, "view in browser" headers and sponsor slots are filtered out — plus the
-email itself stored as **provenance**: kept so a link has an origin, never shown
-as an article. The filtering is rule-based today; the functional documentation
-calls for AI to do this eventually, and `editorialLinks` is where that would go.
-
-`render: true` fetches the page through the **`ziba-playwright`** sidecar, a
-headless browser, for sites that build their markup in the browser. It is much
-slower and needs the sidecar running (`make up` starts it), so leave it off
-unless a site genuinely needs it. A source that asks for rendering with no
-sidecar configured fails with a message saying so, rather than quietly
-collecting an empty page.
+> Scraping was removed. It needed a bespoke selector for every site and broke
+> whenever one was redesigned, while almost every worthwhile source publishes a
+> feed or a newsletter. A `type: website` source is now rejected with a message
+> saying so.
 
 ```sh
 make collect                    # read every enabled source, then fetch full text

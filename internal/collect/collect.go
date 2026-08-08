@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
-	"time"
 
 	"golang.org/x/sync/errgroup"
 
@@ -24,13 +23,6 @@ const userAgent = "Ziba/1.0 (personal content aggregator)"
 // almost entirely waiting on the network, so a small number already saturates
 // it while staying polite to the servers involved.
 const maxParallelSources = 4
-
-// NewHTTPClient returns the client used for all outbound requests. The timeout
-// is per request including body: without it a source that never answers would
-// hold a slot until the process is killed.
-func NewHTTPClient(timeout time.Duration) *http.Client {
-	return &http.Client{Timeout: timeout}
-}
 
 // get performs a GET carrying the Ziba user agent and honouring ctx.
 func get(ctx context.Context, client *http.Client, url string) (*http.Response, error) {

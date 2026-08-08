@@ -15,9 +15,8 @@ import (
 // everything downstream still looks healthy — the digest is just quietly poorer
 // than it should be. So this asserts per source, not in aggregate.
 func TestEverySourceIsRead(t *testing.T) {
-	h := newHarness(t)
-
-	result := h.collectAll(t)
+	h := sharedHarness(t)
+	result := h.lastCollect
 
 	if result.Failed > 0 {
 		t.Errorf("%s failed during collection — see the warnings above", plural(result.Failed, "source"))
@@ -43,10 +42,9 @@ func TestEverySourceIsRead(t *testing.T) {
 // TestArticlesAreStoredOnce covers the identity rule from three angles, because
 // duplicates can arrive three different ways.
 func TestArticlesAreStoredOnce(t *testing.T) {
-	h := newHarness(t)
+	h := sharedHarness(t)
 
-	first := h.collectAll(t)
-	if first.New == 0 {
+	if h.lastCollect.New == 0 {
 		t.Fatal("collected nothing — cannot test deduplication")
 	}
 	afterFirst := h.scalar(t, `SELECT count(*) FROM articles`)
@@ -91,8 +89,7 @@ func TestArticlesAreStoredOnce(t *testing.T) {
 // TestArticlesHaveText checks the step between collection and analysis: a link
 // is only useful once its text has been retrieved.
 func TestArticlesHaveText(t *testing.T) {
-	h := newHarness(t)
-	h.collectAll(t)
+	h := sharedHarness(t)
 
 	total := h.scalar(t, `SELECT count(*) FROM articles`)
 	if total == 0 {
@@ -124,8 +121,7 @@ func TestArticlesHaveText(t *testing.T) {
 // that the labels correspond to the configured interests rather than to
 // whatever the model felt like inventing.
 func TestArticlesAreClassified(t *testing.T) {
-	h := newHarness(t)
-	h.collectAll(t)
+	h := sharedHarness(t)
 
 	analyzed, above, failed, err := h.runner.Analyze(t.Context(), 500)
 	if err != nil {
@@ -267,8 +263,7 @@ func reportCategories(t *testing.T, h *harness) {
 // TestSummariesExistAboveThreshold checks the rule the whole cost model rests
 // on: summarized above the threshold, not summarized below it.
 func TestSummariesExistAboveThreshold(t *testing.T) {
-	h := newHarness(t)
-	h.collectAll(t)
+	h := sharedHarness(t)
 
 	if _, above, _, err := h.runner.Analyze(t.Context(), 500); err != nil {
 		t.Fatalf("analyze: %v", err)
@@ -340,8 +335,7 @@ func showTop(t *testing.T, h *harness) {
 // TestDigestIsBuiltFromRealData closes the loop: everything above, ending in a
 // selection a person could read.
 func TestDigestIsBuiltFromRealData(t *testing.T) {
-	h := newHarness(t)
-	h.collectAll(t)
+	h := sharedHarness(t)
 
 	if _, _, _, err := h.runner.Analyze(t.Context(), 500); err != nil {
 		t.Fatalf("analyze: %v", err)

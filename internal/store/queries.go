@@ -34,10 +34,12 @@ func (s *Store) SyncSources(ctx context.Context, configured []domain.Source) ([]
 			VALUES ($1, $2, $3, $4)
 			ON CONFLICT (type, url) DO UPDATE
 			SET name = EXCLUDED.name, enabled = EXCLUDED.enabled
-			RETURNING id`,
+			RETURNING id, created_at`,
 			src.Name, string(src.Type), src.URL, src.Enabled)
 
-		if err := row.Scan(&src.ID); err != nil {
+		// created_at is deliberately not in the UPDATE list: it records when the
+		// source was first seen, and CollectFrom anchors to it.
+		if err := row.Scan(&src.ID, &src.CreatedAt); err != nil {
 			return nil, fmt.Errorf("upsert source %q: %w", src.Name, err)
 		}
 		synced = append(synced, src)

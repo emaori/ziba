@@ -28,10 +28,6 @@ const (
 	// site, short enough that one bad source does not stall the run.
 	httpTimeout = 30 * time.Second
 
-	// renderTimeout bounds a request to the browser sidecar, which has to start
-	// a page and wait for its scripts before it can answer.
-	renderTimeout = 90 * time.Second
-
 	// maxParallelAnalyses caps concurrent model calls. Small on purpose: this
 	// is a personal tool with no deadline, and a burst of requests only invites
 	// rate limiting.
@@ -62,8 +58,7 @@ type Options struct {
 func New(cfg config.Config, sources []domain.Source, interests config.Interests,
 	db *store.Store, log *slog.Logger, opts Options) *Runner {
 
-	client := collect.NewHTTPClient(httpTimeout)
-	renderer := collect.NewRenderer(collect.NewHTTPClient(renderTimeout), cfg.RenderURL)
+	client := collect.NewHTTPClient(httpTimeout, collect.PolitenessInterval)
 
 	var p *pipeline.Pipeline
 	if opts.Analyzer != nil {
@@ -74,7 +69,6 @@ func New(cfg config.Config, sources []domain.Source, interests config.Interests,
 		store: db,
 		registry: collect.NewRegistry(
 			collect.NewRSS(client, log),
-			collect.NewWebsite(client, renderer, log),
 			collect.NewNewsletter(log),
 		),
 		fullText:  collect.NewFullText(client),
@@ -91,6 +85,11 @@ type CollectResult struct {
 	Found   int
 	New     int
 	Failed  int
+
+	// TooOld counts items discarded for predating their source's cutoff. It is
+	// reported because a feed offering 277 entries and yielding 2 looks broken
+	// unless the run says why.
+	TooOld int
 }
 
 // Collect reads every enabled source and stores what is new.
@@ -118,13 +117,18 @@ func (r *Runner) Collect(ctx context.Context) (CollectResult, error) {
 			result.Failed++
 			continue
 		}
-		inserted, err := r.store.SaveRawItems(ctx, res.Items)
+		recent, tooOld := withinCutoff(res.Source, res.Items)
+
+		inserted, err := r.store.SaveRawItems(ctx, recent)
 		if err != nil {
 			return result, err
 		}
 		result.Found += len(res.Items)
 		result.New += inserted
-		r.log.Info("collected", "source", res.Source.Name, "found", len(res.Items), "new", inserted)
+		result.TooOld += tooOld
+
+		r.log.Info("collected", "source", res.Source.Name,
+			"found", len(res.Items), "new", inserted, "too_old", tooOld)
 	}
 	return result, nil
 }
@@ -266,4 +270,29 @@ func (r *Runner) Daily(ctx context.Context, batch int) error {
 	r.log.Info("digest finished", "articles", selected, "threshold", r.threshold)
 
 	return nil
+}
+
+// withinCutoff drops items published before their source's cutoff.
+//
+// This is what stops a newly added feed from arriving with years of backlog.
+// It runs here rather than inside each collector so that every source type is
+// covered by one rule, and so the collectors stay unaware of it.
+func withinCutoff(src domain.Source, items []domain.RawItem) (recent []domain.RawItem, tooOld int) {
+	if _, filtering := src.CollectFrom.Cutoff(src.CreatedAt); !filtering {
+		return items, 0
+	}
+
+	recent = make([]domain.RawItem, 0, len(items))
+	for _, item := range items {
+		// Provenance items carry the date of the email that produced them and
+		// are the record of where a link came from; dropping one would orphan
+		// links that were themselves accepted.
+		if item.Kind == domain.ItemKindProvenance ||
+			src.CollectFrom.Accepts(src.CreatedAt, item.PublishedAt) {
+			recent = append(recent, item)
+			continue
+		}
+		tooOld++
+	}
+	return recent, tooOld
 }

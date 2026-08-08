@@ -13,6 +13,14 @@
 #   render        fetch through the browser sidecar, for sites that build their
 #                 markup in the browser. Slower; only set it when needed.
 #   max_links     how many articles one visit collects (default 30).
+#
+# collect_from: how much history a source contributes on first contact. A
+#               duration ("7d", "48h"), a date ("2026-01-01"), or "all" for
+#               whatever the source offers. Default is 7d.
+#
+#               The cutoff is anchored to when the source was first added, not
+#               to today, so pausing collection never widens into lost articles.
+#               It only bounds what arrives; it never removes what is stored.
 
 sources:
   - name: "Il Post"
@@ -29,9 +37,14 @@ sources:
 
   # A curated .NET link roundup. The feed points outward at other people's
   # posts, which is exactly what we want: each link becomes its own article.
+  #
+  # Its feed carries 277 entries reaching back to April 2021, so without a
+  # cutoff it arrives with five years of backlog. Two weeks rather than the
+  # default one, because it publishes in weekly batches.
   - name: ".NET Ketchup"
     type: rss
     url: "https://dotnetketchup.com/rss"
+    collect_from: 14d
 
   # Communications of the ACM sits behind Cloudflare bot protection. Every feed
   # path answers 403 to a plain request, and a real headless browser is served a

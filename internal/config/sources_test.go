@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/emaori/ziba/internal/domain"
@@ -145,7 +146,6 @@ func TestLoadNewsletterSourceRejects(t *testing.T) {
 		{"credentials in the address", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://user:pass@imap.example.com\"" + block},
 		{"no host", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://\"" + block},
 		{"missing block", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://imap.example.com\"\n"},
-		{"block on the wrong type", "sources:\n  - name: N\n    type: rss\n    url: \"https://example.com/feed\"" + block},
 		{"unset variable", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://imap.example.com\"\n" +
 			"    newsletter:\n      username_env: ZIBA_TEST_NOT_SET\n      password_env: ZIBA_TEST_IMAP_PASSWORD\n"},
 	}
@@ -156,6 +156,25 @@ func TestLoadNewsletterSourceRejects(t *testing.T) {
 				t.Error("LoadSources returned no error, want one")
 			}
 		})
+	}
+}
+
+// Scraping was removed, and someone will eventually copy an old configuration
+// forward. The refusal has to explain itself rather than say "unknown type".
+func TestLoadSourcesRejectsRetiredWebsiteType(t *testing.T) {
+	_, err := LoadSources(writeSources(t, `
+sources:
+  - name: "Some site"
+    type: website
+    url: "https://example.com/news"
+`))
+	if err == nil {
+		t.Fatal("LoadSources accepted a website source, want it rejected")
+	}
+	for _, want := range []string{"scraping was removed", "RSS", "newsletter"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error %q does not mention %q", err, want)
+		}
 	}
 }
 

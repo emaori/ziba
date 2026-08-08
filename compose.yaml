@@ -1,7 +1,7 @@
 # Local and homeserver deployment.
 #
-# Only the database is defined for now; ziba-api and ziba-playwright are added
-# when there is a server to run and a site that needs a browser.
+# Two services: the application and its database. A headless-browser sidecar
+# lived here while scraping did; both were removed together.
 #
 # Secrets come from a .env file next to this one — see .env.example. That file
 # is git-ignored.
@@ -42,8 +42,6 @@ services:
     depends_on:
       ziba-db:
         condition: service_healthy
-      ziba-playwright:
-        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -51,7 +49,6 @@ services:
       # other services are reached by name, not on loopback. The values in .env
       # are for running the binary outside Docker during development.
       ZIBA_DATABASE_URL: postgres://${POSTGRES_USER:-ziba}:${POSTGRES_PASSWORD}@ziba-db:5432/ziba?sslmode=disable
-      ZIBA_RENDER_URL: http://ziba-playwright:3000
       # The digest is scheduled in local time, so the container has to know
       # which local. Without this it would run on UTC.
       TZ: ${TZ:-Europe/Rome}
@@ -68,32 +65,6 @@ services:
       retries: 3
       start_period: 20s
 
-  # Headless Chromium, for sites that build their markup in the browser.
-  #
-  # A separate container is not an architectural boundary — Ziba is a monolith —
-  # but it keeps Chromium's crashes and its appetite for memory out of the main
-  # process, which is the whole reason it is here.
-  ziba-playwright:
-    image: ghcr.io/browserless/chromium:latest
-    container_name: ziba-playwright
-    restart: unless-stopped
-    environment:
-      # One page at a time is plenty: collection visits a handful of sites on a
-      # nightly schedule, and each extra concurrent browser costs real memory.
-      CONCURRENT: "1"
-      TIMEOUT: "60000"
-      TOKEN: ""
-    ports:
-      - "127.0.0.1:${RENDER_PORT:-3000}:3000"
-    healthcheck:
-      # /pressure reports whether the browser pool can accept work, which is the
-      # question. The root path answers 404, so checking it would mark a
-      # perfectly healthy container as broken.
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/pressure > /dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
 
 volumes:
   ziba-db-data:

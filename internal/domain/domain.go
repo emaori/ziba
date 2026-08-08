@@ -14,9 +14,15 @@ type SourceType string
 
 const (
 	SourceTypeRSS        SourceType = "rss"
-	SourceTypeWebsite    SourceType = "website"
 	SourceTypeNewsletter SourceType = "newsletter"
 	SourceTypePDF        SourceType = "pdf"
+
+	// SourceTypeWebsite is retired. Scraping was removed: it needed a bespoke
+	// selector per site and broke whenever one was redesigned, while almost
+	// every worthwhile source publishes a feed or a newsletter. The constant
+	// remains only so configuration can reject it with an explanation, and so
+	// rows collected before the removal still describe themselves.
+	SourceTypeWebsite SourceType = "website"
 )
 
 // Source is a configured origin of content: a feed, a website, a mailbox, a
@@ -28,12 +34,75 @@ type Source struct {
 	URL     string
 	Enabled bool
 
-	// Website and Newsletter carry the settings only their own type needs, and
-	// are nil otherwise. Settings live here rather than in the database because
-	// the configuration file is their source of truth; storing them would give
-	// them two.
-	Website    *WebsiteOptions
+	// CreatedAt is when this source was first seen. It is set by the database on
+	// first insert and never touched again, which is what makes it a stable
+	// anchor for CollectFrom.
+	CreatedAt time.Time
+
+	// CollectFrom bounds how much history a source contributes.
+	CollectFrom CollectFrom
+
+	// Newsletter carries the settings only a mailbox needs, and is nil
+	// otherwise. Settings live here rather than in the database because the
+	// configuration file is their source of truth; storing them would give them
+	// two.
 	Newsletter *NewsletterOptions
+}
+
+// DefaultCollectGrace is how much history a source contributes on first contact
+// when nothing else is configured.
+//
+// A week is enough that a source has something to show immediately, and short
+// enough that a feed carrying years of backlog does not arrive all at once —
+// one configured feed offers two hundred and seventy-seven entries reaching
+// back five years, of which a week keeps two.
+const DefaultCollectGrace = 7 * 24 * time.Hour
+
+// CollectFrom says how far back a source may reach.
+//
+// The cutoff is anchored to when the source was first seen, not to now. That is
+// deliberate: a rolling window would silently discard everything older than the
+// window whenever collection had been paused, so an outage would compound into
+// lost articles. A fixed anchor costs only what the source's own window dropped.
+type CollectFrom struct {
+	// Grace is how far before the source was first seen to accept. Ignored when
+	// Date is set or All is true.
+	Grace time.Duration
+
+	// Date is an absolute cutoff, and wins over Grace when set.
+	Date time.Time
+
+	// All disables the filter, accepting whatever the source offers.
+	All bool
+}
+
+// Cutoff returns the earliest publication date this source accepts, and whether
+// any filtering applies at all.
+func (c CollectFrom) Cutoff(firstSeen time.Time) (time.Time, bool) {
+	switch {
+	case c.All:
+		return time.Time{}, false
+	case !c.Date.IsZero():
+		return c.Date, true
+	case c.Grace > 0:
+		return firstSeen.Add(-c.Grace), true
+	default:
+		return firstSeen.Add(-DefaultCollectGrace), true
+	}
+}
+
+// Accepts reports whether an item is recent enough for this source.
+//
+// An item with no date is accepted. Collectors substitute the collection time
+// when a source gives no date, so this is mostly theoretical — but the choice
+// matters: letting a little through is better than silently discarding content
+// because a publisher omitted a timestamp.
+func (c CollectFrom) Accepts(firstSeen, published time.Time) bool {
+	cutoff, filtering := c.Cutoff(firstSeen)
+	if !filtering || published.IsZero() {
+		return true
+	}
+	return !published.Before(cutoff)
 }
 
 // NewsletterOptions describes a mailbox of newsletters.
@@ -53,21 +122,6 @@ type NewsletterOptions struct {
 
 	// MaxMessages caps how many emails one run reads.
 	MaxMessages int
-}
-
-// WebsiteOptions tunes how a site is scraped for article links.
-type WebsiteOptions struct {
-	// LinkPattern is a regular expression an article address must match. It is
-	// the difference between collecting a site's articles and collecting its
-	// navigation: most sites encode a date or a section in article addresses.
-	LinkPattern string
-
-	// Render fetches the page through the browser sidecar instead of over plain
-	// HTTP, for sites that build their markup in the browser.
-	Render bool
-
-	// MaxLinks caps how many articles one visit collects.
-	MaxLinks int
 }
 
 // ItemKind says whether a collected item is destined to become an article.

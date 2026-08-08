@@ -33,10 +33,6 @@ type Config struct {
 	FastModel    string
 	CapableModel string
 
-	// RenderURL points at the browser sidecar. Empty disables rendering, which
-	// only matters for sources that ask for it.
-	RenderURL string
-
 	// CollectEvery is how often the unattended schedule collects and analyzes.
 	CollectEvery time.Duration
 
@@ -53,7 +49,6 @@ func Load() (Config, error) {
 		AnthropicAPIKey: os.Getenv("ANTHROPIC_API_KEY"),
 		FastModel:       os.Getenv("ZIBA_FAST_MODEL"),
 		CapableModel:    os.Getenv("ZIBA_CAPABLE_MODEL"),
-		RenderURL:       os.Getenv("ZIBA_RENDER_URL"),
 	}
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("ZIBA_DATABASE_URL is not set")

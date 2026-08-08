@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"regexp"
+	"strconv"
 	"strings"
 
 	neturl "net/url"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -31,18 +32,14 @@ type SourceEntry struct {
 	// bool cannot do.
 	Enabled *bool `yaml:"enabled"`
 
-	// Website applies to scraped sites only.
-	Website *WebsiteEntry `yaml:"website"`
+	// CollectFrom bounds how much history this source contributes on first
+	// contact: a duration such as "7d" or "48h", an absolute date such as
+	// "2026-01-01", or "all" to accept whatever the source offers. Absent means
+	// the default grace.
+	CollectFrom string `yaml:"collect_from"`
 
 	// Newsletter applies to mailboxes only.
 	Newsletter *NewsletterEntry `yaml:"newsletter"`
-}
-
-// WebsiteEntry is the `website:` block of a scraped source.
-type WebsiteEntry struct {
-	LinkPattern string `yaml:"link_pattern"`
-	Render      bool   `yaml:"render"`
-	MaxLinks    int    `yaml:"max_links"`
 }
 
 // NewsletterEntry is the `newsletter:` block of a mailbox source.
@@ -129,7 +126,13 @@ func (e SourceEntry) toDomain() (domain.Source, error) {
 
 	sourceType := domain.SourceType(e.Type)
 	switch sourceType {
-	case domain.SourceTypeRSS, domain.SourceTypeWebsite, domain.SourceTypeNewsletter, domain.SourceTypePDF:
+	case domain.SourceTypeRSS, domain.SourceTypeNewsletter, domain.SourceTypePDF:
+	case domain.SourceTypeWebsite:
+		// Worth saying why, because this used to work and someone will copy an
+		// old configuration forward.
+		return domain.Source{}, fmt.Errorf(
+			"scraping was removed: it needed a bespoke selector per site and broke " +
+				"whenever one was redesigned. Look for an RSS feed or a newsletter instead")
 	default:
 		return domain.Source{}, fmt.Errorf("unknown type %q", e.Type)
 	}
@@ -146,11 +149,17 @@ func (e SourceEntry) toDomain() (domain.Source, error) {
 		enabled = *e.Enabled
 	}
 
+	collectFrom, err := parseCollectFrom(e.CollectFrom)
+	if err != nil {
+		return domain.Source{}, fmt.Errorf("collect_from: %w", err)
+	}
+
 	source := domain.Source{
-		Name:    e.Name,
-		Type:    sourceType,
-		URL:     url,
-		Enabled: enabled,
+		Name:        e.Name,
+		Type:        sourceType,
+		URL:         url,
+		Enabled:     enabled,
+		CollectFrom: collectFrom,
 	}
 
 	if e.Newsletter != nil {
@@ -191,26 +200,42 @@ func (e SourceEntry) toDomain() (domain.Source, error) {
 		return domain.Source{}, fmt.Errorf("a newsletter source needs a newsletter block")
 	}
 
-	if e.Website != nil {
-		if sourceType != domain.SourceTypeWebsite {
-			return domain.Source{}, fmt.Errorf("a website block only applies to type website, not %q", e.Type)
+	return source, nil
+}
+
+// parseCollectFrom reads the `collect_from` setting.
+//
+// Accepted: empty (the default grace), "all", a date as YYYY-MM-DD, or a
+// duration. Durations allow a "d" suffix for days, which the standard parser
+// does not — "7d" is how a person writes a week, and requiring "168h" would be
+// a small daily cruelty.
+func parseCollectFrom(raw string) (domain.CollectFrom, error) {
+	value := strings.TrimSpace(raw)
+	switch {
+	case value == "":
+		return domain.CollectFrom{}, nil
+	case strings.EqualFold(value, "all"):
+		return domain.CollectFrom{All: true}, nil
+	}
+
+	if date, err := time.Parse(time.DateOnly, value); err == nil {
+		if date.After(time.Now()) {
+			return domain.CollectFrom{}, fmt.Errorf("%q is in the future, so nothing would ever be collected", value)
 		}
-		// Compiling here means a bad expression is caught when the file is
-		// loaded, not hours later when the scheduler runs.
-		if e.Website.LinkPattern != "" {
-			if _, err := regexp.Compile(e.Website.LinkPattern); err != nil {
-				return domain.Source{}, fmt.Errorf("link_pattern: %w", err)
-			}
-		}
-		if e.Website.MaxLinks < 0 {
-			return domain.Source{}, fmt.Errorf("max_links cannot be negative")
-		}
-		source.Website = &domain.WebsiteOptions{
-			LinkPattern: e.Website.LinkPattern,
-			Render:      e.Website.Render,
-			MaxLinks:    e.Website.MaxLinks,
+		return domain.CollectFrom{Date: date}, nil
+	}
+
+	if days, found := strings.CutSuffix(value, "d"); found {
+		n, err := strconv.Atoi(days)
+		if err == nil && n > 0 {
+			return domain.CollectFrom{Grace: time.Duration(n) * 24 * time.Hour}, nil
 		}
 	}
 
-	return source, nil
+	grace, err := time.ParseDuration(value)
+	if err != nil || grace <= 0 {
+		return domain.CollectFrom{}, fmt.Errorf(
+			"%q is not a duration such as \"7d\" or \"48h\", a date such as \"2026-01-01\", or \"all\"", value)
+	}
+	return domain.CollectFrom{Grace: grace}, nil
 }
