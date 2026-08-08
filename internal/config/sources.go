@@ -42,12 +42,17 @@ type SourceEntry struct {
 	Newsletter *NewsletterEntry `yaml:"newsletter"`
 }
 
+// DefaultNewsletterDays is how many days of mail a run reads when the source
+// does not say. One day suits a collection interval of a few hours; widen it if
+// the schedule is sparser, or to survive a longer outage.
+const DefaultNewsletterDays = 1
+
 // NewsletterEntry is the `newsletter:` block of a mailbox source.
 type NewsletterEntry struct {
 	Folder      string `yaml:"folder"`
 	UsernameEnv string `yaml:"username_env"`
 	PasswordEnv string `yaml:"password_env"`
-	UnreadOnly  *bool  `yaml:"unread_only"`
+	Days        int    `yaml:"days"`
 	MaxMessages int    `yaml:"max_messages"`
 }
 
@@ -178,9 +183,12 @@ func (e SourceEntry) toDomain() (domain.Source, error) {
 			}
 		}
 
-		unreadOnly := true
-		if e.Newsletter.UnreadOnly != nil {
-			unreadOnly = *e.Newsletter.UnreadOnly
+		days := e.Newsletter.Days
+		if days == 0 {
+			days = DefaultNewsletterDays
+		}
+		if days < 0 {
+			return domain.Source{}, fmt.Errorf("days cannot be negative")
 		}
 		folder := e.Newsletter.Folder
 		if folder == "" {
@@ -188,11 +196,11 @@ func (e SourceEntry) toDomain() (domain.Source, error) {
 		}
 
 		source.Newsletter = &domain.NewsletterOptions{
-			Folder:      folder,
-			UsernameEnv: e.Newsletter.UsernameEnv,
-			PasswordEnv: e.Newsletter.PasswordEnv,
-			UnreadOnly:  unreadOnly,
-			MaxMessages: e.Newsletter.MaxMessages,
+			Folder:       folder,
+			UsernameEnv:  e.Newsletter.UsernameEnv,
+			PasswordEnv:  e.Newsletter.PasswordEnv,
+			LookBackDays: days,
+			MaxMessages:  e.Newsletter.MaxMessages,
 		}
 	}
 

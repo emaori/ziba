@@ -103,6 +103,7 @@ sources:
       folder: "Newsletters"
       username_env: ZIBA_TEST_IMAP_USER
       password_env: ZIBA_TEST_IMAP_PASSWORD
+      days: 3
       max_messages: 20
 `)
 
@@ -118,14 +119,35 @@ sources:
 	if opts.Folder != "Newsletters" {
 		t.Errorf("Folder = %q, want %q", opts.Folder, "Newsletters")
 	}
-	// Reading unseen messages only is what keeps a nightly run cheap on a
-	// mailbox with years of history, so it must be the default.
-	if !opts.UnreadOnly {
-		t.Error("UnreadOnly = false, want true by default")
+	if opts.LookBackDays != 3 {
+		t.Errorf("LookBackDays = %d, want 3", opts.LookBackDays)
 	}
 	// A mailbox address is not a web address and must survive intact.
 	if want := "imaps://imap.example.com:993/"; sources[0].URL != want {
 		t.Errorf("URL = %q, want %q", sources[0].URL, want)
+	}
+}
+
+// A mailbox is read like a feed: a window of recent days, never the read flag.
+// One day suits a collection interval of a few hours.
+func TestNewsletterDefaultsToOneDay(t *testing.T) {
+	t.Setenv("ZIBA_TEST_IMAP_USER", "reader")
+	t.Setenv("ZIBA_TEST_IMAP_PASSWORD", "secret")
+
+	sources, err := LoadSources(writeSources(t, `
+sources:
+  - name: "Newsletters"
+    type: newsletter
+    url: "imaps://imap.example.com"
+    newsletter:
+      username_env: ZIBA_TEST_IMAP_USER
+      password_env: ZIBA_TEST_IMAP_PASSWORD
+`))
+	if err != nil {
+		t.Fatalf("LoadSources returned error: %v", err)
+	}
+	if got := sources[0].Newsletter.LookBackDays; got != DefaultNewsletterDays {
+		t.Errorf("LookBackDays = %d, want %d", got, DefaultNewsletterDays)
 	}
 }
 
@@ -146,6 +168,8 @@ func TestLoadNewsletterSourceRejects(t *testing.T) {
 		{"credentials in the address", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://user:pass@imap.example.com\"" + block},
 		{"no host", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://\"" + block},
 		{"missing block", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://imap.example.com\"\n"},
+		{"negative days", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://imap.example.com\"\n" +
+			"    newsletter:\n      username_env: ZIBA_TEST_IMAP_USER\n      password_env: ZIBA_TEST_IMAP_PASSWORD\n      days: -1\n"},
 		{"unset variable", "sources:\n  - name: N\n    type: newsletter\n    url: \"imaps://imap.example.com\"\n" +
 			"    newsletter:\n      username_env: ZIBA_TEST_NOT_SET\n      password_env: ZIBA_TEST_IMAP_PASSWORD\n"},
 	}

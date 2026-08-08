@@ -116,9 +116,18 @@ type NewsletterOptions struct {
 	UsernameEnv string
 	PasswordEnv string
 
-	// UnreadOnly restricts collection to messages not yet seen, which is what
-	// makes a nightly run cheap on a mailbox that has years of history.
-	UnreadOnly bool
+	// LookBackDays is how many days of mail each run reads.
+	//
+	// A mailbox is read the way a feed is: take a recent window every time and
+	// let deduplication discard what is already known. Ziba deliberately does
+	// not use the read/unread flag for this. That flag belongs to the reader's
+	// mail client, so relying on it meant Ziba missed any newsletter its owner
+	// happened to open first, and re-read the rest for as long as they stayed
+	// unread.
+	//
+	// The window must comfortably exceed the collection interval, or mail that
+	// arrives during an outage is never seen.
+	LookBackDays int
 
 	// MaxMessages caps how many emails one run reads.
 	MaxMessages int

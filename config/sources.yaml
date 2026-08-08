@@ -65,6 +65,11 @@ sources:
   # Newsletters are read as link aggregators — the email is kept only as
   # provenance, and what enters Ziba are the articles it links to.
   #
+  # A mailbox is read the way a feed is: a window of recent days every run, with
+  # duplicates discarded. Ziba never touches the read/unread flag, so mail you
+  # have already opened is still collected and mail Ziba has read still looks
+  # unread to you.
+  #
   # - name: "Newsletters"
   #   type: newsletter
   #   url: "imaps://imap.example.com:993/"
@@ -72,5 +77,5 @@ sources:
   #     folder: "INBOX"
   #     username_env: ZIBA_IMAP_USER
   #     password_env: ZIBA_IMAP_PASSWORD
-  #     unread_only: true      # default; keeps a nightly run cheap
+  #     days: 1                # days of mail each run reads (default 1)
   #     max_messages: 50

@@ -63,10 +63,18 @@ func (c *Newsletter) Collect(ctx context.Context, src domain.Source) ([]domain.R
 		return nil, fmt.Errorf("select folder %q: %w", opts.Folder, err)
 	}
 
-	criteria := &imap.SearchCriteria{}
-	if opts.UnreadOnly {
-		criteria.NotFlag = []imap.Flag{imap.FlagSeen}
+	// A recent window, the way a feed is read — not the unread flag. That flag
+	// belongs to the reader's mail client: relying on it meant Ziba missed any
+	// newsletter its owner opened first, and re-read the rest forever.
+	//
+	// Since matches on when the server received the message rather than the date
+	// the sender claims, so a delayed delivery or a wrong clock cannot hide mail.
+	// The protocol compares whole days, so the window is inclusive of its edge.
+	days := opts.LookBackDays
+	if days <= 0 {
+		days = 1
 	}
+	criteria := &imap.SearchCriteria{Since: time.Now().AddDate(0, 0, -days)}
 
 	found, err := client.Search(criteria, nil).Wait()
 	if err != nil {
