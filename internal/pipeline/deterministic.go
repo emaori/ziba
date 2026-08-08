@@ -43,10 +43,28 @@ func NewDeterministic(interests config.Interests) *Deterministic {
 
 // Assess labels the article with the interest topics whose words appear in it,
 // and scores it by the priority of the best match.
-func (d *Deterministic) Assess(_ context.Context, a domain.Article) (Assessment, error) {
+func (d *Deterministic) Assess(_ context.Context, a domain.Article, declared []string) (Assessment, error) {
 	// Not lowercased: the patterns fold case themselves, and the short-acronym
 	// ones deliberately do not. Folding here would make "AI" unmatchable.
 	haystack := a.Title + " " + a.FullText
+
+	// A source that states its subject is taken at its word. Keyword matching is
+	// exactly what such a source is meant to spare us: it filed a piece about
+	// FastEndpoints as uncategorised for never writing ".NET".
+	if len(declared) > 0 {
+		h := fnv.New32a()
+		h.Write([]byte(a.URL))
+		return Assessment{
+			Categories: declared,
+			Entities:   []string{},
+			Tone:       "neutral",
+			// No opinion to offer on how interesting a piece is: that needs a
+			// reader, or a model. A flat middling score, jittered only to break
+			// ties, is more honest than a number pretending to be a judgement.
+			Score:  domain.RelevanceScore(50 + int(h.Sum32()%5)),
+			Reason: "offline analyzer: declared by the source as " + strings.Join(declared, ", "),
+		}, nil
+	}
 
 	var categories []string
 	best := 0

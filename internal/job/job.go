@@ -246,6 +246,13 @@ func (r *Runner) Analyze(ctx context.Context, batch int) (analyzed, aboveThresho
 		return 0, 0, 0, nil
 	}
 
+	// Which sources state their own subject. Read once for the batch rather
+	// than per article: it is a handful of rows and does not change mid-run.
+	declared, err := r.store.DeclaredCategories(ctx)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
 	var (
 		mu      sync.Mutex
 		results []domain.Article
@@ -256,7 +263,7 @@ func (r *Runner) Analyze(ctx context.Context, batch int) (analyzed, aboveThresho
 
 	for _, article := range articles {
 		group.Go(func() error {
-			result, err := r.pipeline.Analyze(groupCtx, article)
+			result, err := r.pipeline.Analyze(groupCtx, article, declared[article.SourceID])
 
 			mu.Lock()
 			defer mu.Unlock()

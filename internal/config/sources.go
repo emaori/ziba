@@ -44,6 +44,12 @@ type SourceEntry struct {
 	// RSS only.
 	Roundup bool `yaml:"roundup"`
 
+	// Categories declares what this source is about, instead of having it
+	// inferred. Each must name a configured interest. Articles from a source
+	// with categories are always shown, and their score rates how interesting
+	// they are rather than how well they match.
+	Categories []string `yaml:"categories"`
+
 	// Newsletter applies to mailboxes only.
 	Newsletter *NewsletterEntry `yaml:"newsletter"`
 }
@@ -63,7 +69,11 @@ type NewsletterEntry struct {
 }
 
 // LoadSources reads and validates the sources file.
-func LoadSources(path string) ([]domain.Source, error) {
+//
+// Interests are needed to validate a source's declared categories: a name that
+// matches no interest would silently never be shown, which is the opposite of
+// what declaring it is for.
+func LoadSources(path string, interests Interests) ([]domain.Source, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read sources file: %w", err)
@@ -85,8 +95,13 @@ func LoadSources(path string) ([]domain.Source, error) {
 	sources := make([]domain.Source, 0, len(file.Sources))
 	seen := make(map[string]string, len(file.Sources))
 
+	known := make(map[string]bool, len(interests.Topics))
+	for _, topic := range interests.Topics {
+		known[topic.Topic] = true
+	}
+
 	for i, entry := range file.Sources {
-		src, err := entry.toDomain()
+		src, err := entry.toDomain(known)
 		if err != nil {
 			// Both the position and the name, because one of the two is always
 			// the one the user can find quickly.
@@ -130,7 +145,7 @@ func addressFor(sourceType domain.SourceType, raw string) (string, error) {
 	return parsed.String(), nil
 }
 
-func (e SourceEntry) toDomain() (domain.Source, error) {
+func (e SourceEntry) toDomain(knownInterests map[string]bool) (domain.Source, error) {
 	if e.Name == "" {
 		return domain.Source{}, fmt.Errorf("name is required")
 	}
@@ -165,6 +180,14 @@ func (e SourceEntry) toDomain() (domain.Source, error) {
 		return domain.Source{}, fmt.Errorf("collect_from: %w", err)
 	}
 
+	for _, category := range e.Categories {
+		if !knownInterests[category] {
+			return domain.Source{}, fmt.Errorf(
+				"category %q is not one of the configured interests — "+
+					"an article filed under it would never be shown", category)
+		}
+	}
+
 	if e.Roundup && sourceType != domain.SourceTypeRSS {
 		return domain.Source{}, fmt.Errorf("roundup applies to type rss, not %q — "+
 			"a newsletter is already read for its links", e.Type)
@@ -176,6 +199,7 @@ func (e SourceEntry) toDomain() (domain.Source, error) {
 		URL:         url,
 		Enabled:     enabled,
 		Roundup:     e.Roundup,
+		Categories:  e.Categories,
 		CollectFrom: collectFrom,
 	}
 

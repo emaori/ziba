@@ -51,6 +51,18 @@ type Source struct {
 	// It cannot be detected reliably from the feed itself, so it is configured.
 	Roundup bool
 
+	// Categories, when set, are the interests this source's articles belong to,
+	// declared rather than inferred. A .NET newsletter publishes .NET articles,
+	// and asking a model to work that out each time spends tokens rediscovering
+	// what the reader already knew — and sometimes gets it wrong, which then
+	// hides the article.
+	//
+	// Declaring them changes three things: the categories are assigned, the
+	// score rates how interesting the piece is rather than whether it is on
+	// topic, and the relevance threshold no longer applies. The reader
+	// subscribed to this source, so its articles are shown.
+	Categories []string
+
 	// Newsletter carries the settings only a mailbox needs, and is nil
 	// otherwise. Settings live here rather than in the database because the
 	// configuration file is their source of truth; storing them would give them

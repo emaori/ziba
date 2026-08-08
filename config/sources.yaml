@@ -9,6 +9,18 @@
 #          people's writing. Ziba opens the issue and collects what it links to,
 #          instead of storing the table of contents. See .NET Ketchup below.
 #
+# categories: what this source is about, when you already know. Each name must
+#          be one of the interests in interests.yaml. Declaring them means the
+#          AI does not guess the subject — it is told — and instead scores how
+#          *interesting* each piece is. Such articles are always shown: the
+#          relevance threshold does not apply, because you subscribed on
+#          purpose. Leave it out and everything is inferred as before.
+#
+#          A mailbox is one source, so categories there would apply to every
+#          newsletter in it. To declare per publication, give each its own
+#          folder — a Gmail filter or label routing one newsletter to its own
+#          folder — and add one newsletter source per folder.
+#
 # collect_from: how much history a source contributes on first contact. A
 #               duration ("7d", "48h"), a date ("2026-01-01"), or "all" for
 #               whatever the source offers. Default is 7d.
@@ -42,6 +54,10 @@ sources:
     url: "https://dotnetketchup.com/rss"
     roundup: true
     collect_from: 14d
+    # Everything it links is .NET; there is nothing to work out. Declaring it
+    # also stops the classifier hiding a piece that never writes the word —
+    # which it did to an article about FastEndpoints.
+    categories: [".NET"]
 
   # Communications of the ACM — the eight subject feeds.
   #

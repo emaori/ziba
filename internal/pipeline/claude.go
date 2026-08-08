@@ -75,13 +75,26 @@ func NewClaude(opts ClaudeOptions) (*Claude, error) {
 // scatter one subject across several headings and leave the reader's own
 // interests unrepresented. An article that fits none of them returns an empty
 // list, which is a legitimate answer.
-func assessmentSchema(interests config.Interests) map[string]any {
+// assessmentSchema builds the structure the model must answer with.
+//
+// When the source has declared its categories there is nothing to choose, so
+// the field is left out of the schema entirely rather than asked for and
+// discarded — a question not asked cannot be answered wrongly, and the model
+// spends its attention on the score instead.
+func assessmentSchema(interests config.Interests, declared []string) map[string]any {
 	names := make([]string, 0, len(interests.Topics))
 	for _, topic := range interests.Topics {
 		names = append(names, topic.Topic)
 	}
 
-	return map[string]any{
+	scoreDescription := "How relevant this article is to the reader's interests."
+	reasonDescription := "One sentence explaining the score, naming the interest it matches or misses."
+	if len(declared) > 0 {
+		scoreDescription = "How interesting and worth reading this article is."
+		reasonDescription = "One sentence explaining the score, naming what makes the piece worth reading or not."
+	}
+
+	schema := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
 			"categories": map[string]any{
@@ -106,22 +119,29 @@ func assessmentSchema(interests config.Interests) map[string]any {
 				"type":        "integer",
 				"minimum":     0,
 				"maximum":     100,
-				"description": "How relevant this article is to the reader's interests.",
+				"description": scoreDescription,
 			},
 			"reason": map[string]any{
 				"type":        "string",
-				"description": "One sentence explaining the score, naming the interest it matches or misses.",
+				"description": reasonDescription,
 			},
 		},
 		"required":             []string{"categories", "entities", "tone", "score", "reason"},
 		"additionalProperties": false,
 	}
+
+	if len(declared) > 0 {
+		properties := schema["properties"].(map[string]any)
+		delete(properties, "categories")
+		schema["required"] = []string{"entities", "tone", "score", "reason"}
+	}
+	return schema
 }
 
 // Assess implements Assessor: one call that identifies the article and rates
 // it. Sending the article text once instead of twice is where most of the
 // running cost of Ziba was saved.
-func (c *Claude) Assess(ctx context.Context, a domain.Article) (Assessment, error) {
+func (c *Claude) Assess(ctx context.Context, a domain.Article, declared []string) (Assessment, error) {
 	system := fmt.Sprintf(`You classify and rate articles for one specific reader.
 
 First identify what the article is about, factually and without judging its
@@ -137,6 +157,23 @@ interest scores low even when it is excellent in general.
 
 Answer only with the requested structure.`, c.interests.Describe())
 
+	// A declared source is not being classified, it is being judged. The reader
+	// already decided the subject matters by subscribing; what they need to know
+	// is whether this particular piece is worth their time.
+	if len(declared) > 0 {
+		system = fmt.Sprintf(`You rate articles for one specific reader.
+
+This article comes from a source the reader follows deliberately, on these
+subjects: %s. Do not question whether the subject is relevant — it is.
+
+Rate from 0 to 100 how interesting and worth reading this particular piece is.
+Reward depth, originality, and something the reader would not already know.
+Rate low a release note, a routine announcement, a rehash of common knowledge,
+or a thinly disguised advertisement — even though the subject is right.
+
+Answer only with the requested structure.`, strings.Join(declared, ", "))
+	}
+
 	var result struct {
 		Categories []string `json:"categories"`
 		Entities   []string `json:"entities"`
@@ -144,8 +181,14 @@ Answer only with the requested structure.`, c.interests.Describe())
 		Score      int      `json:"score"`
 		Reason     string   `json:"reason"`
 	}
-	if err := c.ask(ctx, c.fastModel, 1024, system, articlePrompt(a), assessmentSchema(c.interests), &result); err != nil {
+	if err := c.ask(ctx, c.fastModel, 1024, system, articlePrompt(a),
+		assessmentSchema(c.interests, declared), &result); err != nil {
 		return Assessment{}, err
+	}
+
+	// The source said what this is about, so that is what it is about.
+	if len(declared) > 0 {
+		result.Categories = declared
 	}
 
 	// The schema constrains this, but the database has a check constraint and a

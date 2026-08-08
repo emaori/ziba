@@ -33,8 +33,13 @@ type Assessment struct {
 }
 
 // Assessor identifies and rates an article in one pass.
+//
+// declared, when not empty, are the categories the article's source states it
+// publishes. The assessor must use them rather than choose its own, and score
+// how interesting the piece is rather than how well it fits the reader's
+// interests — the fit is already known, which is the point of declaring it.
 type Assessor interface {
-	Assess(ctx context.Context, a domain.Article) (Assessment, error)
+	Assess(ctx context.Context, a domain.Article, declared []string) (Assessment, error)
 }
 
 // Summarizer writes a summary aimed at this reader.
@@ -70,8 +75,11 @@ func New(analyzer Analyzer, threshold int, log *slog.Logger) *Pipeline {
 
 // Analyze returns the article enriched with categories, entities, tone, score
 // and — above threshold — a summary.
-func (p *Pipeline) Analyze(ctx context.Context, a domain.Article) (domain.Article, error) {
-	assessment, err := p.analyzer.Assess(ctx, a)
+//
+// declared carries the source's stated categories, or nothing when the source
+// leaves the judgement to the analyzer.
+func (p *Pipeline) Analyze(ctx context.Context, a domain.Article, declared []string) (domain.Article, error) {
+	assessment, err := p.analyzer.Assess(ctx, a, declared)
 	if err != nil {
 		return a, fmt.Errorf("assess %s: %w", a.URL, err)
 	}
@@ -83,7 +91,9 @@ func (p *Pipeline) Analyze(ctx context.Context, a domain.Article) (domain.Articl
 	a.ScoreReason = assessment.Reason
 	a.AnalyzedAt = time.Now().UTC()
 
-	if assessment.Score < p.threshold {
+	// A declared source is always shown, so it always gets a summary: leaving
+	// it out would put an article on the page with nothing to read beneath it.
+	if assessment.Score < p.threshold && len(declared) == 0 {
 		p.log.Debug("below threshold, not summarized",
 			"url", a.URL, "score", assessment.Score, "threshold", p.threshold)
 		return a, nil

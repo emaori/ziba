@@ -38,12 +38,14 @@ func newSetup(ctx context.Context, mode analyzerMode) (*setup, error) {
 		return nil, err
 	}
 
-	sources, err := config.LoadSources(cfg.SourcesPath)
+	// Interests first: a source may declare which of them it belongs to, and
+	// those names are validated against this list.
+	interests, err := config.LoadInterests(cfg.InterestsPath)
 	if err != nil {
 		return nil, err
 	}
 
-	interests, err := config.LoadInterests(cfg.InterestsPath)
+	sources, err := config.LoadSources(cfg.SourcesPath, interests)
 	if err != nil {
 		return nil, err
 	}

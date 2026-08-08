@@ -60,15 +60,18 @@ func (s *Store) GenerateDigest(ctx context.Context, date time.Time,
 
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO digest_articles (digest_id, article_id, ordinal)
-		SELECT $1, id, row_number() OVER (ORDER BY score DESC, published_at DESC NULLS LAST)
-		FROM articles
-		WHERE processed_at IS NOT NULL
-		  AND archived_at IS NULL
-		  AND score >= $2
-		  AND collected_at::date = $3::date
+		SELECT $1, a.id, row_number() OVER (ORDER BY a.score DESC, a.published_at DESC NULLS LAST)
+		FROM articles a JOIN sources s ON s.id = a.source_id
+		WHERE a.processed_at IS NOT NULL
+		  AND a.archived_at IS NULL
+		  AND a.collected_at::date = $3::date
+		  -- A source that declares its categories was subscribed to on purpose,
+		  -- so the threshold does not apply to it: its score orders the day
+		  -- rather than deciding whether it belongs in it.
+		  AND (a.score >= $2 OR cardinality(s.categories) > 0)
 		  -- An article matching none of the reader's interests is not shown
 		  -- anywhere, so it does not belong in the day's selection either.
-		  AND categories && $4::text[]`,
+		  AND a.categories && $4::text[]`,
 		digestID, int16(threshold), date, interests)
 	if err != nil {
 		return 0, fmt.Errorf("select digest articles: %w", err)
@@ -206,7 +209,9 @@ func (s *Store) ArticlesByInterest(ctx context.Context, interest string,
 		WHERE $1 = ANY (a.categories)
 		  AND a.processed_at IS NOT NULL
 		  AND a.archived_at IS NULL
-		  AND a.score >= $2
+		  -- As in the day's selection: a declared source is always shown, and
+		  -- its score only orders it.
+		  AND (a.score >= $2 OR cardinality(s.categories) > 0)
 		ORDER BY a.score DESC, a.published_at DESC NULLS LAST, a.id DESC
 		LIMIT $3 OFFSET $4`, interest, int16(threshold), limit, offset)
 	if err != nil {

@@ -28,14 +28,22 @@ func (s *Store) SyncSources(ctx context.Context, configured []domain.Source) ([]
 	keep := make([]int64, 0, len(configured))
 
 	for _, src := range configured {
+		// A nil slice is sent as NULL, and the column is NOT NULL. "Declares
+		// nothing" is an empty list, not an absent one.
+		categories := src.Categories
+		if categories == nil {
+			categories = []string{}
+		}
+
 		// (type, url) is the natural key: it is what the user actually edits.
 		row := tx.QueryRow(ctx, `
-			INSERT INTO sources (name, type, url, enabled)
-			VALUES ($1, $2, $3, $4)
+			INSERT INTO sources (name, type, url, enabled, categories)
+			VALUES ($1, $2, $3, $4, $5)
 			ON CONFLICT (type, url) DO UPDATE
-			SET name = EXCLUDED.name, enabled = EXCLUDED.enabled
+			SET name = EXCLUDED.name, enabled = EXCLUDED.enabled,
+			    categories = EXCLUDED.categories
 			RETURNING id, created_at`,
-			src.Name, string(src.Type), src.URL, src.Enabled)
+			src.Name, string(src.Type), src.URL, src.Enabled, categories)
 
 		// created_at is deliberately not in the UPDATE list: it records when the
 		// source was first seen, and CollectFrom anchors to it.
@@ -161,6 +169,33 @@ func queueQuery(kind string) string {
 		  AND kind = '` + kind + `'
 		ORDER BY collected_at
 		LIMIT $1`
+}
+
+// DeclaredCategories returns, per source id, the categories that source
+// declares. Sources that declare none are absent from the map.
+//
+// The analysis stage needs this to assign categories instead of inferring them,
+// and it comes from the database rather than the configuration because the two
+// are kept in step by SyncSources — the file remains the truth, and this is a
+// copy written from it on every run.
+func (s *Store) DeclaredCategories(ctx context.Context) (map[int64][]string, error) {
+	rows, err := s.pool.Query(ctx,
+		`SELECT id, categories FROM sources WHERE cardinality(categories) > 0`)
+	if err != nil {
+		return nil, fmt.Errorf("query declared categories: %w", err)
+	}
+	defer rows.Close()
+
+	declared := make(map[int64][]string)
+	for rows.Next() {
+		var id int64
+		var categories []string
+		if err := rows.Scan(&id, &categories); err != nil {
+			return nil, fmt.Errorf("read declared categories: %w", err)
+		}
+		declared[id] = categories
+	}
+	return declared, rows.Err()
 }
 
 // SaveArticle stores an article and reports whether it was new. An article

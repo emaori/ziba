@@ -32,7 +32,7 @@ sources:
     enabled: false
 `)
 
-	sources, err := LoadSources(path)
+	sources, err := LoadSources(path, testInterests())
 	if err != nil {
 		t.Fatalf("LoadSources returned error: %v", err)
 	}
@@ -83,7 +83,7 @@ sources:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := LoadSources(writeSources(t, tt.content)); err == nil {
+			if _, err := LoadSources(writeSources(t, tt.content), testInterests()); err == nil {
 				t.Error("LoadSources returned no error, want one")
 			}
 		})
@@ -107,7 +107,7 @@ sources:
       max_messages: 20
 `)
 
-	sources, err := LoadSources(path)
+	sources, err := LoadSources(path, testInterests())
 	if err != nil {
 		t.Fatalf("LoadSources returned error: %v", err)
 	}
@@ -142,7 +142,7 @@ sources:
     newsletter:
       username_env: ZIBA_TEST_IMAP_USER
       password_env: ZIBA_TEST_IMAP_PASSWORD
-`))
+`), testInterests())
 	if err != nil {
 		t.Fatalf("LoadSources returned error: %v", err)
 	}
@@ -176,7 +176,7 @@ func TestLoadNewsletterSourceRejects(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := LoadSources(writeSources(t, tt.content)); err == nil {
+			if _, err := LoadSources(writeSources(t, tt.content), testInterests()); err == nil {
 				t.Error("LoadSources returned no error, want one")
 			}
 		})
@@ -191,7 +191,7 @@ sources:
   - name: "Some site"
     type: website
     url: "https://example.com/news"
-`))
+`), testInterests())
 	if err == nil {
 		t.Fatal("LoadSources accepted a website source, want it rejected")
 	}
@@ -212,7 +212,7 @@ sources:
   - name: "Ordinary feed"
     type: rss
     url: "https://example.com/feed"
-`))
+`), testInterests())
 	if err != nil {
 		t.Fatalf("LoadSources returned error: %v", err)
 	}
@@ -239,7 +239,7 @@ sources:
     newsletter:
       username_env: TEST_IMAP_USER
       password_env: TEST_IMAP_PASS
-`))
+`), testInterests())
 	if err == nil {
 		t.Fatal("LoadSources accepted roundup on a newsletter, want it rejected")
 	}
@@ -249,7 +249,60 @@ sources:
 }
 
 func TestLoadSourcesMissingFile(t *testing.T) {
-	if _, err := LoadSources(filepath.Join(t.TempDir(), "absent.yaml")); err == nil {
+	if _, err := LoadSources(filepath.Join(t.TempDir(), "absent.yaml"), testInterests()); err == nil {
 		t.Error("LoadSources returned no error for a missing file, want one")
+	}
+}
+
+// testInterests is the interest list a source's declared categories are checked
+// against. Kept minimal: only the names matter here.
+func testInterests() Interests {
+	return Interests{
+		Threshold: 60,
+		Topics: []Interest{
+			{Topic: "AI", Priority: 1},
+			{Topic: ".NET", Priority: 2},
+		},
+	}
+}
+
+// A source may state what it publishes instead of having it inferred.
+func TestLoadDeclaredCategories(t *testing.T) {
+	sources, err := LoadSources(writeSources(t, `
+sources:
+  - name: "A .NET newsletter"
+    type: rss
+    url: "https://example.com/dotnet"
+    categories: [".NET"]
+  - name: "Anything at all"
+    type: rss
+    url: "https://example.com/feed"
+`), testInterests())
+	if err != nil {
+		t.Fatalf("LoadSources returned error: %v", err)
+	}
+	if got := sources[0].Categories; len(got) != 1 || got[0] != ".NET" {
+		t.Errorf("Categories = %v, want [.NET]", got)
+	}
+	if len(sources[1].Categories) != 0 {
+		t.Errorf("Categories = %v for a source that declared none", sources[1].Categories)
+	}
+}
+
+// A category that names no interest would file articles where nothing looks,
+// which is the opposite of what declaring one is for.
+func TestLoadSourcesRejectsUnknownCategory(t *testing.T) {
+	_, err := LoadSources(writeSources(t, `
+sources:
+  - name: "A feed"
+    type: rss
+    url: "https://example.com/feed"
+    categories: ["Gardening"]
+`), testInterests())
+	if err == nil {
+		t.Fatal("LoadSources accepted a category matching no interest, want it rejected")
+	}
+	if !strings.Contains(err.Error(), "Gardening") || !strings.Contains(err.Error(), "never be shown") {
+		t.Errorf("error %q does not explain the problem", err)
 	}
 }

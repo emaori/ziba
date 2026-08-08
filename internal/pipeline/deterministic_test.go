@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/emaori/ziba/internal/config"
@@ -76,7 +77,7 @@ func TestDeterministicDoesNotMisfileGeneralNews(t *testing.T) {
 			"I consiglieri hanno discusso per ore, e alla fine hanno votato.",
 	}
 
-	got, err := analyzer.Assess(context.Background(), italianNews)
+	got, err := analyzer.Assess(context.Background(), italianNews, nil)
 	if err != nil {
 		t.Fatalf("Assess returned error: %v", err)
 	}
@@ -88,5 +89,45 @@ func TestDeterministicDoesNotMisfileGeneralNews(t *testing.T) {
 	}
 	if got.Score >= 60 {
 		t.Errorf("Score = %d for unrelated news, want below the threshold", got.Score)
+	}
+}
+
+// A source that states its subject is taken at its word: no keyword matching,
+// and the categories are the declared ones whatever the text says.
+func TestDeterministicHonoursDeclaredCategories(t *testing.T) {
+	analyzer := NewDeterministic(config.Interests{
+		Threshold: 60,
+		Topics: []config.Interest{
+			{Topic: "AI", Priority: 1},
+			{Topic: ".NET", Priority: 2, Subtopics: []string{"C#"}},
+		},
+	})
+
+	// Deliberately a piece that mentions none of the configured terms — the
+	// case that sent a FastEndpoints article to Uncategorized.
+	article := domain.Article{
+		URL:      "https://example.com/validation",
+		Title:    "Validation in FastEndpoints: pipelines and pitfalls",
+		FullText: "You inherit Validator<TRequest>, add a couple of RuleFor lines, and get your 400 response.",
+	}
+
+	got, err := analyzer.Assess(context.Background(), article, []string{".NET"})
+	if err != nil {
+		t.Fatalf("Assess returned error: %v", err)
+	}
+	if len(got.Categories) != 1 || got.Categories[0] != ".NET" {
+		t.Errorf("Categories = %v, want the declared [.NET]", got.Categories)
+	}
+	if got.Score == 0 {
+		t.Error("Score = 0 for a declared source; it should still be ordered")
+	}
+	if !strings.Contains(got.Reason, "declared") {
+		t.Errorf("Reason = %q, want it to say the source declared this", got.Reason)
+	}
+
+	// Without the declaration the same article falls through the keyword rules.
+	fallback, _ := analyzer.Assess(context.Background(), article, nil)
+	if len(fallback.Categories) != 1 || fallback.Categories[0] != "Uncategorized" {
+		t.Errorf("Categories = %v without a declaration, want Uncategorized", fallback.Categories)
 	}
 }

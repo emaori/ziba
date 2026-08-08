@@ -20,9 +20,11 @@ type stubAnalyzer struct {
 	summarizeErr error
 
 	summarizeCalls int
+	declared       []string
 }
 
-func (s *stubAnalyzer) Assess(context.Context, domain.Article) (Assessment, error) {
+func (s *stubAnalyzer) Assess(_ context.Context, _ domain.Article, declared []string) (Assessment, error) {
+	s.declared = declared
 	return s.assessment, s.assessErr
 }
 
@@ -60,7 +62,7 @@ func TestAnalyzeSummarizesOnlyAboveThreshold(t *testing.T) {
 			}
 			p := New(stub, 60, testLogger())
 
-			got, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com/a"})
+			got, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com/a"}, nil)
 			if err != nil {
 				t.Fatalf("Analyze returned error: %v", err)
 			}
@@ -102,7 +104,7 @@ func TestAnalyzeKeepsScoreWhenSummaryFails(t *testing.T) {
 	}
 	p := New(stub, 60, testLogger())
 
-	got, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com/a"})
+	got, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com/a"}, nil)
 	if err != nil {
 		t.Fatalf("Analyze returned error: %v, want the failure to be tolerated", err)
 	}
@@ -120,7 +122,7 @@ func TestAnalyzePropagatesAssessmentError(t *testing.T) {
 	stub := &stubAnalyzer{assessErr: errors.New("boom")}
 	p := New(stub, 60, testLogger())
 
-	if _, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com/a"}); err == nil {
+	if _, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com/a"}, nil); err == nil {
 		t.Error("Analyze returned no error, want one")
 	}
 	if stub.summarizeCalls != 0 {
@@ -144,11 +146,11 @@ func TestDeterministicIsDeterministic(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	first, err := analyzer.Assess(ctx, article)
+	first, err := analyzer.Assess(ctx, article, nil)
 	if err != nil {
 		t.Fatalf("Assess returned error: %v", err)
 	}
-	second, _ := analyzer.Assess(ctx, article)
+	second, _ := analyzer.Assess(ctx, article, nil)
 
 	if len(first.Categories) != 1 || first.Categories[0] != "Go programming" {
 		t.Errorf("Categories = %v, want [Go programming]", first.Categories)
@@ -162,7 +164,7 @@ func TestDeterministicIsDeterministic(t *testing.T) {
 
 	// An article matching nothing must not score well.
 	unrelated := domain.Article{URL: "https://example.com/x", Title: "Roman traffic", FullText: "Cars."}
-	assessment, _ := analyzer.Assess(ctx, unrelated)
+	assessment, _ := analyzer.Assess(ctx, unrelated, nil)
 	if assessment.Score >= 60 {
 		t.Errorf("Score = %d for an unrelated article, want below threshold", assessment.Score)
 	}

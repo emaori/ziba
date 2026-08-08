@@ -45,7 +45,9 @@ func digestCmd(ctx context.Context, args []string) error {
 		return err
 	}
 
-	fmt.Printf("digest for %s: %d articles at or above %d\n",
+	// Not "at or above the threshold": a source that declares its categories is
+	// always selected, whatever it scored.
+	fmt.Printf("digest for %s: %d articles (threshold %d, not applied to sources that declare their categories)\n",
 		date.Format(time.DateOnly), selected, s.runner.Threshold())
 	if selected == 0 {
 		fmt.Println("nothing cleared the threshold — lower it in the interests file, or collect more")
