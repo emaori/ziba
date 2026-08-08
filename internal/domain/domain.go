@@ -147,9 +147,7 @@ const (
 	ItemKindProvenance ItemKind = "provenance"
 )
 
-// RawItem is a freshly collected element, before any AI processing. Its text
-// may be missing or partial: feeds often carry only an excerpt, and the full
-// text is retrieved in a later step.
+// RawItem is a freshly collected element, before any AI processing.
 type RawItem struct {
 	ID          int64
 	SourceID    int64
@@ -159,7 +157,25 @@ type RawItem struct {
 	Author      string
 	PublishedAt time.Time
 	CollectedAt time.Time
-	Text        string
+
+	// Text is whatever the source itself supplied, before anything was fetched
+	// from the article's own page. What that amounts to varies enormously, and
+	// it is stored exactly as given rather than cleaned up:
+	//
+	//   - a feed gives whatever it chose to publish, as markup. That ranges from
+	//     one sentence to the entire post — measured across the configured
+	//     feeds, from about 50 characters to 27,000.
+	//   - a newsletter's provenance row holds the email body, already reduced to
+	//     plain text.
+	//   - a link extracted from a newsletter has none: only the page it points
+	//     at can supply the text.
+	//
+	// It serves two quite different purposes depending on Kind. For an article
+	// it is a *fallback*, read once when the article's own page is fetched and
+	// used only if that fetch fails — which is what keeps a blocked publisher
+	// from costing an entry entirely. For a provenance row it is the *record*:
+	// the only copy of the email Ziba keeps, and never replaced by anything.
+	Text string
 }
 
 // RelevanceScore expresses how relevant an article is to the configured
