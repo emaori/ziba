@@ -15,13 +15,8 @@ import (
 	"github.com/emaori/ziba/internal/store"
 )
 
-const (
-	// listPageSize bounds how much of an interest or the archive one page shows.
-	listPageSize = 50
-
-	// dayPickerLength is how many days back the day picker offers.
-	dayPickerLength = 30
-)
+// listPageSize bounds how much of an interest or the archive one page shows.
+const listPageSize = 50
 
 // Store is what the web package needs from persistence. Declaring the interface
 // here, where it is consumed, keeps the handlers testable with a fake and
@@ -33,7 +28,7 @@ type Store interface {
 
 	ArticlesByInterest(ctx context.Context, interest string, threshold domain.RelevanceScore, limit, offset int) ([]domain.Article, error)
 	ArticlesOnDay(ctx context.Context, interest string, day time.Time, interests []string) ([]domain.Article, error)
-	DaysWithArticles(ctx context.Context, interest string, limit int, interests []string) ([]store.DayCount, error)
+	DayNavigation(ctx context.Context, interest string, day time.Time, interests []string) (store.DayNavigation, error)
 
 	Archive(ctx context.Context, limit, offset int, interests []string) ([]domain.Article, error)
 }
@@ -48,7 +43,7 @@ type page struct {
 	Digest    domain.Digest
 	Article   domain.Article
 	Articles  []domain.Article
-	Days      []store.DayCount
+	Nav       store.DayNavigation
 	Day       time.Time
 	Interest  string
 	Offset    int
@@ -103,7 +98,7 @@ func (s *Server) handleDay(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	days, err := s.store.DaysWithArticles(r.Context(), interest, dayPickerLength, s.interests)
+	nav, err := s.store.DayNavigation(r.Context(), interest, day, s.interests)
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -111,7 +106,7 @@ func (s *Server) handleDay(w http.ResponseWriter, r *http.Request) {
 
 	s.render(w, r, "day.html", &page{
 		Title: "By day", Active: interest, Interest: interest,
-		Articles: articles, Days: days, Day: day,
+		Articles: articles, Nav: nav, Day: day,
 	})
 }
 

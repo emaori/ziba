@@ -55,12 +55,19 @@ func (f *fakeStore) ArticlesOnDay(context.Context, string, time.Time, []string) 
 	return f.articles, nil
 }
 
-func (f *fakeStore) DaysWithArticles(context.Context, string, int, []string) ([]store.DayCount, error) {
-	return []store.DayCount{{Day: time.Date(2026, 8, 8, 0, 0, 0, 0, time.UTC), Count: 3}}, nil
+func (f *fakeStore) DayNavigation(context.Context, string, time.Time, []string) (store.DayNavigation, error) {
+	return store.DayNavigation{
+		First: date(2026, 7, 1), Last: date(2026, 8, 8),
+		Prev: date(2026, 8, 6), Next: date(2026, 8, 8),
+	}, nil
 }
 
 func (f *fakeStore) Archive(context.Context, int, int, []string) ([]domain.Article, error) {
 	return f.articles, nil
+}
+
+func date(year int, month time.Month, day int) time.Time {
+	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
 }
 
 func testInterests() config.Interests {
@@ -125,7 +132,7 @@ func TestEachPageRendersItsOwnContent(t *testing.T) {
 		{"home is the day's selection", "/", `class="card"`},
 		{"article reader", "/article/42", `class="reader"`},
 		{"interest", "/interest/Robotics", `class="card"`},
-		{"day", "/day", `class="days"`},
+		{"day", "/day", `class="daypick"`},
 		{"archive", "/archive", `class="pager"`},
 	}
 
@@ -374,5 +381,70 @@ func TestEmittedLinksAreFollowable(t *testing.T) {
 				t.Errorf("%s links to %q, which answers %d", from, link, code)
 			}
 		}
+	}
+}
+
+// The day view is reached by a date picker. The regression it replaced was a
+// sideways-scrolling strip of days, so what matters is that the picker is a
+// real date input, bounded by what the archive actually holds, and that moving
+// around does not quietly drop the interest filter.
+func TestDayPicker(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{articles: []domain.Article{sampleArticle()}})
+
+	_, body := get(t, handler, "/day?date=2026-08-07&interest=AI")
+
+	for _, want := range []string{
+		`type="date"`,
+		`name="date"`,
+		`value="2026-08-07"`,
+		// Bounded by the span that holds something, so the calendar cannot
+		// offer a year of empty days.
+		`min="2026-07-01"`,
+		`max="2026-08-08"`,
+		// The filter has to survive submitting the form.
+		`type="hidden" name="interest" value="AI"`,
+		// The arrows step to the nearest populated day, carrying the interest.
+		`/day?date=2026-08-06&amp;interest=AI`,
+		`/day?date=2026-08-08&amp;interest=AI`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("day page does not contain %q", want)
+		}
+	}
+
+	// The strip is gone, not merely restyled.
+	if strings.Contains(body, `class="days"`) {
+		t.Error("the old day strip is still being rendered")
+	}
+}
+
+// With no interest chosen the links must not invent one.
+func TestDayPickerWithoutInterest(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{articles: []domain.Article{sampleArticle()}})
+
+	_, body := get(t, handler, "/day")
+
+	if strings.Contains(body, "interest=") {
+		t.Error("day page carries an interest filter that was never asked for")
+	}
+	if !strings.Contains(body, `/day?date=2026-08-06`) {
+		t.Error("day page has no link to the previous populated day")
+	}
+}
+
+// A day the picker offers but nothing was published on must say so, and offer
+// the way back rather than a dead end.
+func TestEmptyDayPointsSomewhere(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{})
+
+	code, body := get(t, handler, "/day?date=2026-08-07")
+	if code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", code)
+	}
+	if !strings.Contains(body, "Nothing published on this day") {
+		t.Error("an empty day does not say it is empty")
+	}
+	if !strings.Contains(body, `/day?date=2026-08-06`) {
+		t.Error("an empty day offers no way to a day that has something")
 	}
 }

@@ -80,22 +80,57 @@ a { color: var(--accent); }
 .tabs a.on { color: var(--accent); font-weight: 700; }
 .tabs .count { color: var(--rule); }
 
-/* Day picker: a long strip that scrolls sideways rather than wrapping into a
-   wall of dates on a phone. */
-.days {
+/* Day picker: the browser's own calendar, with an arrow either side to step to
+   the nearest day that holds something. It replaced a sideways-scrolling strip
+   of dates, which on a phone meant dragging through a fortnight to reach last
+   Tuesday. */
+.daypick {
   display: flex;
-  gap: 0.9rem;
-  overflow-x: auto;
+  align-items: center;
+  gap: 0.6rem;
   padding: 0.7rem 0;
   margin-bottom: 1.5rem;
   border-bottom: 1px solid var(--rule);
   font-family: system-ui, sans-serif;
-  font-size: 0.78rem;
-  white-space: nowrap;
+  font-size: 0.85rem;
 }
-.days a { text-decoration: none; color: var(--ink-soft); }
-.days a.on { color: var(--accent); font-weight: 700; }
-.days .count { color: var(--rule); }
+
+.daypick .field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  /* Takes the slack so the arrows sit at the ends of the row. */
+  margin-right: auto;
+}
+
+.daypick .field span {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+.daypick input[type="date"] {
+  padding: 0.4rem 0.6rem;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+  /* Safari ignores the inherited scheme and draws a light calendar otherwise. */
+  color-scheme: light dark;
+}
+
+.daypick .step {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  text-decoration: none;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.daypick .step.off { color: var(--rule); }
 
 /* One interest's leading article on the home page. */
 .interest-block { margin-bottom: 2.5rem; }

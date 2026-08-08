@@ -234,37 +234,53 @@ func (s *Store) ArticlesOnDay(ctx context.Context, interest string, day time.Tim
 	return collectArchivable(rows, "day "+day.Format(time.DateOnly))
 }
 
-// DaysWithArticles lists the days that have anything to show for an interest,
-// newest first, so the day picker only offers days that exist.
-func (s *Store) DaysWithArticles(ctx context.Context, interest string, limit int,
-	interests []string) ([]DayCount, error) {
+// DayNavigation says where a reader can move to from a given day.
+//
+// It exists so the day view can offer a real date picker. A picker needs three
+// things the list of days it replaced could not express: the span worth
+// offering at all, and the nearest populated day on either side — because
+// stepping a day at a time through an empty week is not navigation.
+func (s *Store) DayNavigation(ctx context.Context, interest string, day time.Time,
+	interests []string) (DayNavigation, error) {
 
-	rows, err := s.pool.Query(ctx, `
-		SELECT published_at::date AS day, count(*)
-		FROM articles
-		WHERE ($1 = '' OR $1 = ANY (categories))
-		  AND categories && $3::text[]
-		  AND published_at IS NOT NULL
-		GROUP BY day ORDER BY day DESC LIMIT $2`, interest, limit, interests)
+	var nav DayNavigation
+	// Nullable every one of them: an empty archive has no span, and the ends of
+	// a populated one have no neighbour beyond.
+	var first, last, prev, next *time.Time
+
+	err := s.pool.QueryRow(ctx, `
+		WITH days AS (
+			SELECT DISTINCT published_at::date AS day
+			FROM articles
+			WHERE ($1 = '' OR $1 = ANY (categories))
+			  AND categories && $3::text[]
+			  AND published_at IS NOT NULL
+		)
+		SELECT (SELECT min(day) FROM days),
+		       (SELECT max(day) FROM days),
+		       (SELECT max(day) FROM days WHERE day < $2::date),
+		       (SELECT min(day) FROM days WHERE day > $2::date)`,
+		interest, day, interests).Scan(&first, &last, &prev, &next)
 	if err != nil {
-		return nil, fmt.Errorf("query days: %w", err)
+		return nav, fmt.Errorf("query day navigation: %w", err)
 	}
 
-	days, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (DayCount, error) {
-		var d DayCount
-		err := row.Scan(&d.Day, &d.Count)
-		return d, err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("read days: %w", err)
+	for target, value := range map[*time.Time]*time.Time{
+		&nav.First: first, &nav.Last: last, &nav.Prev: prev, &nav.Next: next,
+	} {
+		if value != nil {
+			*target = *value
+		}
 	}
-	return days, nil
+	return nav, nil
 }
 
-// DayCount is one day and how much it holds.
-type DayCount struct {
-	Day   time.Time
-	Count int
+// DayNavigation is the day view's sense of where it is: the span that holds
+// anything, and the nearest day on each side that does. A zero value in any
+// field means there is nothing in that direction.
+type DayNavigation struct {
+	First, Last time.Time
+	Prev, Next  time.Time
 }
 
 // articleColumnsArchived is articleColumns plus the archived marker, for the

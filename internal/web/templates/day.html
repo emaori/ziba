@@ -4,18 +4,58 @@
     <span class="subtitle">{{shortDate .Day}} · {{len .Articles}} articles, including read</span>
   </h1>
 
-  <nav class="days">
-    {{range .Days}}
-      <a class="{{if eq (isoDate .Day) (isoDate $.Day)}}on{{end}}"
-         href="/day?date={{isoDate .Day}}{{if $.Interest}}&interest={{urlquery $.Interest}}{{end}}">
-        {{shortDate .Day}} <span class="count">{{.Count}}</span>
-      </a>
+  {{/* A real date picker rather than a strip of days. The browser supplies the
+       calendar; min and max keep it inside the span that actually holds
+       something. The interest travels as a hidden field so changing the date
+       does not silently drop the filter.
+
+       The arrows step to the nearest day that has articles, not to yesterday:
+       stepping one empty day at a time through a quiet week is not navigation. */}}
+  <form class="daypick" method="get" action="/day">
+    {{if .Interest}}<input type="hidden" name="interest" value="{{.Interest}}">{{end}}
+
+    {{if .Nav.Prev.IsZero}}
+      <span class="step off" aria-hidden="true">←</span>
+    {{else}}
+      <a class="step" href="{{dayLink .Nav.Prev .Interest}}"
+         title="{{shortDate .Nav.Prev}}" rel="prev">←</a>
     {{end}}
-  </nav>
+
+    <label class="field">
+      <span>Date</span>
+      <input type="date" name="date" value="{{isoDate .Day}}"
+             {{if not .Nav.First.IsZero}}min="{{isoDate .Nav.First}}"{{end}}
+             {{if not .Nav.Last.IsZero}}max="{{isoDate .Nav.Last}}"{{end}}>
+    </label>
+
+    {{/* Kept for anyone whose browser does not run the script below. */}}
+    <button class="button secondary" type="submit">Show</button>
+
+    {{if .Nav.Next.IsZero}}
+      <span class="step off" aria-hidden="true">→</span>
+    {{else}}
+      <a class="step" href="{{dayLink .Nav.Next .Interest}}"
+         title="{{shortDate .Nav.Next}}" rel="next">→</a>
+    {{end}}
+  </form>
 
   {{if .Articles}}
     {{range .Articles}}{{template "card" .}}{{end}}
   {{else}}
-    <p class="note">Nothing published on this day.</p>
+    <p class="note">
+      Nothing published on this day.
+      {{if not .Nav.Prev.IsZero}}
+        The nearest earlier day with articles is
+        <a href="{{dayLink .Nav.Prev .Interest}}">{{shortDate .Nav.Prev}}</a>.
+      {{end}}
+    </p>
   {{end}}
+
+  {{/* Progressive enhancement, and the only script in Ziba: picking a date
+       navigates immediately instead of requiring the button. Without it the
+       form still works — the button is right there. */}}
+  <script>
+    document.querySelector('.daypick input[type=date]')
+      .addEventListener('change', function () { this.form.submit(); });
+  </script>
 {{end}}

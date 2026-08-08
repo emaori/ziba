@@ -37,6 +37,21 @@ var templateFuncs = template.FuncMap{
 	// to a space but a path does not — so "Computer Science" became the literal
 	// "Computer+Science" and matched no interest. Paths need "%20".
 	"pathEscape": url.PathEscape,
+
+	// dayLink builds an address for the day view, carrying the interest filter
+	// along. Written here rather than assembled in the template so that the two
+	// halves are escaped the way each needs — and so a link cannot be built
+	// with only one of them remembered.
+	"dayLink": dayLink,
+}
+
+// dayLink addresses one day, keeping the interest filter if there is one.
+func dayLink(day time.Time, interest string) string {
+	query := url.Values{"date": {day.Format(time.DateOnly)}}
+	if interest != "" {
+		query.Set("interest", interest)
+	}
+	return "/day?" + query.Encode()
 }
 
 // paragraphs splits stored article text into paragraphs for the reader.
