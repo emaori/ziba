@@ -46,17 +46,61 @@ sources:
     url: "https://dotnetketchup.com/rss"
     collect_from: 14d
 
-  # Communications of the ACM sits behind Cloudflare bot protection. Every feed
-  # path answers 403 to a plain request, and a real headless browser is served a
-  # CAPTCHA page ("Attention Required! | Cloudflare"). There is no way to read
-  # it with what Ziba has, and working around a deliberate access control is not
-  # something to build. Left here, disabled, so the decision is not rediscovered.
+  # Communications of the ACM — the eight subject feeds.
   #
-  # Options, if it matters: an ACM Digital Library subscription may expose an
-  # authorised feed, or the ACM TechNews newsletter could be read as a mailbox.
-  - name: "Communications of the ACM"
+  # All eight are DISABLED because Ziba cannot reach them. Every address on
+  # cacm.acm.org answers an automated request with a Cloudflare challenge page
+  # ("Attention Required!"), verified against each of these eight in turn. A
+  # browser gets through; a feed reader does not.
+  #
+  # Worth recording: this is not the publisher declining to be read. Their
+  # robots.txt is served normally and permits everything but the admin area,
+  # and it blocks one named AI crawler while leaving ordinary readers allowed.
+  # The refusal comes from a bot-detection layer that is stricter than the
+  # site's own stated policy. Ziba will not disguise itself to get past it.
+  #
+  # To use these: check whether they load for you, and if ACM ever allows a
+  # personal reader through, set enabled: true. ACM TechNews is a newsletter
+  # and would work today through a newsletter source instead.
+
+  - name: "CACM — Architecture & Hardware"
     type: rss
-    url: "https://cacm.acm.org/feed/"
+    url: "https://cacm.acm.org/category/architecture-and-hardware/feed"
+    enabled: false
+
+  - name: "CACM — AI & Machine Learning"
+    type: rss
+    url: "https://cacm.acm.org/category/artificial-intelligence-machine-learning/feed"
+    enabled: false
+
+  - name: "CACM — Computing Applications"
+    type: rss
+    url: "https://cacm.acm.org/category/computing-applications/feed"
+    enabled: false
+
+  - name: "CACM — Data & Information"
+    type: rss
+    url: "https://cacm.acm.org/category/data-and-information/feed"
+    enabled: false
+
+  - name: "CACM — Security & Privacy"
+    type: rss
+    url: "https://cacm.acm.org/category/security-and-privacy/feed"
+    enabled: false
+
+  - name: "CACM — Software Engineering & Programming Languages"
+    type: rss
+    url: "https://cacm.acm.org/category/software-engineering-and-programming-languages/feed"
+    enabled: false
+
+  - name: "CACM — Systems & Networking"
+    type: rss
+    url: "https://cacm.acm.org/category/systems-and-networking/feed"
+    enabled: false
+
+  - name: "CACM — Theory"
+    type: rss
+    url: "https://cacm.acm.org/category/theory/feed"
     enabled: false
 
   # A newsletter mailbox. Credentials are never written here: name the
