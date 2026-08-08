@@ -41,6 +41,7 @@ type Runner struct {
 	fullText  *collect.FullText
 	pipeline  *pipeline.Pipeline
 	threshold domain.RelevanceScore
+	interests []string
 	sources   []domain.Source
 	log       *slog.Logger
 }
@@ -74,6 +75,7 @@ func New(cfg config.Config, sources []domain.Source, interests config.Interests,
 		fullText:  collect.NewFullText(client),
 		pipeline:  p,
 		threshold: domain.RelevanceScore(interests.Threshold),
+		interests: interestNames(interests),
 		sources:   sources,
 		log:       log,
 	}
@@ -227,7 +229,17 @@ func (r *Runner) Analyze(ctx context.Context, batch int) (analyzed, aboveThresho
 
 // Digest builds and stores the selection for a day.
 func (r *Runner) Digest(ctx context.Context, date time.Time) (int, error) {
-	return r.store.GenerateDigest(ctx, date, r.threshold)
+	return r.store.GenerateDigest(ctx, date, r.threshold, r.interests)
+}
+
+// interestNames flattens the configured interests to the plain list the queries
+// filter on.
+func interestNames(interests config.Interests) []string {
+	names := make([]string, 0, len(interests.Topics))
+	for _, topic := range interests.Topics {
+		names = append(names, topic.Topic)
+	}
+	return names
 }
 
 // Threshold reports the score an article must reach to be selected.

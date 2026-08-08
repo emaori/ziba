@@ -5,7 +5,9 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -13,8 +15,13 @@ import (
 	"github.com/emaori/ziba/internal/store"
 )
 
-// archivePageSize bounds how much of the archive one page shows.
-const archivePageSize = 50
+const (
+	// listPageSize bounds how much of an interest or the archive one page shows.
+	listPageSize = 50
+
+	// dayPickerLength is how many days back the day picker offers.
+	dayPickerLength = 30
+)
 
 // Store is what the web package needs from persistence. Declaring the interface
 // here, where it is consumed, keeps the handlers testable with a fake and
@@ -22,23 +29,90 @@ const archivePageSize = 50
 type Store interface {
 	LatestDigest(ctx context.Context) (domain.Digest, error)
 	Article(ctx context.Context, id int64) (domain.Article, error)
-	Categories(ctx context.Context) ([]store.Category, error)
-	ArticlesByCategory(ctx context.Context, category string, limit int) ([]domain.Article, error)
-	Archive(ctx context.Context, limit, offset int) ([]domain.Article, error)
+	SetArchived(ctx context.Context, id int64, archived bool) error
+
+	ArticlesByInterest(ctx context.Context, interest string, threshold domain.RelevanceScore, limit, offset int) ([]domain.Article, error)
+	ArticlesOnDay(ctx context.Context, interest string, day time.Time, interests []string) ([]domain.Article, error)
+	DaysWithArticles(ctx context.Context, interest string, limit int, interests []string) ([]store.DayCount, error)
+
+	Archive(ctx context.Context, limit, offset int, interests []string) ([]domain.Article, error)
 }
 
-// page is the data every template receives. Categories appear in the navigation
-// on every screen, so they are loaded for every page.
+// page is the data every template receives. The interests appear in the tab bar
+// on every screen, so they travel with every page.
 type page struct {
-	Title      string
-	Categories []store.Category
+	Title     string
+	Interests []string
+	Active    string // which tab is highlighted, if any
 
-	Digest   domain.Digest
-	Article  domain.Article
-	Articles []domain.Article
-	Category string
-	Offset   int
-	PageSize int
+	Digest    domain.Digest
+	Article   domain.Article
+	Articles  []domain.Article
+	Days      []store.DayCount
+	Day       time.Time
+	Interest  string
+	Offset    int
+	PageSize  int
+	Threshold domain.RelevanceScore
+}
+
+// handleInterest lists one interest's unread articles, most relevant first.
+func (s *Server) handleInterest(w http.ResponseWriter, r *http.Request) {
+	interest := r.PathValue("name")
+	if !s.knownInterest(interest) {
+		http.NotFound(w, r)
+		return
+	}
+
+	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	offset = max(offset, 0)
+
+	articles, err := s.store.ArticlesByInterest(r.Context(), interest, s.threshold, listPageSize, offset)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+
+	s.render(w, r, "interest.html", &page{
+		Title: interest, Active: interest, Interest: interest,
+		Articles: articles, Offset: offset, PageSize: listPageSize,
+	})
+}
+
+// handleDay shows everything for one day — read, unread, and below threshold.
+// This is the view that hides nothing.
+func (s *Server) handleDay(w http.ResponseWriter, r *http.Request) {
+	interest := r.URL.Query().Get("interest")
+	if interest != "" && !s.knownInterest(interest) {
+		http.NotFound(w, r)
+		return
+	}
+
+	day := time.Now()
+	if raw := r.URL.Query().Get("date"); raw != "" {
+		parsed, err := time.Parse(time.DateOnly, raw)
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		day = parsed
+	}
+
+	articles, err := s.store.ArticlesOnDay(r.Context(), interest, day, s.interests)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	days, err := s.store.DaysWithArticles(r.Context(), interest, dayPickerLength, s.interests)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+
+	s.render(w, r, "day.html", &page{
+		Title: "By day", Active: interest, Interest: interest,
+		Articles: articles, Days: days, Day: day,
+	})
 }
 
 func (s *Server) handleDigest(w http.ResponseWriter, r *http.Request) {
@@ -47,9 +121,6 @@ func (s *Server) handleDigest(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	// No digest generated yet is an empty page, not an error — the template
-	// explains how to generate one.
-
 	s.render(w, r, "digest.html", &page{Title: "Today", Digest: digest})
 }
 
@@ -73,46 +144,81 @@ func (s *Server) handleArticle(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "article.html", &page{Title: article.Title, Article: article})
 }
 
-func (s *Server) handleCategory(w http.ResponseWriter, r *http.Request) {
-	name := r.PathValue("name")
-
-	articles, err := s.store.ArticlesByCategory(r.Context(), name, archivePageSize)
+// handleArchive marks an article read, or puts it back.
+//
+// It answers a form post and redirects, rather than rendering. That is the
+// post-redirect-get pattern, and it is what stops the browser's back button and
+// refresh from silently repeating the action.
+func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	archived := r.PathValue("action") == "archive"
+	if err := s.store.SetArchived(r.Context(), id, archived); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.NotFound(w, r)
+			return
+		}
 		s.fail(w, r, err)
 		return
 	}
 
-	s.render(w, r, "list.html", &page{Title: name, Category: name, Articles: articles})
+	http.Redirect(w, r, backTo(r), http.StatusSeeOther)
 }
 
-func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-	if offset < 0 {
-		offset = 0
+// backTo works out where to send the reader after they press a button.
+//
+// The referer is the page they were on. Only a same-site address is honoured:
+// following an arbitrary one would turn this into an open redirect, letting
+// another site bounce a visitor onward through us.
+func backTo(r *http.Request) string {
+	referer, err := url.Parse(r.Referer())
+	if err != nil || referer.Path == "" {
+		return "/"
+	}
+	if referer.Host != "" && referer.Host != r.Host {
+		return "/"
 	}
 
-	articles, err := s.store.Archive(r.Context(), archivePageSize, offset)
+	back := referer.Path
+	if referer.RawQuery != "" {
+		back += "?" + referer.RawQuery
+	}
+	return back
+}
+
+func (s *Server) handleArchiveAll(w http.ResponseWriter, r *http.Request) {
+	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
+	offset = max(offset, 0)
+
+	articles, err := s.store.Archive(r.Context(), listPageSize, offset, s.interests)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
 
 	s.render(w, r, "list.html", &page{
-		Title:    "Archive",
-		Articles: articles,
-		Offset:   offset,
-		PageSize: archivePageSize,
+		Title: "Everything", Articles: articles, Offset: offset, PageSize: listPageSize,
 	})
 }
 
-// render loads the navigation and writes the page.
-func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, data *page) {
-	categories, err := s.store.Categories(r.Context())
-	if err != nil {
-		s.fail(w, r, err)
-		return
+func (s *Server) knownInterest(name string) bool {
+	for _, i := range s.interests {
+		if i == name {
+			return true
+		}
 	}
-	data.Categories = categories
+	return false
+}
+
+// render writes the page. The tab bar is the same on every screen, so it is
+// filled in here rather than in each handler.
+func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, data *page) {
+	data.Interests = s.interests
+	data.Threshold = s.threshold
 
 	set, ok := s.pages[name]
 	if !ok {

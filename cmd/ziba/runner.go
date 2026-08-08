@@ -14,9 +14,10 @@ import (
 // runner wired from both. Every command builds it the same way, so they cannot
 // drift apart in how they interpret the configuration.
 type setup struct {
-	cfg    config.Config
-	store  *store.Store
-	runner *job.Runner
+	cfg       config.Config
+	store     *store.Store
+	runner    *job.Runner
+	interests config.Interests
 }
 
 // analyzerMode says which analyzer a command wants.
@@ -70,9 +71,10 @@ func newSetup(ctx context.Context, mode analyzerMode) (*setup, error) {
 
 	log := slog.Default()
 	return &setup{
-		cfg:    cfg,
-		store:  db,
-		runner: job.New(cfg, sources, interests, db, log, job.Options{Analyzer: analyzer}),
+		cfg:       cfg,
+		store:     db,
+		runner:    job.New(cfg, sources, interests, db, log, job.Options{Analyzer: analyzer}),
+		interests: interests,
 	}, nil
 }
 

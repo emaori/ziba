@@ -8,6 +8,7 @@
     {{if .Tone}}<span class="tone">{{.Tone}}</span>{{end}}
   </p>
   <h1>{{.Title}}</h1>
+  {{if .Archived}}<p class="read-marker">You marked this read on {{shortDate .ArchivedAt}}</p>{{end}}
   {{if .Author}}<p class="byline">{{.Author}}</p>{{end}}
   {{if .Summary}}
     <aside class="summary-box">
@@ -23,6 +24,7 @@
     <p class="entities">Mentions: {{join .Entities ", "}}</p>
   {{end}}
   <p class="actions">
+    {{template "archiveButton" .}}
     <a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>
   </p>
 </article>

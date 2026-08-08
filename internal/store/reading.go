@@ -34,7 +34,8 @@ func scanArticle(row pgx.CollectableRow) (domain.Article, error) {
 // The ranking is computed in SQL rather than in Go: the database is already
 // sorting the rows, so numbering them there avoids reading the whole set into
 // memory only to write it straight back.
-func (s *Store) GenerateDigest(ctx context.Context, date time.Time, threshold domain.RelevanceScore) (int, error) {
+func (s *Store) GenerateDigest(ctx context.Context, date time.Time,
+	threshold domain.RelevanceScore, interests []string) (int, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("begin transaction: %w", err)
@@ -62,9 +63,13 @@ func (s *Store) GenerateDigest(ctx context.Context, date time.Time, threshold do
 		SELECT $1, id, row_number() OVER (ORDER BY score DESC, published_at DESC NULLS LAST)
 		FROM articles
 		WHERE processed_at IS NOT NULL
+		  AND archived_at IS NULL
 		  AND score >= $2
-		  AND collected_at::date = $3::date`,
-		digestID, int16(threshold), date)
+		  AND collected_at::date = $3::date
+		  -- An article matching none of the reader's interests is not shown
+		  -- anywhere, so it does not belong in the day's selection either.
+		  AND categories && $4::text[]`,
+		digestID, int16(threshold), date, interests)
 	if err != nil {
 		return 0, fmt.Errorf("select digest articles: %w", err)
 	}
@@ -108,6 +113,9 @@ func (s *Store) LatestDigest(ctx context.Context) (domain.Digest, error) {
 		JOIN articles a ON a.id = da.article_id
 		JOIN sources s ON s.id = a.source_id
 		WHERE da.digest_id = $1
+		  -- Also filtered here, not only at generation: marking an article read
+		  -- must take it off today's page now, not tomorrow.
+		  AND a.archived_at IS NULL
 		ORDER BY da.ordinal`, id)
 	if err != nil {
 		return domain.Digest{}, fmt.Errorf("query digest articles: %w", err)
@@ -139,73 +147,145 @@ func (s *Store) Article(ctx context.Context, id int64) (domain.Article, error) {
 	return a, nil
 }
 
-// Category is one subject area and how much is filed under it.
-type Category struct {
-	Name  string
-	Count int
-}
-
-// Categories lists the subject areas in use, most populated first.
-func (s *Store) Categories(ctx context.Context) ([]Category, error) {
+// Archive returns every article that belongs to at least one of the reader's
+// interests, newest first, whatever its score and whether or not it has been
+// read.
+//
+// Articles matching no interest are excluded here as everywhere else. They are
+// still collected and stored — interests change, and re-analysing brings them
+// back — but they are never shown.
+func (s *Store) Archive(ctx context.Context, limit, offset int, interests []string) ([]domain.Article, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT category, count(*)
-		FROM articles, unnest(categories) AS category
-		WHERE processed_at IS NOT NULL
-		GROUP BY category
-		ORDER BY count(*) DESC, category`)
-	if err != nil {
-		return nil, fmt.Errorf("query categories: %w", err)
-	}
-
-	categories, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (Category, error) {
-		var c Category
-		err := row.Scan(&c.Name, &c.Count)
-		return c, err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("read categories: %w", err)
-	}
-	return categories, nil
-}
-
-// ArticlesByCategory returns the articles filed under a category, most relevant
-// first. It includes articles below the threshold: the digest is a selection,
-// the archive is everything.
-func (s *Store) ArticlesByCategory(ctx context.Context, category string, limit int) ([]domain.Article, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT`+articleColumns+`
+		SELECT`+articleColumnsArchived+`
 		FROM articles a
 		JOIN sources s ON s.id = a.source_id
-		WHERE $1 = ANY (a.categories)
-		ORDER BY a.score DESC NULLS LAST, a.collected_at DESC
-		LIMIT $2`, category, limit)
-	if err != nil {
-		return nil, fmt.Errorf("query category %q: %w", category, err)
-	}
-
-	articles, err := pgx.CollectRows(rows, scanArticle)
-	if err != nil {
-		return nil, fmt.Errorf("read category %q: %w", category, err)
-	}
-	return articles, nil
-}
-
-// Archive returns everything collected, newest first — including articles that
-// never cleared the threshold. The AI curates, it does not censor.
-func (s *Store) Archive(ctx context.Context, limit, offset int) ([]domain.Article, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT`+articleColumns+`
-		FROM articles a
-		JOIN sources s ON s.id = a.source_id
+		WHERE a.categories && $3::text[]
 		ORDER BY a.collected_at DESC, a.id DESC
-		LIMIT $1 OFFSET $2`, limit, offset)
+		LIMIT $1 OFFSET $2`, limit, offset, interests)
 	if err != nil {
 		return nil, fmt.Errorf("query archive: %w", err)
 	}
 
-	articles, err := pgx.CollectRows(rows, scanArticle)
+	return collectArchivable(rows, "archive")
+}
+
+// SetArchived marks an article read, or puts it back.
+//
+// Archiving is the reader's own act, not something time does. While archived an
+// article is out of the interest tabs and the daily selection, but the
+// day-by-day view still shows it, which is what makes un-archiving reachable.
+func (s *Store) SetArchived(ctx context.Context, id int64, archived bool) error {
+	var when any
+	if archived {
+		when = time.Now()
+	}
+
+	tag, err := s.pool.Exec(ctx, `UPDATE articles SET archived_at = $2 WHERE id = $1`, id, when)
 	if err != nil {
-		return nil, fmt.Errorf("read archive: %w", err)
+		return fmt.Errorf("set archived on article %d: %w", id, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	return nil
+}
+
+// ArticlesByInterest returns the unread articles filed under one interest, best
+// first. Only those above the threshold: the tabs are a reading list, not the
+// archive.
+//
+// The order is by relevance, matching the home page. Sorting by date instead
+// buried the strongest article of the week under anything published since, so
+// the two views now agree on what "first" means; the date view is /day.
+func (s *Store) ArticlesByInterest(ctx context.Context, interest string,
+	threshold domain.RelevanceScore, limit, offset int) ([]domain.Article, error) {
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT`+articleColumnsArchived+`
+		FROM articles a JOIN sources s ON s.id = a.source_id
+		WHERE $1 = ANY (a.categories)
+		  AND a.processed_at IS NOT NULL
+		  AND a.archived_at IS NULL
+		  AND a.score >= $2
+		ORDER BY a.score DESC, a.published_at DESC NULLS LAST, a.id DESC
+		LIMIT $3 OFFSET $4`, interest, int16(threshold), limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("query interest %q: %w", interest, err)
+	}
+	return collectArchivable(rows, "interest "+interest)
+}
+
+// ArticlesOnDay returns everything published on one day for an interest —
+// including what has been read and what never cleared the threshold. This view
+// deliberately hides nothing; it is where an article goes to be found again.
+func (s *Store) ArticlesOnDay(ctx context.Context, interest string, day time.Time,
+	interests []string) ([]domain.Article, error) {
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT`+articleColumnsArchived+`
+		FROM articles a JOIN sources s ON s.id = a.source_id
+		WHERE ($1 = '' OR $1 = ANY (a.categories))
+		  AND a.categories && $3::text[]
+		  AND a.published_at::date = $2::date
+		ORDER BY a.score DESC NULLS LAST, a.published_at DESC`, interest, day, interests)
+	if err != nil {
+		return nil, fmt.Errorf("query day %s: %w", day.Format(time.DateOnly), err)
+	}
+	return collectArchivable(rows, "day "+day.Format(time.DateOnly))
+}
+
+// DaysWithArticles lists the days that have anything to show for an interest,
+// newest first, so the day picker only offers days that exist.
+func (s *Store) DaysWithArticles(ctx context.Context, interest string, limit int,
+	interests []string) ([]DayCount, error) {
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT published_at::date AS day, count(*)
+		FROM articles
+		WHERE ($1 = '' OR $1 = ANY (categories))
+		  AND categories && $3::text[]
+		  AND published_at IS NOT NULL
+		GROUP BY day ORDER BY day DESC LIMIT $2`, interest, limit, interests)
+	if err != nil {
+		return nil, fmt.Errorf("query days: %w", err)
+	}
+
+	days, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (DayCount, error) {
+		var d DayCount
+		err := row.Scan(&d.Day, &d.Count)
+		return d, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read days: %w", err)
+	}
+	return days, nil
+}
+
+// DayCount is one day and how much it holds.
+type DayCount struct {
+	Day   time.Time
+	Count int
+}
+
+// articleColumnsArchived is articleColumns plus the archived marker, for the
+// screens that show a read/unread state.
+const articleColumnsArchived = articleColumns + `, a.archived_at`
+
+func collectArchivable(rows pgx.Rows, what string) ([]domain.Article, error) {
+	articles, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.Article, error) {
+		var a domain.Article
+		// Null for anything unread; see LatestPerInterest.
+		var archived *time.Time
+		err := row.Scan(&a.ID, &a.SourceID, &a.SourceName, &a.URL, &a.Title, &a.Author,
+			&a.PublishedAt, &a.CollectedAt, &a.Categories, &a.Entities, &a.Tone,
+			&a.Summary, &a.Score, &a.ScoreReason, &archived)
+		if archived != nil {
+			a.ArchivedAt = *archived
+		}
+		return a, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", what, err)
 	}
 	return articles, nil
 }

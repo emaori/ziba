@@ -12,9 +12,13 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/emaori/ziba/internal/config"
+	"github.com/emaori/ziba/internal/domain"
 )
 
 //go:embed templates/*.html static/*
@@ -26,6 +30,13 @@ var templateFuncs = template.FuncMap{
 	"shortDate":  shortDate,
 	"join":       strings.Join,
 	"add":        func(a, b int) int { return a + b },
+	"isoDate":    func(t time.Time) string { return t.Format(time.DateOnly) },
+
+	// pathEscape, not the built-in urlquery, for anything that lands in a URL
+	// *path*. urlquery writes a space as "+", which a query string decodes back
+	// to a space but a path does not — so "Computer Science" became the literal
+	// "Computer+Science" and matched no interest. Paths need "%20".
+	"pathEscape": url.PathEscape,
 }
 
 // paragraphs splits stored article text into paragraphs for the reader.
@@ -55,6 +66,13 @@ func shortDate(t time.Time) string {
 type Server struct {
 	store Store
 
+	// interests drive the tab bar and are the only values the interest routes
+	// accept. They come from the configuration file rather than from whatever
+	// categories happen to be in the database, so the tabs are stable and are
+	// the reader's own subjects rather than the model's invention.
+	interests []string
+	threshold domain.RelevanceScore
+
 	// pages holds one fully independent template set per page, keyed by file
 	// name. They cannot share a set: every page defines a template called
 	// "content", and in a shared set the last one parsed would silently
@@ -64,7 +82,7 @@ type Server struct {
 
 // New parses the templates and wires the routes. Parsing at startup means a
 // broken template fails on boot rather than on the first request that hits it.
-func New(store Store) (*Server, error) {
+func New(store Store, interests config.Interests) (*Server, error) {
 	files, err := fs.Glob(assets, "templates/*.html")
 	if err != nil {
 		return nil, err
@@ -88,7 +106,18 @@ func New(store Store) (*Server, error) {
 	if len(pages) == 0 {
 		return nil, fmt.Errorf("no page templates found")
 	}
-	return &Server{store: store, pages: pages}, nil
+
+	names := make([]string, 0, len(interests.Topics))
+	for _, topic := range interests.Topics {
+		names = append(names, topic.Topic)
+	}
+
+	return &Server{
+		store:     store,
+		interests: names,
+		threshold: domain.RelevanceScore(interests.Threshold),
+		pages:     pages,
+	}, nil
 }
 
 // layoutFile holds the frame every page is rendered into.
@@ -99,9 +128,15 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /{$}", s.handleDigest)
+	mux.HandleFunc("GET /interest/{name}", s.handleInterest)
+	mux.HandleFunc("GET /day", s.handleDay)
 	mux.HandleFunc("GET /article/{id}", s.handleArticle)
-	mux.HandleFunc("GET /category/{name}", s.handleCategory)
-	mux.HandleFunc("GET /archive", s.handleArchive)
+	mux.HandleFunc("GET /archive", s.handleArchiveAll)
+
+	// Marking read changes state, so it is a post and never a link: a crawler
+	// or a prefetching browser must not be able to empty the reading list.
+	mux.HandleFunc("POST /article/{id}/{action}", s.handleArchive)
+
 	mux.Handle("GET /static/", http.FileServerFS(assets))
 
 	return mux

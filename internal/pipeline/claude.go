@@ -68,40 +68,54 @@ func NewClaude(opts ClaudeOptions) (*Claude, error) {
 // The field order matters: the model fills the structure in order, so naming
 // the subject before rating it means the score is reached with the subject
 // already established rather than in the same breath.
-var assessmentSchema = map[string]any{
-	"type": "object",
-	"properties": map[string]any{
-		"categories": map[string]any{
-			"type":        "array",
-			"items":       map[string]any{"type": "string"},
-			"minItems":    1,
-			"maxItems":    3,
-			"description": "Broad subject areas, e.g. \"Artificial intelligence\", \"Italian politics\".",
+//
+// Categories are restricted to the configured interests rather than left free.
+// They are what the interface files articles under, so a model inventing
+// "Artificial intelligence" one day and "AI and machine learning" the next would
+// scatter one subject across several headings and leave the reader's own
+// interests unrepresented. An article that fits none of them returns an empty
+// list, which is a legitimate answer.
+func assessmentSchema(interests config.Interests) map[string]any {
+	names := make([]string, 0, len(interests.Topics))
+	for _, topic := range interests.Topics {
+		names = append(names, topic.Topic)
+	}
+
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"categories": map[string]any{
+				"type":        "array",
+				"items":       map[string]any{"type": "string", "enum": names},
+				"minItems":    0,
+				"maxItems":    3,
+				"description": "Which of the reader's interests this article belongs to. Choose only those it genuinely is about; an empty list is correct for an article that fits none.",
+			},
+			"entities": map[string]any{
+				"type":        "array",
+				"items":       map[string]any{"type": "string"},
+				"maxItems":    8,
+				"description": "People, organizations, products or places the article is actually about.",
+			},
+			"tone": map[string]any{
+				"type":        "string",
+				"enum":        []string{"news", "analysis", "opinion", "tutorial", "announcement", "interview", "review"},
+				"description": "What kind of piece this is.",
+			},
+			"score": map[string]any{
+				"type":        "integer",
+				"minimum":     0,
+				"maximum":     100,
+				"description": "How relevant this article is to the reader's interests.",
+			},
+			"reason": map[string]any{
+				"type":        "string",
+				"description": "One sentence explaining the score, naming the interest it matches or misses.",
+			},
 		},
-		"entities": map[string]any{
-			"type":        "array",
-			"items":       map[string]any{"type": "string"},
-			"maxItems":    8,
-			"description": "People, organizations, products or places the article is actually about.",
-		},
-		"tone": map[string]any{
-			"type":        "string",
-			"enum":        []string{"news", "analysis", "opinion", "tutorial", "announcement", "interview", "review"},
-			"description": "What kind of piece this is.",
-		},
-		"score": map[string]any{
-			"type":        "integer",
-			"minimum":     0,
-			"maximum":     100,
-			"description": "How relevant this article is to the reader's interests.",
-		},
-		"reason": map[string]any{
-			"type":        "string",
-			"description": "One sentence explaining the score, naming the interest it matches or misses.",
-		},
-	},
-	"required":             []string{"categories", "entities", "tone", "score", "reason"},
-	"additionalProperties": false,
+		"required":             []string{"categories", "entities", "tone", "score", "reason"},
+		"additionalProperties": false,
+	}
 }
 
 // Assess implements Assessor: one call that identifies the article and rates
@@ -130,7 +144,7 @@ Answer only with the requested structure.`, c.interests.Describe())
 		Score      int      `json:"score"`
 		Reason     string   `json:"reason"`
 	}
-	if err := c.ask(ctx, c.fastModel, 1024, system, articlePrompt(a), assessmentSchema, &result); err != nil {
+	if err := c.ask(ctx, c.fastModel, 1024, system, articlePrompt(a), assessmentSchema(c.interests), &result); err != nil {
 		return Assessment{}, err
 	}
 

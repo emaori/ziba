@@ -120,7 +120,7 @@ func serveCmd(ctx context.Context, args []string) error {
 		slog.Info("migration applied", "name", name)
 	}
 
-	server, err := web.New(s.store)
+	server, err := web.New(s.store, s.interests)
 	if err != nil {
 		return fmt.Errorf("build web server: %w", err)
 	}

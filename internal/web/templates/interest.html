@@ -1,0 +1,25 @@
+{{define "content"}}
+  <h1 class="page-title">
+    {{.Interest}}
+    <span class="subtitle">{{len .Articles}} unread, most relevant first</span>
+  </h1>
+
+  {{if .Articles}}
+    {{range .Articles}}{{template "card" .}}{{end}}
+  {{else}}
+    <p class="note">
+      Nothing unread here. Look in the
+      <a href="/day?interest={{urlquery .Interest}}">day view</a> for what you
+      have already read, and for articles below the threshold.
+    </p>
+  {{end}}
+
+  <p class="pager">
+    {{if gt .Offset 0}}
+      <a class="button secondary" href="/interest/{{pathEscape .Interest}}">← Top</a>
+    {{end}}
+    {{if eq (len .Articles) .PageSize}}
+      <a class="button" href="/interest/{{pathEscape .Interest}}?offset={{add .Offset .PageSize}}">More →</a>
+    {{end}}
+  </p>
+{{end}}

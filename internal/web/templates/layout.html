@@ -11,14 +11,15 @@
     <a class="wordmark" href="/">Ziba</a>
     <nav>
       <a href="/">Today</a>
-      <a href="/archive">Archive</a>
+      <a href="/day">By day</a>
+      <a href="/archive">Everything</a>
     </nav>
   </header>
 
-  {{if .Categories}}
-  <nav class="categories">
-    {{range .Categories}}
-      <a href="/category/{{.Name}}">{{.Name}} <span class="count">{{.Count}}</span></a>
+  {{if .Interests}}
+  <nav class="tabs">
+    {{range .Interests}}
+      <a class="{{if eq . $.Active}}on{{end}}" href="/interest/{{pathEscape .}}">{{.}}</a>
     {{end}}
   </nav>
   {{end}}
@@ -52,6 +53,21 @@
   <p class="actions">
     <a class="button" href="/article/{{.ID}}">Read in Ziba</a>
     <a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>
+    {{template "archiveButton" .}}
   </p>
 </article>
+{{end}}
+
+{{/* Marking read is a state change, so it posts rather than links. Where to
+     return to is taken from the request's own referer rather than passed down
+     through every template — the card is rendered with an article as its dot,
+     so the page it sits on is not reachable from in here. */}}
+{{define "archiveButton"}}
+<form class="inline" method="post" action="/article/{{.ID}}/{{if .Archived}}unarchive{{else}}archive{{end}}">
+  {{if .Archived}}
+    <button class="button secondary" type="submit" title="Put this back in the reading list">↩ Unread</button>
+  {{else}}
+    <button class="button secondary" type="submit" title="Take this out of the reading list">✓ Mark read</button>
+  {{end}}
+</form>
 {{end}}

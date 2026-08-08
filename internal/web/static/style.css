@@ -33,7 +33,7 @@ body {
   font: 1rem/1.6 Georgia, "Iowan Old Style", "Times New Roman", serif;
 }
 
-main, .masthead, .categories, footer { max-width: var(--measure); margin: 0 auto; }
+main, .masthead, .tabs, .days, footer { max-width: var(--measure); margin: 0 auto; }
 
 a { color: var(--accent); }
 
@@ -64,9 +64,9 @@ a { color: var(--accent); }
   text-decoration: none;
 }
 
-/* Category strip ---------------------------------------------------------- */
+/* Interest tabs ---------------------------------------------------------- */
 
-.categories {
+.tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem 0.9rem;
@@ -75,9 +75,51 @@ a { color: var(--accent); }
   font-size: 0.85rem;
 }
 
-.categories a { text-decoration: none; color: var(--ink-soft); }
-.categories a:hover { color: var(--accent); }
-.categories .count { color: var(--rule); }
+.tabs a { text-decoration: none; color: var(--ink-soft); }
+.tabs a:hover { color: var(--accent); }
+.tabs a.on { color: var(--accent); font-weight: 700; }
+.tabs .count { color: var(--rule); }
+
+/* Day picker: a long strip that scrolls sideways rather than wrapping into a
+   wall of dates on a phone. */
+.days {
+  display: flex;
+  gap: 0.9rem;
+  overflow-x: auto;
+  padding: 0.7rem 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--rule);
+  font-family: system-ui, sans-serif;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.days a { text-decoration: none; color: var(--ink-soft); }
+.days a.on { color: var(--accent); font-weight: 700; }
+.days .count { color: var(--rule); }
+
+/* One interest's leading article on the home page. */
+.interest-block { margin-bottom: 2.5rem; }
+.interest-heading {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  font-family: system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-soft);
+}
+.interest-heading a { text-decoration: none; color: inherit; }
+.interest-heading a:hover { color: var(--accent); }
+
+/* The mark-read control is a form, but must sit in the row of buttons. */
+form.inline { display: inline; margin: 0; }
+form.inline .button { font: inherit; cursor: pointer; border: 1px solid var(--rule); }
+
+.read-marker {
+  margin: 0 0 1rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
 
 /* Headings ---------------------------------------------------------------- */
 

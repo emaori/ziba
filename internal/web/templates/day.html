@@ -1,0 +1,21 @@
+{{define "content"}}
+  <h1 class="page-title">
+    {{if .Interest}}{{.Interest}}{{else}}All interests{{end}}
+    <span class="subtitle">{{shortDate .Day}} · {{len .Articles}} articles, including read</span>
+  </h1>
+
+  <nav class="days">
+    {{range .Days}}
+      <a class="{{if eq (isoDate .Day) (isoDate $.Day)}}on{{end}}"
+         href="/day?date={{isoDate .Day}}{{if $.Interest}}&interest={{urlquery $.Interest}}{{end}}">
+        {{shortDate .Day}} <span class="count">{{.Count}}</span>
+      </a>
+    {{end}}
+  </nav>
+
+  {{if .Articles}}
+    {{range .Articles}}{{template "card" .}}{{end}}
+  {{else}}
+    <p class="note">Nothing published on this day.</p>
+  {{end}}
+{{end}}

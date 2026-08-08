@@ -2,14 +2,17 @@ package web
 
 import (
 	"context"
+	"html"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
 	"github.com/emaori/ziba/internal/store"
 )
@@ -21,6 +24,8 @@ type fakeStore struct {
 	article  domain.Article
 	articles []domain.Article
 	missing  bool
+
+	archivedCalls []bool
 }
 
 func (f *fakeStore) LatestDigest(context.Context) (domain.Digest, error) {
@@ -34,21 +39,43 @@ func (f *fakeStore) Article(_ context.Context, id int64) (domain.Article, error)
 	return f.article, nil
 }
 
-func (f *fakeStore) Categories(context.Context) ([]store.Category, error) {
-	return []store.Category{{Name: "Go programming", Count: 7}}, nil
+func (f *fakeStore) SetArchived(_ context.Context, id int64, archived bool) error {
+	if f.missing {
+		return pgx.ErrNoRows
+	}
+	f.archivedCalls = append(f.archivedCalls, archived)
+	return nil
 }
 
-func (f *fakeStore) ArticlesByCategory(context.Context, string, int) ([]domain.Article, error) {
+func (f *fakeStore) ArticlesByInterest(context.Context, string, domain.RelevanceScore, int, int) ([]domain.Article, error) {
 	return f.articles, nil
 }
 
-func (f *fakeStore) Archive(context.Context, int, int) ([]domain.Article, error) {
+func (f *fakeStore) ArticlesOnDay(context.Context, string, time.Time, []string) ([]domain.Article, error) {
 	return f.articles, nil
+}
+
+func (f *fakeStore) DaysWithArticles(context.Context, string, int, []string) ([]store.DayCount, error) {
+	return []store.DayCount{{Day: time.Date(2026, 8, 8, 0, 0, 0, 0, time.UTC), Count: 3}}, nil
+}
+
+func (f *fakeStore) Archive(context.Context, int, int, []string) ([]domain.Article, error) {
+	return f.articles, nil
+}
+
+func testInterests() config.Interests {
+	return config.Interests{
+		Threshold: 60,
+		Topics: []config.Interest{
+			{Topic: "AI", Priority: 1},
+			{Topic: "Robotics", Priority: 2},
+		},
+	}
 }
 
 func newTestServer(t *testing.T, s Store) http.Handler {
 	t.Helper()
-	server, err := New(s)
+	server, err := New(s, testInterests())
 	if err != nil {
 		t.Fatalf("New returned error: %v", err)
 	}
@@ -95,9 +122,10 @@ func TestEachPageRendersItsOwnContent(t *testing.T) {
 		path   string
 		expect string // markup unique to that page
 	}{
-		{"digest", "/", `class="card"`},
+		{"home is the day's selection", "/", `class="card"`},
 		{"article reader", "/article/42", `class="reader"`},
-		{"category", "/category/Robotics", `class="card"`},
+		{"interest", "/interest/Robotics", `class="card"`},
+		{"day", "/day", `class="days"`},
 		{"archive", "/archive", `class="pager"`},
 	}
 
@@ -193,6 +221,158 @@ func TestParagraphs(t *testing.T) {
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("paragraph %d = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func post(t *testing.T, h http.Handler, path, referer string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, path, nil)
+	if referer != "" {
+		req.Header.Set("Referer", referer)
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+// Marking read must be a post, not a link: a crawler or a prefetching browser
+// following links must not be able to empty the reading list.
+func TestArchivingIsNotReachableByGet(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{article: sampleArticle()})
+
+	if code, _ := get(t, handler, "/article/42/archive"); code == http.StatusOK {
+		t.Error("a GET marked an article read; it must only answer POST")
+	}
+}
+
+func TestArchiveAndUnarchive(t *testing.T) {
+	store := &fakeStore{article: sampleArticle()}
+	handler := newTestServer(t, store)
+
+	rec := post(t, handler, "/article/42/archive", "http://example.com/interest/Robotics")
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want 303", rec.Code)
+	}
+	// Back to the page the button was pressed on, so the list closes over the
+	// gap rather than throwing the reader to the front page.
+	if got := rec.Header().Get("Location"); got != "/interest/Robotics" {
+		t.Errorf("Location = %q, want the page it came from", got)
+	}
+
+	post(t, handler, "/article/42/unarchive", "http://example.com/day?date=2026-08-08")
+
+	if len(store.archivedCalls) != 2 || !store.archivedCalls[0] || store.archivedCalls[1] {
+		t.Errorf("archived calls = %v, want [true false]", store.archivedCalls)
+	}
+}
+
+// The return address comes from the referer, so it must be checked. Following
+// an arbitrary one would let another site bounce a visitor onward through us.
+func TestArchiveWillNotRedirectOffSite(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{article: sampleArticle()})
+
+	for _, referer := range []string{
+		"https://elsewhere.example/phishing",
+		"//elsewhere.example/phishing",
+		"",
+	} {
+		rec := post(t, handler, "/article/42/archive", referer)
+		if got := rec.Header().Get("Location"); got != "/" {
+			t.Errorf("referer %q redirected to %q, want /", referer, got)
+		}
+	}
+}
+
+// The button has to be on both screens the reader might press it from.
+func TestArchiveButtonAppearsOnCardsAndReader(t *testing.T) {
+	article := sampleArticle()
+	handler := newTestServer(t, &fakeStore{
+		article:  article,
+		articles: []domain.Article{article},
+		digest:   domain.Digest{Date: time.Now(), Articles: []domain.Article{article}},
+	})
+
+	for _, path := range []string{"/", "/interest/Robotics", "/article/42"} {
+		_, body := get(t, handler, path)
+		if !strings.Contains(body, `action="/article/42/archive"`) {
+			t.Errorf("%s has no mark-read control", path)
+		}
+	}
+}
+
+// An article already read offers the way back, not the way out again.
+func TestReadArticleOffersUnarchive(t *testing.T) {
+	article := sampleArticle()
+	article.ArchivedAt = time.Date(2026, 8, 8, 10, 0, 0, 0, time.UTC)
+	handler := newTestServer(t, &fakeStore{article: article})
+
+	_, body := get(t, handler, "/article/42")
+	if !strings.Contains(body, `action="/article/42/unarchive"`) {
+		t.Error("a read article does not offer a way to un-read it")
+	}
+}
+
+// Interest routes accept only configured interests, so a stale or invented
+// heading cannot render an empty page that looks real.
+func TestUnknownInterestIs404(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{})
+
+	if code, _ := get(t, handler, "/interest/Basket%20weaving"); code != http.StatusNotFound {
+		t.Errorf("status = %d for an unconfigured interest, want 404", code)
+	}
+	if code, _ := get(t, handler, "/day?date=not-a-date"); code != http.StatusNotFound {
+		t.Errorf("status = %d for a bad date, want 404", code)
+	}
+}
+
+// Follow the links the templates actually emit, rather than asserting a path
+// typed by hand.
+//
+// This is the test that was missing. The tab links were built with the query
+// escaper, which writes a space as "+" — correct inside a query string, wrong
+// in a path, where it stays a literal plus. Every interest whose name contains
+// a space led to a 404, while a hand-written "%20" in the tests passed happily.
+func TestEmittedLinksAreFollowable(t *testing.T) {
+	article := sampleArticle()
+	store := &fakeStore{
+		article:  article,
+		articles: []domain.Article{article},
+		digest:   domain.Digest{Date: time.Now(), Articles: []domain.Article{article}},
+	}
+
+	// An interest whose name contains a space is the whole point.
+	server, err := New(store, config.Interests{
+		Threshold: 60,
+		Topics: []config.Interest{
+			{Topic: "Computer Science", Priority: 1},
+			{Topic: ".NET", Priority: 2},
+			{Topic: "Italian and International news", Priority: 3},
+		},
+	})
+	if err != nil {
+		t.Fatalf("New returned error: %v", err)
+	}
+	handler := server.Handler()
+
+	href := regexp.MustCompile(`href="(/(?:interest|day|article|digest|archive)[^"]*)"`)
+
+	for _, from := range []string{"/", "/day", "/archive"} {
+		code, body := get(t, handler, from)
+		if code != http.StatusOK {
+			t.Fatalf("%s: status = %d", from, code)
+		}
+
+		matches := href.FindAllStringSubmatch(body, -1)
+		if len(matches) == 0 {
+			t.Errorf("%s emitted no internal links to check", from)
+		}
+
+		for _, m := range matches {
+			link := html.UnescapeString(m[1])
+			if code, _ := get(t, handler, link); code != http.StatusOK {
+				t.Errorf("%s links to %q, which answers %d", from, link, code)
+			}
 		}
 	}
 }

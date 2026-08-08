@@ -210,7 +210,16 @@ type Article struct {
 	Score       RelevanceScore
 	ScoreReason string
 	AnalyzedAt  time.Time
+
+	// ArchivedAt is when the reader marked this read. While it is set the
+	// article is out of circulation: gone from the interest tabs and from the
+	// daily selection, though still present in the day-by-day view, which shows
+	// everything on purpose.
+	ArchivedAt time.Time
 }
+
+// Archived reports whether the reader has marked this article read.
+func (a Article) Archived() bool { return !a.ArchivedAt.IsZero() }
 
 // Digest is the daily selection of the most relevant articles, ranked by score.
 // Only the date part of Date is meaningful.

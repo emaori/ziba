@@ -2,11 +2,12 @@
   {{if .Digest.Articles}}
     <h1 class="page-title">
       Today
-      <span class="subtitle">{{shortDate .Digest.Date}} · {{len .Digest.Articles}} articles</span>
+      <span class="subtitle">{{shortDate .Digest.Date}} · {{len .Digest.Articles}} articles, most relevant first</span>
     </h1>
     {{range .Digest.Articles}}{{template "card" .}}{{end}}
     <p class="note">
-      Everything else collected today is in the <a href="/archive">archive</a>.
+      Browse by subject with the tabs above, or look at
+      <a href="/day">any day</a> — including what you have already read.
     </p>
   {{else}}
     <h1 class="page-title">Nothing selected yet</h1>
@@ -15,7 +16,8 @@
       <code>ziba digest</code> to build the selection for today.
     </p>
     <p class="note">
-      The <a href="/archive">archive</a> shows everything collected so far.
+      The tabs above browse by subject, and <a href="/archive">everything</a>
+      lists all of it.
     </p>
   {{end}}
 {{end}}
