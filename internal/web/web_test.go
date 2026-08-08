@@ -538,3 +538,25 @@ func TestScriptIsLoadedAndDeferred(t *testing.T) {
 		t.Error("page carries more than one script")
 	}
 }
+
+// The reader repeats both controls at the head of the page, so a long article
+// need not be scrolled to its end to be marked read or opened at source.
+func TestReaderRepeatsActionsAtTop(t *testing.T) {
+	article := sampleArticle()
+	handler := newTestServer(t, &fakeStore{article: article})
+
+	_, body := get(t, handler, "/article/42")
+
+	if got := strings.Count(body, `action="/article/42/archive"`); got != 2 {
+		t.Errorf("mark-read control appears %d times, want 2 (head and foot)", got)
+	}
+	if got := strings.Count(body, `Open original`); got != 2 {
+		t.Errorf("open-original link appears %d times, want 2 (head and foot)", got)
+	}
+
+	// Above the body, or it is not the point. The first copy must come before
+	// the article text starts.
+	if strings.Index(body, `action="/article/42/archive"`) > strings.Index(body, `class="body"`) {
+		t.Error("the first mark-read control is below the article text")
+	}
+}

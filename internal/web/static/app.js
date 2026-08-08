@@ -46,13 +46,28 @@
         throw new Error('unexpected status ' + response.status);
       }
       button.disabled = false;
-      toggle(form, button);
+      // Every control for this article, not just the one clicked: the reader
+      // shows the same button at the head and the foot of the page, and one
+      // flipping while the other did not would be worse than a reload.
+      var article = articleOf(form);
+      document.querySelectorAll('form.inline').forEach(function (other) {
+        if (articleOf(other) === article) {
+          toggle(other, other.querySelector('button'));
+        }
+      });
     }).catch(function () {
       // Fall back to the ordinary post rather than leaving the reader unsure
       // whether the click registered. Worst case they get the old behaviour.
       form.submit();
     });
   });
+
+  // articleOf reads the article's id out of a form's address, which is either
+  // /article/{id}/archive or /article/{id}/unarchive.
+  function articleOf(form) {
+    var parts = form.getAttribute('action').split('/');
+    return parts[2];
+  }
 
   // toggle swaps the control to its opposite state.
   //

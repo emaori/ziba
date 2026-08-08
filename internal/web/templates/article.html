@@ -10,6 +10,16 @@
   <h1>{{.Title}}</h1>
   {{if .Archived}}<p class="read-marker">You marked this read on {{shortDate .ArchivedAt}}</p>{{end}}
   {{if .Author}}<p class="byline">{{.Author}}</p>{{end}}
+
+  {{/* The same two controls as the foot of the page. A long article should not
+       have to be scrolled to its end to be marked read or opened at source.
+       Both copies stay in step: the script toggles every control for the
+       article, not just the one that was clicked. */}}
+  <p class="actions">
+    {{template "archiveButton" .}}
+    <a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>
+  </p>
+
   {{if .Summary}}
     <aside class="summary-box">
       <h2>Summary</h2>
