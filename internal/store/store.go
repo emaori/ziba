@@ -37,3 +37,26 @@ func Open(ctx context.Context, databaseURL string) (*Store, error) {
 func (s *Store) Close() {
 	s.pool.Close()
 }
+
+// Pool exposes the connection pool.
+//
+// This is an escape hatch for integration tests, which need to ask the database
+// questions no application query answers — "are there duplicates", "how many
+// per source". Application code should use the methods on Store instead; a
+// query worth running twice is a query worth naming.
+func (s *Store) Pool() *pgxpool.Pool { return s.pool }
+
+// TruncateAll empties every table except the migration record.
+//
+// It exists for integration tests, which need a known-empty database. Nothing
+// in the application calls it, and nothing should: it is one statement away
+// from destroying an archive that took months to accumulate.
+func (s *Store) TruncateAll(ctx context.Context) error {
+	// One statement, so the foreign keys never see an inconsistent moment.
+	_, err := s.pool.Exec(ctx,
+		`TRUNCATE digest_articles, digests, articles, raw_items, sources RESTART IDENTITY CASCADE`)
+	if err != nil {
+		return fmt.Errorf("truncate: %w", err)
+	}
+	return nil
+}

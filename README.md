@@ -243,6 +243,25 @@ Article text is stored as plain text with one paragraph per line, and the reader
 escapes it when rendering. Nothing a collected page contains can inject markup
 into the interface — worth preserving if the templates are changed.
 
+## Integration tests
+
+```sh
+make test-integration      # real sources, real database, ~10 minutes
+```
+
+These run against the actual configured sources over the real network, and
+against a separate `ziba_integration` database — never the application's own,
+because they truncate it. They are behind a build tag, so `make check` stays
+fast and hermetic.
+
+They fail when a site goes down or restructures its feed. That is not flakiness
+to be engineered away; it is what the tests are for.
+
+Set `ANTHROPIC_API_KEY` to exercise the real model. Without it the deterministic
+analyzer stands in and every test says so in its output — a run that silently
+used keyword matching and reported success would be worse than no test at all.
+Assertions about *curation quality* only bind when a real model ran.
+
 ## Migrations are plain numbered `.sql` files under `internal/store/migrations/`,
 embedded in the binary. `migrate` applies whatever has not been applied yet and
 is safe to re-run; each migration runs in a transaction, and an advisory lock

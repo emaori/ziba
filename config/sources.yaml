@@ -19,31 +19,32 @@ sources:
     type: rss
     url: "https://www.ilpost.it/feed/"
 
-  - name: "Hacker News — front page"
-    type: rss
-    url: "https://hnrss.org/frontpage"
-
-  - name: "Go Blog"
-    type: rss
-    url: "https://go.dev/blog/feed.atom"
-
-  # Carries the full article text in the feed, so full-text retrieval usually
-  # has nothing left to add.
   - name: "IEEE Spectrum"
     type: rss
     url: "https://spectrum.ieee.org/feeds/feed.rss"
 
-  # Scraped rather than read from a feed. ANSA article addresses carry a date,
-  # which is what the pattern keys on.
-  - name: "ANSA — Tecnologia"
-    type: website
-    url: "https://www.ansa.it/sito/notizie/tecnologia/tecnologia.shtml"
-    website:
-      link_pattern: "/[0-9]{4}/[0-9]{2}/[0-9]{2}/"
-      max_links: 25
-      # This site serves its markup, so rendering is off. Set `render: true`
-      # for sites that build theirs in the browser — it works, but it is much
-      # slower and needs the sidecar running.
+  - name: "Hacker News — front page"
+    type: rss
+    url: "https://hnrss.org/frontpage"
+
+  # A curated .NET link roundup. The feed points outward at other people's
+  # posts, which is exactly what we want: each link becomes its own article.
+  - name: ".NET Ketchup"
+    type: rss
+    url: "https://dotnetketchup.com/rss"
+
+  # Communications of the ACM sits behind Cloudflare bot protection. Every feed
+  # path answers 403 to a plain request, and a real headless browser is served a
+  # CAPTCHA page ("Attention Required! | Cloudflare"). There is no way to read
+  # it with what Ziba has, and working around a deliberate access control is not
+  # something to build. Left here, disabled, so the decision is not rediscovered.
+  #
+  # Options, if it matters: an ACM Digital Library subscription may expose an
+  # authorised feed, or the ACM TechNews newsletter could be read as a mailbox.
+  - name: "Communications of the ACM"
+    type: rss
+    url: "https://cacm.acm.org/feed/"
+    enabled: false
 
   # A newsletter mailbox. Credentials are never written here: name the
   # environment variables that hold them and set those in .env.

@@ -20,7 +20,7 @@ COMPOSE        := docker --context $(DOCKER_CONTEXT) compose
 SSH_HOST ?= homeserver
 DB_PORT  ?= 5432
 
-.PHONY: build run test fmt vet tidy check clean \
+.PHONY: build run test test-integration fmt vet tidy check clean \
         dev image deploy up down restart ps logs app-logs db-psql db-tunnel migrate collect process digest run-once serve
 
 ## build: compile the binary into bin/
@@ -46,6 +46,12 @@ vet:
 ## tidy: sync go.mod with the imports actually used
 tidy:
 	go mod tidy
+
+## test-integration: run the real-data tests — real sources, real database
+## Uses a separate `ziba_integration` database, never the application's own.
+## Set ANTHROPIC_API_KEY to exercise the real model (this costs money).
+test-integration: .env
+	set -a; . ./.env; set +a; go test -tags=integration -count=1 -v -timeout 20m ./internal/integration/
 
 ## check: what should pass before a commit
 check: fmt vet test

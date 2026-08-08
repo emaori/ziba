@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
+	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
@@ -19,22 +21,37 @@ import (
 // the AI is there to replace — and it never pretends to be.
 type Deterministic struct {
 	interests config.Interests
+
+	// patterns holds one compiled matcher per topic, covering the topic name
+	// and its subtopics. Compiled once here rather than per article.
+	patterns [][]*regexp.Regexp
 }
 
 // NewDeterministic builds the offline analyzer.
 func NewDeterministic(interests config.Interests) *Deterministic {
-	return &Deterministic{interests: interests}
+	patterns := make([][]*regexp.Regexp, len(interests.Topics))
+	for i, topic := range interests.Topics {
+		terms := append([]string{topic.Topic}, topic.Subtopics...)
+		for _, term := range terms {
+			if p := termPattern(term); p != nil {
+				patterns[i] = append(patterns[i], p)
+			}
+		}
+	}
+	return &Deterministic{interests: interests, patterns: patterns}
 }
 
 // Assess labels the article with the interest topics whose words appear in it,
 // and scores it by the priority of the best match.
 func (d *Deterministic) Assess(_ context.Context, a domain.Article) (Assessment, error) {
-	haystack := strings.ToLower(a.Title + " " + a.FullText)
+	// Not lowercased: the patterns fold case themselves, and the short-acronym
+	// ones deliberately do not. Folding here would make "AI" unmatchable.
+	haystack := a.Title + " " + a.FullText
 
 	var categories []string
 	best := 0
-	for _, topic := range d.interests.Topics {
-		if !mentions(haystack, topic) {
+	for i, topic := range d.interests.Topics {
+		if !mentions(haystack, d.patterns[i]) {
 			continue
 		}
 		categories = append(categories, topic.Topic)
@@ -77,16 +94,78 @@ func (d *Deterministic) Summarize(_ context.Context, a domain.Article, _ Assessm
 	return "[offline] " + text, nil
 }
 
-// mentions reports whether the article talks about a topic, by the crudest
-// possible measure.
-func mentions(haystack string, topic config.Interest) bool {
-	if strings.Contains(haystack, strings.ToLower(topic.Topic)) {
-		return true
+// termPattern builds a matcher for one interest term that will not fire inside
+// a longer word.
+//
+// Plain substring matching is unusable for short terms: "AI" appears inside
+// "email", "again", "detail" and — in Italian — "mai" and "assai", so a general
+// news source came out 82% classified as artificial intelligence. The boundary
+// is required only on the sides where the term itself begins or ends with a
+// letter or digit, so ".NET" still matches inside "ASP.NET" and "C#" still
+// matches at the end of a sentence.
+func termPattern(term string) *regexp.Regexp {
+	term = strings.TrimSpace(term)
+	if term == "" {
+		return nil
 	}
-	for _, sub := range topic.Subtopics {
-		if strings.Contains(haystack, strings.ToLower(sub)) {
+
+	// Short acronyms are matched case-sensitively, because in lower case they
+	// collide with ordinary words in other languages. "AI" is the example that
+	// forced this: "ai" is one of the commonest Italian prepositions, so an
+	// Italian newspaper came out with ski reports and cartoonists filed under
+	// artificial intelligence. Word boundaries cannot help — it genuinely is a
+	// word, just not that one.
+	//
+	// Longer terms stay case-insensitive: ".net" and "asp.net" are written both
+	// ways and are not words in any language.
+	fold := `(?i)`
+	if isShortAcronym(term) {
+		fold = ``
+	}
+
+	pattern := fold + regexp.QuoteMeta(term)
+	if isAlphanumeric([]rune(term)[0]) {
+		pattern = fold + `(^|[^\p{L}\p{N}])` + regexp.QuoteMeta(term)
+	}
+	if last := []rune(term)[len([]rune(term))-1]; isAlphanumeric(last) {
+		pattern += `([^\p{L}\p{N}]|$)`
+	}
+
+	compiled, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil
+	}
+	return compiled
+}
+
+func isAlphanumeric(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+// mentions reports whether the article talks about a topic. Still a crude
+// measure — it is keyword matching, which is what the model is there to replace
+// — but at least one that respects word boundaries.
+func mentions(haystack string, patterns []*regexp.Regexp) bool {
+	for _, p := range patterns {
+		if p != nil && p.MatchString(haystack) {
 			return true
 		}
 	}
 	return false
+}
+
+// isShortAcronym reports whether a term is a brief all-capitals abbreviation —
+// "AI", "ML", "UI". These are the terms whose lower-case form is likely to be a
+// word in some language, so they are matched exactly as written.
+func isShortAcronym(term string) bool {
+	runes := []rune(term)
+	if len(runes) == 0 || len(runes) > 3 {
+		return false
+	}
+	for _, r := range runes {
+		if !unicode.IsUpper(r) {
+			return false
+		}
+	}
+	return true
 }
