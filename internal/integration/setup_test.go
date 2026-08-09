@@ -218,9 +218,17 @@ func (h *harness) collectAll(t *testing.T) job.CollectResult {
 	ctx := t.Context()
 	started := time.Now()
 
+	// The same order as job.Daily, and it must stay that way. This harness had
+	// drifted: Expand was added to Daily and to the collect command but not
+	// here, so every roundup issue was collected and never opened, and the feed
+	// that publishes them contributed nothing at all. The suite caught it, which
+	// is the argument for the suite.
 	result, err := h.runner.Collect(ctx)
 	if err != nil {
 		t.Fatalf("collect: %v", err)
+	}
+	if _, _, err := h.runner.Expand(ctx, 500); err != nil {
+		t.Fatalf("expand roundups: %v", err)
 	}
 	if _, _, err := h.runner.Hydrate(ctx, 500); err != nil {
 		t.Fatalf("retrieve full text: %v", err)
