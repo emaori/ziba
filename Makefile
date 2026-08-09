@@ -32,8 +32,10 @@ run:
 	go run ./cmd/$(BINARY) $(ARGS)
 
 ## test: run the test suite
+## Store and job tests need PostgreSQL; they skip themselves when it is absent,
+## so .env is sourced to give them the address when there is one.
 test:
-	go test ./...
+	set -a; [ -f ./.env ] && . ./.env; set +a; go test ./...
 
 ## fmt: format all Go files
 fmt:
@@ -42,6 +44,12 @@ fmt:
 ## vet: report suspicious constructs
 vet:
 	go vet ./...
+# Tagged tests are invisible to the line above, so they rot unnoticed: the
+# integration suite had been failing to compile for a day before anyone looked.
+# This compiles them without running them — running needs a database and the
+# network, which `make test-integration` is for.
+	go vet -tags=integration ./...
+	go vet -tags=trace ./...
 
 ## tidy: sync go.mod with the imports actually used
 tidy:

@@ -116,13 +116,14 @@ func newHarness(t *testing.T) *harness {
 	}
 	truncateAll(t, ctx, db)
 
-	sources, err := config.LoadSources(configDir + "/sources.yaml")
-	if err != nil {
-		t.Fatalf("load sources: %v", err)
-	}
+	// Interests first: a source's declared categories are validated against them.
 	interests, err := config.LoadInterests(configDir + "/interests.yaml")
 	if err != nil {
 		t.Fatalf("load interests: %v", err)
+	}
+	sources, err := config.LoadSources(configDir+"/sources.yaml", interests)
+	if err != nil {
+		t.Fatalf("load sources: %v", err)
 	}
 
 	analyzer, real := buildAnalyzer(t, interests)

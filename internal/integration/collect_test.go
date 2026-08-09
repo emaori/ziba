@@ -377,3 +377,122 @@ func TestDigestIsBuiltFromRealData(t *testing.T) {
 	t.Logf("digest holds %s from %s",
 		plural(len(digest.Articles), "article"), plural(len(h.enabledSources()), "source"))
 }
+
+// A roundup feed must be read one level deeper: the issue is opened, never
+// stored, and what it links to becomes the articles.
+//
+// The configured example carries 277 issues going back to 2021, so this also
+// checks the collection window is doing its work — expanding all of them would
+// mean 277 fetches.
+func TestRoundupFeedsAreExpanded(t *testing.T) {
+	h := sharedHarness(t)
+
+	var roundups []domain.Source
+	for _, src := range h.sources {
+		if src.Enabled && src.Roundup {
+			roundups = append(roundups, src)
+		}
+	}
+	if len(roundups) == 0 {
+		t.Skip("no roundup source is configured")
+	}
+
+	for _, src := range roundups {
+		t.Run(src.Name, func(t *testing.T) {
+			issues := h.scalar(t, `
+				SELECT count(*) FROM raw_items r JOIN sources s ON s.id = r.source_id
+				WHERE s.name = $1 AND r.kind = 'roundup'`, src.Name)
+			if issues == 0 {
+				t.Fatal("collected no issues at all")
+			}
+			if issues > 30 {
+				t.Errorf("%d issues collected: the cutoff is not bounding the backlog", issues)
+			}
+
+			// Every issue opened, and none left as an article.
+			if pending := h.scalar(t, `
+				SELECT count(*) FROM raw_items r JOIN sources s ON s.id = r.source_id
+				WHERE s.name = $1 AND r.kind = 'roundup' AND r.outcome IS DISTINCT FROM 'expanded'`,
+				src.Name); pending != 0 {
+				t.Errorf("%d issues were not expanded", pending)
+			}
+
+			links := h.scalar(t, `
+				SELECT count(*) FROM raw_items r JOIN sources s ON s.id = r.source_id
+				WHERE s.name = $1 AND r.kind = 'article'`, src.Name)
+			if links <= issues {
+				t.Errorf("%d issues produced only %d links; expansion is not finding them", issues, links)
+			}
+
+			// The issue pages themselves must never reach the archive.
+			if stored := h.scalar(t, `
+				SELECT count(*) FROM articles a JOIN raw_items r ON r.url = a.url
+				WHERE r.kind = 'roundup'`); stored != 0 {
+				t.Errorf("%d issue pages were stored as articles", stored)
+			}
+		})
+	}
+}
+
+// A source that declares its subject has it assigned, not inferred — and is
+// shown whatever it scored.
+func TestDeclaredSourcesAreCategorizedAndShown(t *testing.T) {
+	h := sharedHarness(t)
+
+	var declared []domain.Source
+	for _, src := range h.sources {
+		if src.Enabled && len(src.Categories) > 0 {
+			declared = append(declared, src)
+		}
+	}
+	if len(declared) == 0 {
+		t.Skip("no source declares its categories")
+	}
+
+	for _, src := range declared {
+		t.Run(src.Name, func(t *testing.T) {
+			total := h.scalar(t, `
+				SELECT count(*) FROM articles a JOIN sources s ON s.id = a.source_id
+				WHERE s.name = $1 AND a.processed_at IS NOT NULL`, src.Name)
+			if total == 0 {
+				t.Skip("nothing analyzed from this source yet")
+			}
+
+			// Every analyzed article carries exactly what the source declared.
+			wrong := h.scalar(t, `
+				SELECT count(*) FROM articles a JOIN sources s ON s.id = a.source_id
+				WHERE s.name = $1 AND a.processed_at IS NOT NULL
+				  AND NOT (a.categories @> s.categories)`, src.Name)
+			if wrong != 0 {
+				t.Errorf("%d of %d articles do not carry the declared categories", wrong, total)
+			}
+
+			// None can be uncategorised, which is what declaring is there to
+			// prevent — an article that never writes the word is still on topic.
+			if unfiled := h.scalar(t, `
+				SELECT count(*) FROM articles a JOIN sources s ON s.id = a.source_id
+				WHERE s.name = $1 AND a.categories = ARRAY['Uncategorized']`, src.Name); unfiled != 0 {
+				t.Errorf("%d articles were left uncategorised despite the declaration", unfiled)
+			}
+		})
+	}
+}
+
+// Every finished item must say what became of it. A processed row with no
+// outcome is the state the statistics page cannot explain.
+func TestEveryProcessedItemRecordsAnOutcome(t *testing.T) {
+	h := sharedHarness(t)
+
+	if unexplained := h.scalar(t, `
+		SELECT count(*) FROM raw_items
+		WHERE processed_at IS NOT NULL AND outcome IS NULL`); unexplained != 0 {
+		t.Errorf("%d processed items record no outcome", unexplained)
+	}
+
+	// And the counters must reconcile with the articles actually stored.
+	stored := h.scalar(t, `SELECT count(*) FROM raw_items WHERE outcome = 'stored'`)
+	articles := h.scalar(t, `SELECT count(*) FROM articles`)
+	if stored != articles {
+		t.Errorf("%d items recorded as stored but %d articles exist", stored, articles)
+	}
+}
