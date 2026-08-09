@@ -20,11 +20,6 @@ import (
 //
 // These are aliases rather than dated snapshot ids: same model, and they do not
 // need editing when a new snapshot ships.
-const (
-	DefaultFastModel    = "claude-haiku-4-5"
-	DefaultCapableModel = "claude-sonnet-5"
-)
-
 // maxArticleRunes bounds how much of an article is sent. Beyond this a longer
 // prompt buys nothing: the opening of a piece already says what it is about,
 // and the cost grows with every rune.
@@ -38,8 +33,16 @@ type Claude struct {
 	interests    config.Interests
 }
 
-// ClaudeOptions configures the analyzer. Empty model names fall back to the
-// defaults above.
+// ClaudeOptions configures the analyzer.
+//
+// Both model names are required, as they are for every provider. There was once
+// a default pair here and it was removed on purpose: a model name written into
+// the code is a claim about what exists, made at the moment the line was typed
+// and never revisited. Model families are renamed, superseded and retired, and
+// a default that has gone stale fails at the first real article with an error
+// about an unknown model — long after the run looked configured. Naming them in
+// the environment puts the claim next to the key it is used with, where someone
+// will see it.
 type ClaudeOptions struct {
 	APIKey       string
 	FastModel    string
@@ -52,11 +55,16 @@ func NewClaude(opts ClaudeOptions) (*Claude, error) {
 	if opts.APIKey == "" {
 		return nil, fmt.Errorf("ANTHROPIC_API_KEY is not set")
 	}
+	if opts.FastModel == "" || opts.CapableModel == "" {
+		return nil, fmt.Errorf(
+			"ZIBA_FAST_MODEL and ZIBA_CAPABLE_MODEL must both name a Claude model: " +
+				"there is no default, because a stale one fails at the first call")
+	}
 
 	return &Claude{
 		client:       anthropic.NewClient(option.WithAPIKey(opts.APIKey)),
-		fastModel:    orDefault(opts.FastModel, DefaultFastModel),
-		capableModel: orDefault(opts.CapableModel, DefaultCapableModel),
+		fastModel:    opts.FastModel,
+		capableModel: opts.CapableModel,
 		interests:    opts.Interests,
 	}, nil
 }
@@ -142,37 +150,7 @@ func assessmentSchema(interests config.Interests, declared []string) map[string]
 // it. Sending the article text once instead of twice is where most of the
 // running cost of Ziba was saved.
 func (c *Claude) Assess(ctx context.Context, a domain.Article, declared []string) (Assessment, error) {
-	system := fmt.Sprintf(`You classify and rate articles for one specific reader.
-
-First identify what the article is about, factually and without judging its
-quality. Then rate how relevant it is to this reader.
-
-The reader's interests, most important first:
-
-%s
-
-Rate from 0 to 100. Reward depth and usefulness to these interests; do not
-reward an article merely for mentioning a keyword. An article outside every
-interest scores low even when it is excellent in general.
-
-Answer only with the requested structure.`, c.interests.Describe())
-
-	// A declared source is not being classified, it is being judged. The reader
-	// already decided the subject matters by subscribing; what they need to know
-	// is whether this particular piece is worth their time.
-	if len(declared) > 0 {
-		system = fmt.Sprintf(`You rate articles for one specific reader.
-
-This article comes from a source the reader follows deliberately, on these
-subjects: %s. Do not question whether the subject is relevant — it is.
-
-Rate from 0 to 100 how interesting and worth reading this particular piece is.
-Reward depth, originality, and something the reader would not already know.
-Rate low a release note, a routine announcement, a rehash of common knowledge,
-or a thinly disguised advertisement — even though the subject is right.
-
-Answer only with the requested structure.`, strings.Join(declared, ", "))
-	}
+	system := assessSystemPrompt(c.interests, declared)
 
 	var result struct {
 		Categories []string `json:"categories"`
@@ -207,16 +185,7 @@ Answer only with the requested structure.`, strings.Join(declared, ", "))
 // Summarize implements Summarizer. This is the only stage that runs on the
 // capable model, and only for articles above threshold.
 func (c *Claude) Summarize(ctx context.Context, a domain.Article, _ Assessment) (string, error) {
-	system := fmt.Sprintf(`You write short summaries for one specific reader.
-
-The reader's interests, most important first:
-
-%s
-
-Write 3 to 4 sentences saying what the article reports and why it matters to
-this reader. Be concrete: name the finding, the number, the decision. Do not
-open with "This article" and do not recommend reading it — the reader decides
-that. Answer with the summary alone.`, c.interests.Describe())
+	system := summarySystemPrompt(c.interests)
 
 	message, err := c.client.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     c.capableModel,
@@ -292,11 +261,4 @@ func articlePrompt(a domain.Article) string {
 	}
 	fmt.Fprintf(&b, "URL: %s\n\n%s", a.URL, text)
 	return b.String()
-}
-
-func orDefault(value, fallback string) string {
-	if value == "" {
-		return fallback
-	}
-	return value
 }

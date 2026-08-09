@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/emaori/ziba/internal/config"
@@ -55,12 +56,7 @@ func newSetup(ctx context.Context, mode analyzerMode) (*setup, error) {
 	case analyzerOffline:
 		analyzer = pipeline.NewDeterministic(interests)
 	case analyzerReal:
-		analyzer, err = pipeline.NewClaude(pipeline.ClaudeOptions{
-			APIKey:       cfg.AnthropicAPIKey,
-			FastModel:    cfg.FastModel,
-			CapableModel: cfg.CapableModel,
-			Interests:    interests,
-		})
+		analyzer, err = newAnalyzer(cfg, interests)
 		if err != nil {
 			return nil, err
 		}
@@ -81,3 +77,31 @@ func newSetup(ctx context.Context, mode analyzerMode) (*setup, error) {
 }
 
 func (s *setup) Close() { s.store.Close() }
+
+// newAnalyzer builds the configured provider.
+//
+// Both implement the same interface and answer the same prompts, so this is the
+// only place in the program that knows which company is being asked.
+func newAnalyzer(cfg config.Config, interests config.Interests) (pipeline.Analyzer, error) {
+	key, variable := cfg.APIKey()
+	if key == "" {
+		return nil, fmt.Errorf("%s is not set, and ZIBA_AI_PROVIDER is %q", variable, cfg.Provider)
+	}
+
+	switch cfg.Provider {
+	case config.ProviderOpenAI:
+		return pipeline.NewOpenAI(pipeline.OpenAIOptions{
+			APIKey:       key,
+			FastModel:    cfg.FastModel,
+			CapableModel: cfg.CapableModel,
+			Interests:    interests,
+		})
+	default:
+		return pipeline.NewClaude(pipeline.ClaudeOptions{
+			APIKey:       key,
+			FastModel:    cfg.FastModel,
+			CapableModel: cfg.CapableModel,
+			Interests:    interests,
+		})
+	}
+}

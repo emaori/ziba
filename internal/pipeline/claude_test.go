@@ -71,3 +71,33 @@ func TestAssessmentSchemaConstrainsCategoriesToTheInterests(t *testing.T) {
 		t.Errorf("enum = %v, want the configured interests", got)
 	}
 }
+
+// No provider carries a default model name. A name in code is a claim about
+// what exists, made once and never revisited, and a stale one fails at the
+// first real article rather than at startup.
+func TestNewClaudeRequiresModels(t *testing.T) {
+	tests := []struct {
+		name string
+		opts ClaudeOptions
+		want string
+	}{
+		{"no key", ClaudeOptions{FastModel: "a", CapableModel: "b"}, "ANTHROPIC_API_KEY"},
+		{"no fast model", ClaudeOptions{APIKey: "k", CapableModel: "b"}, "ZIBA_FAST_MODEL"},
+		{"no capable model", ClaudeOptions{APIKey: "k", FastModel: "a"}, "ZIBA_CAPABLE_MODEL"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewClaude(tt.opts)
+			if err == nil {
+				t.Fatal("expected an error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("error %q does not name %s", err, tt.want)
+			}
+		})
+	}
+
+	if _, err := NewClaude(ClaudeOptions{APIKey: "k", FastModel: "a", CapableModel: "b"}); err != nil {
+		t.Errorf("a complete configuration was refused: %v", err)
+	}
+}
