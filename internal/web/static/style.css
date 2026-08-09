@@ -314,3 +314,87 @@ code {
   border-radius: 2px;
   font-size: 0.85em;
 }
+
+/* Statistics ---------------------------------------------------------------- */
+
+.section {
+  margin: 2.5rem 0 0.8rem;
+  font-size: 0.78rem;
+  font-family: system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--ink-soft);
+}
+
+/* The headline figures, as a grid that reflows rather than a row that squeezes. */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.8rem;
+  margin: 0 0 1rem;
+}
+
+.figures p {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+
+.figures strong { display: block; font-size: 1.6rem; line-height: 1.1; }
+.figures span {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+/* A wide table must scroll inside its own box; the page itself must not. */
+.scroller { overflow-x: auto; }
+
+.figures-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.figures-table th, .figures-table td {
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+}
+
+.figures-table th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  /* The headers explain the columns on hover, so say so. */
+  cursor: help;
+}
+
+/* Numbers line up on the right, and in a tabular face so columns of digits
+   share a width. */
+.figures-table .n { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* A count worth noticing rather than an error: something was collected and
+   deliberately not kept. */
+.figures-table .note-cell { color: var(--accent); }
+
+.figures-table tbody tr:hover { background: var(--card); }
+
+/* The by-day table carries two levels: a day's total, then the sources under
+   it. The indent and the weight do the work a second table would have done. */
+.figures-table .day-total td { font-weight: 700; border-bottom: none; }
+.figures-table .day-total td:first-child a { text-decoration: none; }
+
+.figures-table .day-source td { color: var(--ink-soft); border-bottom: none; }
+.figures-table .day-source td:first-child { padding-left: 1.8rem; }
+
+/* Close each day with a rule, rather than ruling every row. */
+.figures-table .day-source + .day-total td,
+.figures-table tbody tr:last-child td { border-bottom: 1px solid var(--rule); }

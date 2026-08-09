@@ -154,7 +154,7 @@ func (r *Runner) Expand(ctx context.Context, batch int) (opened, queued int, err
 		return 0, 0, nil
 	}
 
-	done := make([]int64, 0, len(issues))
+	done := make(map[domain.Outcome][]int64)
 	for _, issue := range issues {
 		if ctx.Err() != nil {
 			break
@@ -176,13 +176,14 @@ func (r *Runner) Expand(ctx context.Context, batch int) (opened, queued int, err
 		r.log.Info("roundup expanded", "issue", issue.Title,
 			"links", len(links), "new", inserted)
 		queued += inserted
-		done = append(done, issue.ID)
+		done[domain.OutcomeExpanded] = append(done[domain.OutcomeExpanded], issue.ID)
 	}
 
+	opened = len(done[domain.OutcomeExpanded])
 	if err := r.store.MarkRawItemsProcessed(ctx, done); err != nil {
-		return len(done), queued, err
+		return opened, queued, err
 	}
-	return len(done), queued, nil
+	return opened, queued, nil
 }
 
 // Hydrate turns collected items into articles by retrieving their full text.
@@ -195,7 +196,12 @@ func (r *Runner) Hydrate(ctx context.Context, batch int) (processed, created int
 		return 0, 0, nil
 	}
 
-	done := make([]int64, 0, len(items))
+	done := make(map[domain.Outcome][]int64)
+	finish := func(outcome domain.Outcome, id int64) {
+		done[outcome] = append(done[outcome], id)
+		processed++
+	}
+
 	for _, item := range items {
 		if ctx.Err() != nil {
 			break
@@ -207,7 +213,7 @@ func (r *Runner) Hydrate(ctx context.Context, batch int) (processed, created int
 			// often, reached through a newsletter's redirect. Mark it done and
 			// move on: there is nothing to keep and nothing to retry.
 			r.log.Info("skipping link", "url", item.URL, "reason", err)
-			done = append(done, item.ID)
+			finish(domain.OutcomeSkipped, item.ID)
 			continue
 		}
 		if err != nil {
@@ -218,18 +224,22 @@ func (r *Runner) Hydrate(ctx context.Context, batch int) (processed, created int
 
 		_, isNew, err := r.store.SaveArticle(ctx, article)
 		if err != nil {
-			return len(done), created, err
+			return processed, created, err
 		}
 		if isNew {
 			created++
+			finish(domain.OutcomeStored, item.ID)
+		} else {
+			// The same address was already stored, usually because another
+			// source published the same link first.
+			finish(domain.OutcomeDuplicate, item.ID)
 		}
-		done = append(done, item.ID)
 	}
 
 	if err := r.store.MarkRawItemsProcessed(ctx, done); err != nil {
-		return len(done), created, err
+		return processed, created, err
 	}
-	return len(done), created, nil
+	return processed, created, nil
 }
 
 // Analyze runs the AI pipeline over articles not yet analyzed.

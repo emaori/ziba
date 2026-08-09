@@ -147,6 +147,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /day", s.handleDay)
 	mux.HandleFunc("GET /article/{id}", s.handleArticle)
 	mux.HandleFunc("GET /archive", s.handleArchiveAll)
+	mux.HandleFunc("GET /stats", s.handleStats)
 
 	// Marking read changes state, so it is a post and never a link: a crawler
 	// or a prefetching browser must not be able to empty the reading list.

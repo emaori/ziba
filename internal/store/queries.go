@@ -226,13 +226,25 @@ func (s *Store) SaveArticle(ctx context.Context, a domain.Article) (id int64, cr
 
 // MarkRawItemsProcessed records that the given items have been turned into
 // articles, so the next run skips them.
-func (s *Store) MarkRawItemsProcessed(ctx context.Context, ids []int64) error {
-	if len(ids) == 0 {
+func (s *Store) MarkRawItemsProcessed(ctx context.Context, finished map[domain.Outcome][]int64) error {
+	batch := &pgx.Batch{}
+	for outcome, ids := range finished {
+		if len(ids) == 0 {
+			continue
+		}
+		batch.Queue(`UPDATE raw_items SET processed_at = now(), outcome = $2
+		             WHERE id = ANY($1)`, ids, string(outcome))
+	}
+	if batch.Len() == 0 {
 		return nil
 	}
-	if _, err := s.pool.Exec(ctx,
-		`UPDATE raw_items SET processed_at = now() WHERE id = ANY($1)`, ids); err != nil {
-		return fmt.Errorf("mark items processed: %w", err)
+
+	results := s.pool.SendBatch(ctx, batch)
+	defer results.Close()
+	for range batch.Len() {
+		if _, err := results.Exec(); err != nil {
+			return fmt.Errorf("mark items processed: %w", err)
+		}
 	}
 	return nil
 }

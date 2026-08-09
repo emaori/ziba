@@ -174,6 +174,27 @@ const (
 	ItemKindRoundup ItemKind = "roundup"
 )
 
+// Outcome says what became of a collected item once the pipeline finished with
+// it. An empty outcome means it has not finished — or, for rows collected
+// before outcomes were recorded, that nobody knows.
+type Outcome string
+
+const (
+	// OutcomeStored: the item became an article that did not exist before.
+	OutcomeStored Outcome = "stored"
+
+	// OutcomeDuplicate: the article was already known under the same address,
+	// often because another source had already published the same link.
+	OutcomeDuplicate Outcome = "duplicate"
+
+	// OutcomeSkipped: the link led somewhere deliberately not stored — a video,
+	// most often, reached through a newsletter's redirect.
+	OutcomeSkipped Outcome = "skipped"
+
+	// OutcomeExpanded: a roundup issue that was opened for the links it holds.
+	OutcomeExpanded Outcome = "expanded"
+)
+
 // RawItem is a freshly collected element, before any AI processing.
 type RawItem struct {
 	ID          int64

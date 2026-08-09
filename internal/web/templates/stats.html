@@ -1,0 +1,115 @@
+{{define "content"}}
+  <h1 class="page-title">
+    Statistics
+    <span class="subtitle">what collection has actually been doing</span>
+  </h1>
+
+  <section class="figures">
+    <p><strong>{{.Library.Total}}</strong><span>articles stored</span></p>
+    <p><strong>{{.Library.Shown}}</strong><span>in an interest, so shown</span></p>
+    <p><strong>{{.Library.Hidden}}</strong><span>matching none, hidden</span></p>
+    <p><strong>{{.Library.AboveScore}}</strong><span>at or above {{.Threshold}}</span></p>
+    <p><strong>{{.Library.Archived}}</strong><span>marked read</span></p>
+    <p><strong>{{.Library.NoText}}</strong><span>with no text retrieved</span></p>
+  </section>
+
+  <h2 class="section">By source</h2>
+
+  <div class="scroller">
+    <table class="figures-table">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th class="n" title="Everything that reached the database from this source">Collected</th>
+          <th class="n" title="Items meant to become an article">Links</th>
+          <th class="n" title="Became an article that did not exist before">Stored</th>
+          <th class="n" title="The same address was already stored, often from another source">Duplicate</th>
+          <th class="n" title="Led somewhere deliberately not stored, such as a video">Skipped</th>
+          <th class="n" title="Emails and roundup issues, never destined to be articles">Not articles</th>
+          <th class="n" title="Collected but not yet processed">Pending</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .BySource}}
+          <tr>
+            <td>{{.Source}}</td>
+            <td class="n">{{.Collected}}</td>
+            <td class="n">{{.Links}}</td>
+            <td class="n">{{.Stored}}</td>
+            <td class="n {{if .Duplicate}}note-cell{{end}}">{{.Duplicate}}</td>
+            <td class="n {{if .Skipped}}note-cell{{end}}">{{.Skipped}}</td>
+            <td class="n">{{add .Provenance .Roundups}}</td>
+            <td class="n">{{.Pending}}</td>
+          </tr>
+        {{else}}
+          <tr><td colspan="8">Nothing collected yet.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="section">By day collected, and by source within it</h2>
+
+  <div class="scroller">
+    <table class="figures-table">
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th class="n">Collected</th>
+          <th class="n">Links</th>
+          <th class="n">Stored</th>
+          <th class="n">Duplicate</th>
+          <th class="n">Skipped</th>
+          <th class="n">Not articles</th>
+          <th class="n">Pending</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .ByDay}}
+          {{/* The day's own total, then the sources that made it up. Two levels
+               in one table rather than two tables: the totals are only
+               meaningful next to the rows they add up. */}}
+          <tr class="day-total">
+            <td><a href="{{dayLink .Day ""}}">{{shortDate .Day}}</a></td>
+            <td class="n">{{.Collected}}</td>
+            <td class="n">{{.Links}}</td>
+            <td class="n">{{.Stored}}</td>
+            <td class="n {{if .Duplicate}}note-cell{{end}}">{{.Duplicate}}</td>
+            <td class="n {{if .Skipped}}note-cell{{end}}">{{.Skipped}}</td>
+            <td class="n">{{add .Provenance .Roundups}}</td>
+            <td class="n">{{.Pending}}</td>
+          </tr>
+          {{range .Sources}}
+            <tr class="day-source">
+              <td>{{.Source}}</td>
+              <td class="n">{{.Collected}}</td>
+              <td class="n">{{.Links}}</td>
+              <td class="n">{{.Stored}}</td>
+              <td class="n {{if .Duplicate}}note-cell{{end}}">{{.Duplicate}}</td>
+              <td class="n {{if .Skipped}}note-cell{{end}}">{{.Skipped}}</td>
+              <td class="n">{{add .Provenance .Roundups}}</td>
+              <td class="n">{{.Pending}}</td>
+            </tr>
+          {{end}}
+        {{else}}
+          <tr><td colspan="8">Nothing collected yet.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note">
+    <strong>Collected</strong> counts what reached the database. It is not what
+    the sources offered: an item published before its source's cutoff, and a
+    newsletter link filtered out as navigation, are both discarded before
+    anything is written and leave nothing to count. One feed offers 277 entries
+    and contributes three. Those rejections appear in the run's log only.
+  </p>
+
+  {{if .Unknown}}
+    <p class="note">
+      Some items finished before outcomes were recorded and are counted only
+      under Collected.
+    </p>
+  {{end}}
+{{end}}

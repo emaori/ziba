@@ -67,6 +67,29 @@ func (f *fakeStore) Archive(context.Context, int, int, []string) ([]domain.Artic
 	return f.articles, nil
 }
 
+func (f *fakeStore) TalliesBySource(context.Context) ([]store.Tally, error) {
+	return []store.Tally{{
+		Source: "IEEE Spectrum", Links: 30, Stored: 24, Duplicate: 4, Skipped: 2,
+	}}, nil
+}
+
+func (f *fakeStore) TalliesByDay(context.Context, int) ([]store.DayTally, error) {
+	return []store.DayTally{{
+		Tally: store.Tally{Day: date(2026, 8, 8), Links: 12, Stored: 11, Duplicate: 1, Provenance: 3},
+		Sources: []store.Tally{
+			{Source: "Il Post", Links: 9, Stored: 9},
+			{Source: "Newsletters", Links: 3, Stored: 2, Duplicate: 1, Provenance: 3},
+		},
+	}}, nil
+}
+
+func (f *fakeStore) Articles(context.Context, []string, int) (store.ArticleStats, error) {
+	return store.ArticleStats{
+		Total: 443, Analyzed: 440, Shown: 300, Hidden: 140, NoText: 9,
+		Archived: 5, AboveScore: 210,
+	}, nil
+}
+
 func date(year int, month time.Month, day int) time.Time {
 	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
 }
@@ -677,5 +700,54 @@ func TestReaderExplainsMissingText(t *testing.T) {
 	handler = newTestServer(t, &fakeStore{article: sampleArticle()})
 	if _, body := get(t, handler, "/article/42"); strings.Contains(body, "could not be retrieved") {
 		t.Error("an article with text claims its text is missing")
+	}
+}
+
+// The statistics page must show the figures it was given, and must reach the
+// day view from a day's row: the numbers are only useful if the articles behind
+// them are one click away.
+func TestStatsPage(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{})
+
+	code, body := get(t, handler, "/stats")
+	if code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", code)
+	}
+
+	for _, want := range []string{
+		"443",                  // articles stored
+		"140",                  // hidden for matching no interest
+		"IEEE Spectrum",        // the by-source row
+		"/day?date=2026-08-08", // the by-day row links to that day
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("statistics page is missing %q", want)
+		}
+	}
+
+	// Collected is a derived figure and easy to get wrong: 30 links, no
+	// provenance, no roundups.
+	if !strings.Contains(body, ">30<") {
+		t.Error("the by-source row does not show its collected total")
+	}
+	// And on the day row: 12 links plus 3 provenance.
+	if !strings.Contains(body, ">15<") {
+		t.Error("the by-day row does not add provenance into its collected total")
+	}
+
+	// Each day is broken down by the sources that made it up.
+	byDay := body[strings.Index(body, "By day collected"):]
+	for _, want := range []string{"Il Post", "Newsletters", `class="day-source"`} {
+		if !strings.Contains(byDay, want) {
+			t.Errorf("the by-day table is missing %q", want)
+		}
+	}
+}
+
+// The page is reachable from every other one, or it will not be looked at.
+func TestStatsIsInTheNav(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{})
+	if _, body := get(t, handler, "/"); !strings.Contains(body, `href="/stats"`) {
+		t.Error("the masthead does not link to the statistics page")
 	}
 }

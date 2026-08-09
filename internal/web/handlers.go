@@ -31,6 +31,10 @@ type Store interface {
 	DayNavigation(ctx context.Context, interest string, day time.Time, interests []string) (store.DayNavigation, error)
 
 	Archive(ctx context.Context, limit, offset int, interests []string) ([]domain.Article, error)
+
+	TalliesBySource(ctx context.Context) ([]store.Tally, error)
+	TalliesByDay(ctx context.Context, limit int) ([]store.DayTally, error)
+	Articles(ctx context.Context, interests []string, threshold int) (store.ArticleStats, error)
 }
 
 // page is the data every template receives. The interests appear in the tab bar
@@ -46,6 +50,10 @@ type page struct {
 	Nav       store.DayNavigation
 	Day       time.Time
 	Interest  string
+	BySource  []store.Tally
+	ByDay     []store.DayTally
+	Library   store.ArticleStats
+	Unknown   int
 	Offset    int
 	PageSize  int
 	Threshold domain.RelevanceScore
@@ -211,6 +219,41 @@ func (s *Server) handleArchiveAll(w http.ResponseWriter, r *http.Request) {
 
 	s.render(w, r, "list.html", &page{
 		Title: "Everything", Articles: articles, Offset: offset, PageSize: listPageSize,
+	})
+}
+
+// statsDays is how far back the day-by-day table reaches. A month is enough to
+// see a pattern and short enough to read without scrolling.
+const statsDays = 30
+
+// handleStats shows what collection has actually been doing.
+func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
+	bySource, err := s.store.TalliesBySource(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	byDay, err := s.store.TalliesByDay(r.Context(), statsDays)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	library, err := s.store.Articles(r.Context(), s.interests, int(s.threshold))
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+
+	// Rows that finished before outcomes were recorded. Worth naming rather
+	// than folding into another column, so the totals stay honest.
+	unknown := 0
+	for _, tally := range bySource {
+		unknown += tally.Unknown
+	}
+
+	s.render(w, r, "stats.html", &page{
+		Title: "Statistics", BySource: bySource, ByDay: byDay,
+		Library: library, Unknown: unknown,
 	})
 }
 
