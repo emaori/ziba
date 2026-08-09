@@ -122,8 +122,11 @@ sources:
 	if opts.LookBackDays != 3 {
 		t.Errorf("LookBackDays = %d, want 3", opts.LookBackDays)
 	}
-	// A mailbox address is not a web address and must survive intact.
-	if want := "imaps://imap.example.com:993/"; sources[0].URL != want {
+	// A mailbox address is not a web address: the web normalizer would reject
+	// the scheme, so it must survive its own way — host and port as written,
+	// with the folder appended, which is what makes two labels on one server
+	// two sources rather than a collision.
+	if want := "imaps://imap.example.com:993/Newsletters"; sources[0].URL != want {
 		t.Errorf("URL = %q, want %q", sources[0].URL, want)
 	}
 }
@@ -304,5 +307,73 @@ sources:
 	}
 	if !strings.Contains(err.Error(), "Gardening") || !strings.Contains(err.Error(), "never be shown") {
 		t.Errorf("error %q does not explain the problem", err)
+	}
+}
+
+// Several labels on one mailbox are several sources, and a source is identified
+// by its type and address. Without the folder in the address they collide — the
+// file would refuse them as duplicates, and the sources table, which has the
+// same unique key, would fold them onto one row.
+func TestMailboxFolderIsPartOfTheAddress(t *testing.T) {
+	t.Setenv("TEST_IMAP_USER", "reader")
+	t.Setenv("TEST_IMAP_PASS", "secret")
+
+	const block = `
+      username_env: TEST_IMAP_USER
+      password_env: TEST_IMAP_PASS
+`
+	sources, err := LoadSources(writeSources(t, `
+sources:
+  - name: ".NET"
+    type: newsletter
+    url: "imaps://imap.example.com:993/"
+    newsletter:
+      folder: "DotNet"`+block+`
+  - name: "AI"
+    type: newsletter
+    url: "imaps://imap.example.com:993/"
+    newsletter:
+      folder: "AI"`+block+`
+  - name: "The rest"
+    type: newsletter
+    url: "imaps://imap.example.com:993/"
+    newsletter:
+      folder: "INBOX"`+block), testInterests())
+	if err != nil {
+		t.Fatalf("three labels on one mailbox were refused: %v", err)
+	}
+
+	want := []string{
+		"imaps://imap.example.com:993/DotNet",
+		"imaps://imap.example.com:993/AI",
+		"imaps://imap.example.com:993/INBOX",
+	}
+	for i, src := range sources {
+		if src.URL != want[i] {
+			t.Errorf("source %d address = %q, want %q", i, src.URL, want[i])
+		}
+		// The folder is still available to the collector, which selects by name.
+		if src.Newsletter == nil || src.Newsletter.Folder == "" {
+			t.Errorf("source %d lost its folder", i)
+		}
+	}
+
+	// A nested label carries a separator, which must not turn into two path
+	// segments and collide with something else.
+	nested, err := LoadSources(writeSources(t, `
+sources:
+  - name: "Nested"
+    type: newsletter
+    url: "imaps://imap.example.com:993/"
+    newsletter:
+      folder: "Tech/Weekly"`+block), testInterests())
+	if err != nil {
+		t.Fatalf("a nested label was refused: %v", err)
+	}
+	if want := "imaps://imap.example.com:993/Tech%2FWeekly"; nested[0].URL != want {
+		t.Errorf("nested address = %q, want %q", nested[0].URL, want)
+	}
+	if nested[0].Newsletter.Folder != "Tech/Weekly" {
+		t.Errorf("folder = %q, want it unescaped for the IMAP select", nested[0].Newsletter.Folder)
 	}
 }

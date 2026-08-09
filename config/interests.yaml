@@ -32,6 +32,18 @@ interests:
     subtopics: ["C#", "ASP.NET", "dotnet tooling", "Blazor"]
     note: "Practical .NET development: language features, framework releases, real-world patterns."
 
+  # Deliberately narrower than "Computer Science", which is for ideas: this is
+  # the craft — how to write, test and ship code today. An article can be both,
+  # and several will be.
+  - topic: "Programming"
+    priority: 1
+    # Phrases, not words. The subtopics double as the offline matcher's
+    # vocabulary, and "testing" and "languages" fired on ordinary prose — a
+    # research-integrity notice and an article about hexagons both came out as
+    # Programming. The same trap as "ai" inside Italian words.
+    subtopics: ["programming languages", "unit testing", "developer tooling", "debugging", "refactoring"]
+    note: "The craft of writing software: patterns, tooling, and hard-won practice. Prefer a working example over an opinion piece."
+
   - topic: "Italian and International news"
     priority: 3
     note: "Analysis and context rather than breaking news."

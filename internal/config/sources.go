@@ -231,6 +231,16 @@ func (e SourceEntry) toDomain(knownInterests map[string]bool) (domain.Source, er
 			folder = "INBOX"
 		}
 
+		// The folder becomes part of the address.
+		//
+		// A source is identified by its type and address, in the file and in the
+		// database both. Four labels on one mailbox are four sources sharing one
+		// server, so without this they collide — the file refuses them as
+		// duplicates, and the database, which has the same unique key, would
+		// fold them onto one row. Naming the mailbox in the path is also what an
+		// IMAP address is supposed to look like.
+		source.URL = strings.TrimSuffix(url, "/") + "/" + neturl.PathEscape(folder)
+
 		source.Newsletter = &domain.NewsletterOptions{
 			Folder:       folder,
 			UsernameEnv:  e.Newsletter.UsernameEnv,

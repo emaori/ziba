@@ -18,8 +18,18 @@
 #
 #          A mailbox is one source, so categories there would apply to every
 #          newsletter in it. To declare per publication, give each its own
-#          folder — a Gmail filter or label routing one newsletter to its own
-#          folder — and add one newsletter source per folder.
+#          folder and add one newsletter source per folder.
+#
+#          In Gmail a label IS an IMAP folder — "DotNet" is selectable exactly
+#          as INBOX is, and a nested label reads as "Parent/Child". No special
+#          handling is needed.
+#
+#          But a labelled message stays in the inbox as well, so a source for
+#          INBOX and a source for the label will both collect it. That is worse
+#          than duplicated work: sources are read in parallel, whichever stores
+#          an article first owns it, and only the owning source's declared
+#          categories apply — so the classification would depend on a race.
+#          Set the Gmail filter to skip the inbox, or do not configure INBOX.
 #
 # collect_from: how much history a source contributes on first contact. A
 #               duration ("7d", "48h"), a date ("2026-01-01"), or "all" for
@@ -127,6 +137,44 @@ sources:
   # have already opened is still collected and mail Ziba has read still looks
   # unread to you.
   #
+  # One source per Gmail label, so each can declare what it publishes. The
+  # labels must skip the inbox, or the source below collects the same mail and
+  # whichever wins the race owns the article — see the note on categories above.
+  - name: ".NET newsletters"
+    type: newsletter
+    url: "imaps://imap.gmail.com:993/"
+    categories: [".NET"]
+    newsletter:
+      folder: "DotNet"
+      username_env: ZIBA_IMAP_USER
+      password_env: ZIBA_IMAP_PASSWORD
+      days: 1
+      max_messages: 50
+
+  - name: "AI newsletters"
+    type: newsletter
+    url: "imaps://imap.gmail.com:993/"
+    categories: ["AI"]
+    newsletter:
+      folder: "AI"
+      username_env: ZIBA_IMAP_USER
+      password_env: ZIBA_IMAP_PASSWORD
+      days: 1
+      max_messages: 50
+
+  - name: "Programming newsletters"
+    type: newsletter
+    url: "imaps://imap.gmail.com:993/"
+    categories: ["Programming"]
+    newsletter:
+      folder: "Programming"
+      username_env: ZIBA_IMAP_USER
+      password_env: ZIBA_IMAP_PASSWORD
+      days: 1
+      max_messages: 50
+
+  # Everything not labelled. No categories: what arrives here is unknown, so it
+  # is classified like any other source.
   - name: "Newsletters"
     type: newsletter
     url: "imaps://imap.gmail.com:993/"
