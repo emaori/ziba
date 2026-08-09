@@ -1,0 +1,269 @@
+Delivered-To: inbox@fixture.test
+Received: by 2002:a05:701b:21c8:b0:13f:c80c:d596 with SMTP id r8csp446862dla;
+        Sat, 8 Aug 2026 09:28:46 -0700 (PDT)
+X-Received: by 2002:a05:600c:190a:b0:495:6a50:3fb8 with SMTP id 5b1f17b1804b1-4994e743275mr375949395e9.1.1786206526557;
+        Sat, 08 Aug 2026 09:28:46 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1786206526; cv=none;
+        d=google.com; s=arc-20260327;
+        b=lmYrY/t0074+kI+b6gOyOnd0vAI6SXsBEmMNsWaPdtu1BUyf
+         ZvP7snIY2qelqbvJl/+0bpFttgY8RYVkbZY2mOvhlWFM9QzDDkcdnSMz4bWqbaGp25v1
+         xEOX4djd7PZuiTI4/t0075+oqVWO5lqRbBtPFp
+         DS5CA8YsECmQpNv7L7fQSD8vnhesdbOrfRzVjq+v+T0aOWhcYZ4fGw5aS/M5hRTiwojs
+         WDWCzYoTfzCJvEYhppXXeomvnxFC2h2+wwd9MIpCg+gudpMi9TD9XgsZDNWgkE/byM57
+         4BDQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=to:references:message-id:subject:date:mime-version:from
+         :content-transfer-encoding:dkim-signature;
+        bh=In9D0po9ZAo6EiY5EgJ/t0076=;
+        fh=2d2LkZ5xJxt2RnLYvOfQ29SMCFGw48RFlkYFEgaEobM=;
+        b=Be4Lm8zz01/dOYDZKDrY9pHQ++itoP7okkHDX0hqUQfo1GQMaC3abcyyb5jaNiFeH0
+         4dz1fQyYAyvl19EbYvnNcdbz9jP85J1C0Mu9ZW0o66YgypL2jEuqvpwvsm9kLoNMa4vB
+         qj6X3p8M/GNnHDLcHCJKq/p2/t0077/vvD/Po4xVVs
+         OfYzbq+bvz3jAGpOuBNk5OaiioSAdMbVay2Kx+a3/t0078/TaiZXnKn
+         M0o1CfM20t90KeLJuiY6fyXs4Bx0YGJl9neoBBpCGWab2u04do4IVoXrKZKOHRwq1+39
+         V5Kg==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@aruba.it header.s=a1 header.b=nPUEHeeo;
+       spf=pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) smtp.mailfrom=reader@fixture.test;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=fixture.test
+Return-Path: <reader@fixture.test>
+Received: from smtpcmd01-sp1.aruba.it (smtpcmd01-sp1.aruba.it. [62.149.158.218])
+        by mx.google.com with ESMTPS id 5b1f17b1804b1-499542badf2si170033065e9.19.2026.08.08.09.28.46
+        for <inbox@fixture.test>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256);
+        Sat, 08 Aug 2026 09:28:46 -0700 (PDT)
+Received-SPF: pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) client-ip=62.149.158.218;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@aruba.it header.s=a1 header.b=nPUEHeeo;
+       spf=pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) smtp.mailfrom=reader@fixture.test;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=fixture.test
+Received: from smtpclient.apple ([93.45.31.109])
+	by Aruba SMTP with ESMTPSA
+	id sjtKwnbmh3FmdsjugwdYuL; Sat, 08 Aug 2026 18:28:46 +0200
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=aruba.it; s=a1;
+	t=1786206526; bh=Krhs4PeAJZ6bvylLysnT4GgaG4WckmlgAdqHN3Ll0ls=;
+	h=Content-Type:From:Mime-Version:Date:Subject:To;
+	b=nPUEHeeoccSmAgYEe0DA0iPTUHkgWJPt81NvR0HgWrIs6tshFK/BgPtX61olzjbog
+	 33JmOP4VRiVoJFtrANbnAwSmhTK3RS9t/vMS7fywdgX/t0079
+	 FN2sNjsIq/t0080/t0081/YzMA/OUE98jeBpuKdr
+	 NMAU5hq7dbA6dqPSgWIIYD4+l7um1irL4/UN/t0082+
+	 AKy2czXjQvb0zgPc34J+aXbnziCu99ceIzum7YAEr3/t0083
+	 q93BgQs0J8FYQ==
+Content-Type: multipart/alternative; boundary=Apple-Mail-00000000-0000-4000-8000-000000000070
+Content-Transfer-Encoding: 7bit
+From: reader <reader@fixture.test>
+Mime-Version: 1.0 (1.0)
+Date: Sat, 8 Aug 2026 18:28:36 +0200
+Subject: Fwd: PD#688 How big is a Git commit?
+Message-Id: <00000000-0000-4000-8000-000000000071@fixture.test>
+References: <person85@fixture.test>
+To: inbox@fixture.test
+X-Mailer: iPhone Mail (23F84)
+X-CMAE-Envelope: MS4xfABkqgWxsAqEft+EU5DQphGPlltA4AokNqJXzbUwQUn7Mhny4QXzlm8CAzCqltEdfiqqXcG9qupD8ain8v/vxaHP/t0084
+ 3Bx6jPaTUWaaL7s2UweASCn9xhxX2H+PeedUJM9x7H6fppNoht2jUCqnQQe4K9TYngXoN6+7gJmBctWmCO5yiNNQea7SwodSASM=
+
+
+--Apple-Mail-00000000-0000-4000-8000-000000000070
+Content-Type: text/html;
+	charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<html class=3D"apple-mail-supports-explicit-dark-mode"><head><meta http-equi=
+v=3D"content-type" content=3D"text/html; charset=3Dutf-8"></head><body dir=3D=
+"auto"><div dir=3D"ltr"></div><div dir=3D"ltr"><br><br><br>Inizio messaggio i=
+noltrato:<br><br></div><blockquote type=3D"cite"><div dir=3D"ltr"><b>Da:</b>=
+ Programming Digest &lt;person86@fixture.test&gt;<br><b>Data:</b> 2 ag=
+osto 2026 alle ore 20:21:53 CEST<br><b>A:</b> reader@fixture.test<br><b>Ogge=
+tto:</b> <b>PD#688 How big is a Git commit?</b><br><br></div></blockquote><b=
+lockquote type=3D"cite"><div dir=3D"ltr">=EF=BB=BF
+
+ =20
+    <meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8"=
+>
+    <meta charset=3D"utf-8">
+    <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D=
+1.0">
+   =20
+ =20
+
+ =20
+    <div class=3D"body" style=3D"max-width: 640px;">
+      <!-- start text/html -->
+<div class=3D"preheader" style=3D"display: none; font-size: 1px; color: #fff=
+; line-height: 1px; max-height: Opx; max-width: Opx; opacity: 0; overflow: h=
+idden;">
+  git stores data as compressed objects, so commit sizes vary based on how c=
+ompressible your files are
+</div>
+<div style=3D"display: none; max-height: 0px; overflow: hidden;">
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+</div>
+<!-- end text/html -->
+
+<p class=3D"header" style=3D"font-size: 85%;" align=3D"right">August 02, 202=
+6 | <a href=3D"https://programmingdigest.net/newsletters/2334?sid=3Dt0073" style=3D"text-decoration: underline; color: #3=
+670F7;">Read Online</a></p>
+
+<p><a href=3D"https://programmingdigest.net/links/22855/00000000-0000-4000-8000-000000000072/email" style=3D"text-decoration: underline; color: #3670F7;=
+">How big is a Git commit?</a><br><em style=3D"font-style: italic;">5 minute=
+s</em> by Dave Gauer</p>
+<p>Git stores data as compressed objects, so commit sizes vary based on how c=
+ompressible your files are. Small commits add a few kilobytes of overhead, w=
+hile larger text files can compress down to around 10% of their original siz=
+e. Git also packs objects together over time to save even more space, making=
+ it very storage efficient overall.</p>
+<p><a href=3D"https://programmingdigest.net/links/22856/00000000-0000-4000-8000-000000000072/email" style=3D"text-decoration: underline; color: #3670F7;=
+">Stop re-explaining your codebase to your AI agent every morning</a><br><em=
+ style=3D"font-style: italic;">sponsored by Jolli</em></p>
+<p>Coding agents are stateless, your context isn't. Jolli Memory stores agen=
+t memory as Git-backed files in your repo, so it persists across sessions an=
+d follows you between Cursor, Claude Code, Codex, and VS Code. Ships with th=
+e codebase to every teammate. Free and open source.</p>
+<p><a href=3D"https://programmingdigest.net/links/22857/00000000-0000-4000-8000-000000000072/email" style=3D"text-decoration: underline; color: #3670F7;=
+">Harness engineering deep dive</a><br><em style=3D"font-style: italic;">30 m=
+inutes</em> by Lukas Niessen</p>
+<p>The model is just a small part of a real AI agent system. The harness =E2=
+=80=94 the loop, tools, sandbox, state, sensors, and guardrails =E2=80=94 is=
+ where most of the engineering actually lives. Sensors should transform tool=
+ output into clean signals; the agent should never decide it is done on its o=
+wn; and action spaces shrink through tool design, not longer instructions. T=
+he outer harness is the durable asset that compounds over time, while models=
+ get swapped and commoditized.</p>
+<p><a href=3D"https://programmingdigest.net/links/22858/00000000-0000-4000-8000-000000000072/email" style=3D"text-decoration: underline; color: #3670F7;=
+">How LLMs figure out what you mean</a><br><em style=3D"font-style: italic;"=
+>6 minutes</em> by Zarar Siddiqi</p>
+<p>An AI can't work with raw text, so it converts each word into a list of n=
+umbers called a vector. Think of each vector as an arrow, where words with s=
+imilar meanings point in similar directions. The model then scores how close=
+ly any two arrows align and converts those scores into percentage weights, s=
+howing how much attention each word pays to every other word.</p>
+<p><a href=3D"https://programmingdigest.net/links/22859/00000000-0000-4000-8000-000000000072/email" style=3D"text-decoration: underline; color: #3670F7;=
+">Meet alice. Alice is impatient.</a><br><em style=3D"font-style: italic;">4=
+ minutes</em> by Marc Brooker</p>
+<p>Users and operators often measure service performance very differently. O=
+perators count each outage or slow request once, while users experience long=
+ outages repeatedly, making them feel much worse. This is called the inspect=
+ion paradox: users see a time-weighted version of your metrics, so a one-min=
+ute average recovery time can feel like an hour to them. Long tail events ma=
+tter far more to users than standard averages suggest.</p>
+<p><a href=3D"https://programmingdigest.net/links/22860/00000000-0000-4000-8000-000000000072/email" style=3D"text-decoration: underline; color: #3670F7;=
+">A peek into reddit's anti-spam internals</a><br><em style=3D"font-style: i=
+talic;">24 minutes</em> by Lyra Horse</p>
+<p>A bug in Reddit's spam filter briefly exposed internal removal reasons to=
+ a moderator in 2021. The leaked messages revealed several tools Reddit uses=
+ behind the scenes, including Google's Perspective API for spam scoring, a r=
+ules engine called Spamurai, domain bans, and even URL inspection that scans=
+ linked pages for known spam patterns.</p>
+<p>And the most popular article from the last issue was:</p>
+<ul>
+<li><a href=3D"https://programmingdigest.net/links/22861/00000000-0000-4000-8000-000000000072/email" style=3D"text-decoration: underline; color: #3670F7=
+;">Stop re-explaining your codebase to your AI agent every morning</a></li>
+</ul>
+
+<h2>newsletters</h2>
+<ul>
+    <li><a href=3D"https://leadershipintech.com/?utm_medium=3Dcampaign&amp;u=
+tm_source=3Dprogramming" target=3D"_blank" rel=3D"noopener" style=3D"text-de=
+coration: underline; color: #3670F7;">Leadership in Tech</a></li>
+    <li><a href=3D"https://reactdigest.net/?utm_medium=3Dcampaign&amp;utm_so=
+urce=3Dprogramming" target=3D"_blank" rel=3D"noopener" style=3D"text-decorat=
+ion: underline; color: #3670F7;">React Digest</a></li>
+    <li><a href=3D"https://csharpdigest.net/?utm_medium=3Dcampaign&amp;utm_s=
+ource=3Dprogramming" target=3D"_blank" rel=3D"noopener" style=3D"text-decora=
+tion: underline; color: #3670F7;">C# Digest</a></li>
+</ul>
+
+<hr style=3D"margin: 2rem; border: 1px solid whitesmoke;">
+<p>Would you like to <a href=3D"https://bonobopress.com/" style=3D"text-deco=
+ration: underline; color: #3670F7;">advertise</a> in the newsletter? Check o=
+ut our <a href=3D"https://bonobopress.com/media-kit/" style=3D"text-decorati=
+on: underline; color: #3670F7;">media kit</a> and get in touch.</p>
+
+<!-- start text/html -->
+<!-- end text/html -->
+
+
+      <hr style=3D"margin: 2rem; border: 1px solid whitesmoke;">
+      <div class=3D"footer" style=3D"color: dimgray;">
+        <p>=C2=A9 2026 <a target=3D"_blank" rel=3D"noopener" href=3D"https:/=
+/bonobopress.com/" style=3D"text-decoration: underline; color: dimgray !impo=
+rtant;">Bonobo Press</a></p>
+        <p>
+        <small>
+          Jakub Chodounsky (dba. Bonobo Press)<br>
+          1/25 Mana Street<br>
+          Wellington, New Zealand<br>
+          <a target=3D"_blank" rel=3D"noopener" href=3D"https://programmingd=
+igest.net/privacy" style=3D"text-decoration: underline; color: dimgray !impo=
+rtant;">Privacy Policy</a>
+        </small>
+        </p>
+        <p><small>If you no longer wish to receive these emails, click to <a=
+ href=3D"https://programmingdigest.net/subscribers/t0073/unsubscribe" style=3D"text-decoration: underline; color: dimgray=
+ !important;">unsubscribe</a>.</small></p>
+      </div>
+          <img alt=3D"" src=3D"https://programmingdigest.net/newsletters/233=
+4/open/00000000-0000-4000-8000-000000000072.gif" width=3D"1" height=3D"1" da=
+ta-unique-identifier=3D"">
+
+    </div>
+ =20
+<!-- =E2=84=A2 -->
+</div></blockquote></body></html>=
+
+--Apple-Mail-00000000-0000-4000-8000-000000000070--

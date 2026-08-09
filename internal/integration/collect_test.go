@@ -26,6 +26,13 @@ func TestEverySourceIsRead(t *testing.T) {
 	for _, src := range h.enabledSources() {
 		n := counts[src.Name]
 		switch {
+		case n == 0 && src.Type == domain.SourceTypeNewsletter:
+			// A mailbox with nothing in it is not a fault. Subscriptions lapse,
+			// mail gets filed, and a window of one day covers a quiet one. This
+			// is the source most likely to be legitimately empty, and failing
+			// on it would train the reader to ignore a red suite.
+			t.Logf("mailbox %q had nothing in its window: not a failure, but "+
+				"nothing about newsletters was exercised either", src.Name)
 		case n == 0:
 			t.Errorf("source %q produced no articles at all", src.Name)
 		case n < 5:

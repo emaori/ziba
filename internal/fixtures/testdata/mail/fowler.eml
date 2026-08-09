@@ -1,0 +1,594 @@
+Delivered-To: inbox@fixture.test
+Received: by 2002:a05:701b:21c8:b0:13f:c80c:d596 with SMTP id r8csp447071dla;
+        Sat, 8 Aug 2026 09:29:03 -0700 (PDT)
+X-Received: by 2002:a05:600c:b95:b0:495:5858:8101 with SMTP id 5b1f17b1804b1-4996199186fmr97336155e9.15.1786206542809;
+        Sat, 08 Aug 2026 09:29:02 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1786206542; cv=none;
+        d=google.com; s=arc-20260327;
+        b=Mpi/t0093++U19TpSDiN4cylQlTteo3rEd4jioNhWbXgmcLjc8pN8l
+         EZulaezzbfhDHvGyPZbax+pwq2auxQJBptCHio4BoS6VMDqDNvbMesPB/Md4kv3Onpr7
+         XbvdsFz8aDEGxGx5JgWfvPcVb8cMDTwwX/JSOeMI/a+scNy8qxnbGld2OBbCF5Wr2psu
+         0NmIGK5EcosXvnWr0z6merocu2f7Yt4WqcZwojnXZoOlACXcnbTI+JzeFd46woxOixBG
+         Hidk10oCvgZALJHtIymt2yYopFPhUHDmugSG6Y61ul8SWabaQWnyQign/JNCQbHjmdjb
+         L1Lw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=to:references:message-id:subject:date:mime-version:from
+         :content-transfer-encoding:dkim-signature;
+        bh=Zhpr3DbsqS04+3fGJRMB7Y8MzV3zEwcWbRt7GDb9thw=;
+        fh=2d2LkZ5xJxt2RnLYvOfQ29SMCFGw48RFlkYFEgaEobM=;
+        b=iEtXMKdfE96WXjgovkMV9txG/t0094
+         DRWIehgI7IhJlz8KNuIRNh1M68OkewpGOo8r4+TL0oauhJgfYDDOdC0IrQv/4MP7L1w2
+         xWeeO24oa90c/t0095
+         JiiMDxUvWYwdDjrQATN1QP5KR206TLU9byitZFSABoKHldXgh9+Vz6dLpLeBegOuKBPZ
+         0YjKNYpgN8KiWytBd5ofIBbJ8dqQHM9HpkMAQhEIMkwxNO454SZbjS5YaMR0yy81p7G+
+         u+mw==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@aruba.it header.s=a1 header.b=m2QwhGBD;
+       spf=pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) smtp.mailfrom=reader@fixture.test;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=fixture.test
+Return-Path: <reader@fixture.test>
+Received: from smtpcmd01-sp1.aruba.it (smtpcmd01-sp1.aruba.it. [62.149.158.218])
+        by mx.google.com with ESMTPS id 5b1f17b1804b1-499542badf2si170033065e9.19.2026.08.08.09.29.02
+        for <inbox@fixture.test>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256);
+        Sat, 08 Aug 2026 09:29:02 -0700 (PDT)
+Received-SPF: pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) client-ip=62.149.158.218;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@aruba.it header.s=a1 header.b=m2QwhGBD;
+       spf=pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) smtp.mailfrom=reader@fixture.test;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=fixture.test
+Received: from smtpclient.apple ([93.45.31.109])
+	by Aruba SMTP with ESMTPSA
+	id sjtKwnbmh3FmdsjuwwdYvu; Sat, 08 Aug 2026 18:29:02 +0200
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=aruba.it; s=a1;
+	t=1786206542; bh=f2OvieXTAgI6l9HUQKpAg8nCKUU95BA9+UOxZaBxcxw=;
+	h=Content-Type:From:Mime-Version:Date:Subject:To;
+	b=m2QwhGBDdDwVqzIxdzJ2qXIUzE1zmUA+/t0096
+	 rASGp4MUaLl1617uY42lOgCPuJtMx7ouNc+61d0OMM1kjdfZcXYUoe9vtmQL2owWpI
+	 y6M7blNe3hBTWafHjclphPOWwlFe4/2XVlDcUlUAZG/3ejmF/OpfAZSUaHuzryzkC+
+	 vVo0Phv8dspz2bsiUgJqrp5nMhn1AeYfMCOekxoTu/KTBpKA/t0097
+	 RcXS30VBLWysKVuWQHNVrbP7aXbeB7Q5CEcazNdRitNyYfP2ZPuKbUCghjOOg0KZFp
+	 z/vAvGdkkHIug==
+Content-Type: multipart/alternative; boundary=Apple-Mail-00000000-0000-4000-8000-000000000087
+Content-Transfer-Encoding: 7bit
+From: reader <reader@fixture.test>
+Mime-Version: 1.0 (1.0)
+Date: Sat, 8 Aug 2026 18:28:52 +0200
+Subject: Fwd: Your Daily digest for Martin Fowler
+Message-Id: <00000000-0000-4000-8000-000000000088@fixture.test>
+References: <person105@fixture.test>
+To: inbox@fixture.test
+X-Mailer: iPhone Mail (23F84)
+X-CMAE-Envelope: MS4xfA6drTmTxUSgCppYTGVqyDk6bOoTZYFWjA8P/t0098+OgJv87Ilx0ONY/t0099+J8Mt3vCOcoII/VWxaKc+c
+ Up9uAjGLhsDYcvv9gsgEqHt5i4Wn6gC5dv0T0o/t0100/vFJ+9U8cHp+o0BWqBOycgkHwP4BpStd70=
+
+
+--Apple-Mail-00000000-0000-4000-8000-000000000087
+Content-Type: text/html;
+	charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<html class=3D"apple-mail-supports-explicit-dark-mode"><head><meta http-equi=
+v=3D"content-type" content=3D"text/html; charset=3Dutf-8"></head><body dir=3D=
+"auto"><div dir=3D"ltr"></div><div dir=3D"ltr"><br><br><br>Inizio messaggio i=
+noltrato:<br><br></div><blockquote type=3D"cite"><div dir=3D"ltr"><b>Da:</b>=
+ Blogtrottr &lt;person106@fixture.test&gt;<br><b>Data:</b> 4 agosto 2026 all=
+e ore 19:33:24 CEST<br><b>A:</b> reader@fixture.test<br><b>Oggetto:</b> <b>Y=
+our Daily digest for Martin Fowler</b><br><br></div></blockquote><blockquote=
+ type=3D"cite"><div dir=3D"ltr">=EF=BB=BF
+
+
+  <meta charset=3D"utf-8">
+  <meta name=3D"x-apple-disable-message-reformatting">
+  <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D1=
+">
+  <meta name=3D"format-detection" content=3D"telephone=3Dno, date=3Dno, addr=
+ess=3Dno, email=3Dno, url=3Dno">
+  <meta name=3D"color-scheme" content=3D"light dark">
+  <meta name=3D"supported-color-schemes" content=3D"light dark">
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings xmlns:o=3D"urn:schemas-microsoft-com:office:=
+office">
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <style>
+    td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: "Segoe UI", sans-serif; ms=
+o-line-height-rule: exactly;}
+    .mso-break-all {word-break: break-all;}
+  </style>
+  <![endif]-->
+  <style>.m-0 { margin: 0px !important; }
+.mx-auto { margin-left: auto !important; margin-right: auto !important; }
+.mb-0 { margin-bottom: 0px !important; }
+.mb-1 { margin-bottom: 4px !important; }
+.mb-2 { margin-bottom: 8px !important; }
+.mb-4 { margin-bottom: 16px !important; }
+.ml-2 { margin-left: 8px !important; }
+.mt-2 { margin-top: 8px !important; }
+.mt-3 { margin-top: 12px !important; }
+.flex { display: flex !important; }
+.table { display: table !important; }
+.table-row { display: table-row !important; }
+.hidden { display: none !important; }
+.h-16 { height: 64px !important; }
+.h-px { height: 1px !important; }
+.max-h-20 { max-height: 80px !important; }
+.w-800px { width: 800px !important; }
+.w-full { width: 100% !important; }
+.max-w-20 { max-width: 80px !important; }
+.max-w-full { max-width: 100% !important; }
+.table-auto { table-layout: auto !important; }
+.list-outside { list-style-position: outside !important; }
+.list-none { list-style-type: none !important; }
+.items-center { align-items: center !important; }
+.justify-end { justify-content: flex-end !important; }
+.justify-between { justify-content: space-between !important; }
+.rounded { border-radius: 4px !important; }
+.rounded-lg { border-radius: 8px !important; }
+.border { border-width: 1px !important; }
+.border-0 { border-width: 0px !important; }
+.border-gray-400 { border-color: rgb(156, 163, 175) !important; }
+.bg-gray-100 { background-color: rgb(243, 244, 246) !important; }
+.bg-slate-50 { background-color: rgb(248, 250, 252) !important; }
+.bg-slate-500 { background-color: rgb(100, 116, 139) !important; }
+.bg-white { background-color: rgb(255, 255, 254) !important; }
+.object-cover { object-fit: cover !important; }
+.p-0 { padding: 0px !important; }
+.p-2 { padding: 8px !important; }
+.p-3 { padding: 12px !important; }
+.text-left { text-align: left !important; }
+.text-center { text-align: center !important; }
+.text-right { text-align: right !important; }
+.align-middle { vertical-align: middle !important; }
+.font-inter { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "=
+Segoe UI", sans-serif !important; }
+.text-2xl-8 { font-size: 24px !important; line-height: 32px !important; }
+.text-base-6 { font-size: 16px !important; line-height: 24px !important; }
+.text-sm-5 { font-size: 14px !important; line-height: 20px !important; }
+.text-xs { font-size: 12px !important; }
+.text-xs-5 { font-size: 12px !important; line-height: 20px !important; }
+.font-medium { font-weight: 500 !important; }
+.font-semibold { font-weight: 600 !important; }
+.leading-4 { line-height: 16px !important; }
+.text-gray-500 { color: rgb(107, 114, 128) !important; }
+.text-slate-500 { color: rgb(100, 116, 139) !important; }
+.text-slate-600 { color: rgb(71, 85, 105) !important; }
+.text-slate-900 { color: rgb(15, 23, 42) !important; }
+.mso-font-width-150pc { }
+.-webkit-font-smoothing-antialiased { -webkit-font-smoothing: antialiased !i=
+mportant; }
+.border-1px_solid_themecolors_slate_200 { border: 1px solid rgb(226, 232, 24=
+0) !important; }
+.word-break-break-word { word-break: break-word !important; }
+img { height: auto; max-width: 100%; vertical-align: middle; }
+.hover-underline:hover { text-decoration: underline !important; }
+.sm-mt-0 { margin-top: 0px !important; }
+.sm-rounded-none { border-radius: 0px !important; }
+.sm-p-0 { padding: 0px !important; }
+.sm-p-2 { padding: 8px !important; }</style>
+ =20
+ =20
+
+
+  <div role=3D"article" aria-roledescription=3D"email" aria-label=3D"" lang=3D=
+"en">
+   =20
+  <div class=3D"bg-slate-50 p-3 sm-p-0 font-inter">
+    <table align=3D"center" class=3D"m-0 mx-auto" cellpadding=3D"0" cellspac=
+ing=3D"0" role=3D"none">
+      <tbody><tr>
+        <td class=3D"w-800px max-w-full">
+          <table class=3D"w-full mt-3 sm-mt-0" cellpadding=3D"0" cellspacing=
+=3D"0" role=3D"none">
+            <tbody><tr>
+              <td class=3D"p-3 sm-p-2 bg-white border-1px_solid_themecolors_=
+slate_200 rounded-lg sm-rounded-none">
+                <h1 class=3D"m-0 mb-0 text-2xl-8 text-slate-900 font-semibol=
+d">Martin Fowler</h1>
+                <p class=3D"m-0 text-base-6 text-slate-600">Master feed of n=
+ews and updates from martinfowler.com</p>
+                <hr class=3D"border-0 bg-slate-500 text-gray-500 h-px mb-4">=
+
+
+                                <div>
+                <table cellpadding=3D"0" width=3D"100%" cellspacing=3D"0" ro=
+le=3D"none">
+                  <tbody><tr>
+                    <td align=3D"center"><div>
+    <table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0"=
+ data-lt-version=3D"3.0.0">
+        <tbody><tr><td colspan=3D"2" align=3D"center" style=3D"line-height: 1=
+px">
+            <img src=3D"http://li.blogtrottr.com/imp?s=3D1164959&amp;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Dstatic" border=3D"0" style=3D"display: block=
+; max-height: 12px !important" data-unique-identifier=3D""></td></tr>
+        <tr class=3D"lihide"><td colspan=3D"2" style=3D"line-height: 1px">
+            <a href=3D"http://li.blogtrottr.com/click?s=3D1164955&amp;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Ddefault" rel=3D"nofollow" target=3D"_blank"=
+>
+                <img src=3D"http://li.blogtrottr.com/imp?s=3D1164955&amp;e=t0091&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Ddefault&amp;li_coord=3Ddesktop&amp;collap=
+se_width=3D800" border=3D"0" width=3D"800" style=3D"display: block; width: 1=
+00% !important; max-width: 800px !important;" class=3D"lihide" data-unique-i=
+dentifier=3D""></a></td></tr>
+        <!--[if !mso]>-->
+        <tr style=3D"display: none" class=3D"lishow">
+            <td colspan=3D"2" style=3D"line-height: 1px">
+                <a href=3D"http://li.blogtrottr.com/click?s=3D1164955&amp;e=t0091&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Ddefault" rel=3D"nofollow" target=3D"_blan=
+k">
+                    <img src=3D"http://li.blogtrottr.com/imp?s=3D1164955&amp=
+;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Ddefault&amp;li_coord=3Dmobile&amp;co=
+llapse_width=3D600" border=3D"0" width=3D"600" style=3D"display: block !impo=
+rtant; width: 100% !important; max-width: 600px !important;" data-unique-ide=
+ntifier=3D""></a></td></tr>
+        <!--<![endif]-->
+        <tr><td align=3D"left" style=3D"line-height: 1px">
+            <a style=3D"display: block; max-width: 116px; max-height: 15px;"=
+ href=3D"http://li.blogtrottr.com/click?s=3D1164956&amp;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D=
+886050&amp;stpe=3Dstatic" rel=3D"nofollow" target=3D"_blank">
+                <img src=3D"http://li.blogtrottr.com/imp?s=3D1164956&amp;e=t0091&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Dstatic" border=3D"0" style=3D"display: bl=
+ock; min-height: 1px" data-unique-identifier=3D""></a></td>
+            <td align=3D"right" style=3D"line-height: 1px">
+                <a style=3D"display: block; max-width: 19px; max-height: 15p=
+x;" href=3D"http://li.blogtrottr.com/click?s=3D1164958&amp;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lct=
+g=3D886050&amp;stpe=3Dstatic" rel=3D"nofollow" target=3D"_blank">
+                    <img src=3D"http://li.blogtrottr.com/imp?s=3D1164958&amp=
+;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Dstatic" border=3D"0" style=3D"displa=
+y: block; min-height: 1px" data-unique-identifier=3D""></a></td></tr>
+    </tbody></table>
+</div></td>
+                  </tr>
+                </tbody></table>
+                </div>
+               =20
+               =20
+                                <!-- item start -->
+                <div class=3D"flex items-center justify-between">
+                <h2 class=3D"m-0 mt-2 text-2xl-8">
+                  <a href=3D"https://martinfowler.com/fragments/2026-08-04.h=
+tml" class=3D"font-medium text-slate-900 hover-underline">Fragments: August =
+ 4</a>
+                </h2>
+                                </div>
+                <p class=3D"m-0 mb-4 text-slate-600 text-sm-5">4 Aug 2026, 1=
+2:08
+                by
+                                                                        <a h=
+ref=3D"https://martinfowler.com">Martin Fowler</a>                          =
+                                                  </p>
+                                <div class=3D"m-0 text-base-6 text-slate-600=
+"><p>There=E2=80=99s been a fair bit of publicity of the <a href=3D"https://=
+www.theguardian.com/technology/2026/jul/22/openai-says-its-models-went-rogue=
+-and-hacked-startup-in-unprecedented-incident">Open AI =E2=80=9Crogue agent=E2=
+=80=9D that hacked into Hugging Face</a>. This prompted Anthropic to check w=
+hat their models were up to and, to my complete lack of surprise, <a href=3D=
+"https://www.anthropic.com/news/investigating-incidents-cybersecurity-evals"=
+>discovered three incidents where models had gained unauthorized access</a> t=
+o data in other organizations. <a href=3D"https://simonwillison.net/2026/Jul=
+/30/three-real-world-incidents/#atom-everything">Simon Wilison concluded</a>=
+:</p>
+
+<blockquote>
+  <p>It=E2=80=99s abundantly clear now that running evals of cyberattack pot=
+ential in models is a spectacularly risky business. Every AI lab needs to pa=
+y attention to this. Keeping a close eye on what=E2=80=99s happening in thos=
+e sandboxes is crucial</p>
+</blockquote>
+
+<p>It strikes me that this is akin to a virus escaping from a laboratory. It=
+ makes clear that the model builders are not putting sufficient controls in p=
+lace to prevent these lab escapes. They are morally responsible for any cons=
+equences of this, and that should extend to legal liability too. The bigger c=
+oncern however is that this same kind of thing can happen with any organizat=
+ion running open-weight models. Lots of labs playing around with dangerous t=
+ools and little idea how to contain them.</p>
+
+<p>We are sitting in state that Johann Rehberger describes as <a href=3D"htt=
+ps://embracethered.com/blog/posts/2025/the-normalization-of-deviance-in-ai/"=
+>the Normalization of Deviance in AI</a>. No big disasters have occurred yet=
+, despite all of these worrying signs. But when does our Challenger-moment a=
+ppear?</p>
+
+<p>&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84</p>
+
+<p>If the sense that we=E2=80=99re in the calm before a storm of rogue AIs w=
+orming their way into sensitive software systems isn=E2=80=99t enough, there=
+=E2=80=99s also knowledge that AI is also a financial bubble. Big advances i=
+n technology, whether it be railways or the internet, come with bubbles, and=
+ those of us old enough to remember the dotcom bubble see all the signs of t=
+hat now - only bigger. The problem is that bubbles may be obvious, but the w=
+ay they grow and pop, particularly <em>when</em> they pop, isn=E2=80=99t as c=
+lear. The dotcom bubble was widely understood to be one, indeed the chairman=
+ of US Federal Reserve talked of <a href=3D"https://en.wikipedia.org/wiki/Ir=
+rational_exuberance">irrational exuberance</a>. The trouble is that he said t=
+his in 1996, and the bubble took years to grow and burst. Even after the bub=
+ble popped, an investor would have experienced an excellent 10% per year gai=
+n since 1995.</p>
+
+<p>So with that in mind, what to make of the warning signs of this bubble? T=
+here are various folks calling out flashing red lights, but I confess I=E2=80=
+=99m not enough into financial and economic analysis to gauge how reasonable=
+ these warning signs are, or how seriously to treat the sources pointing to t=
+hem. Those caveats aside, I=E2=80=99ll mention a couple</p>
+
+<p>A substack called =E2=80=9CGroundbreaker=E2=80=9D calls out <a href=3D"ht=
+tps://substack.com/home/post/p-203509919">a parallel to mortgage crisis of 2=
+008/9</a>. They say the key indicator of that event was =E2=80=9Cthe second d=
+erivative=E2=80=9D - that is the point when the rate of increase of prices s=
+tarted going down. The point being that the fuel for this bubble, like many b=
+ubbles, was that people believed prices were going to keep increasing, and t=
+hus it was good to invest. Once the rate of price increases started slowing,=
+ then that was a sign that this confidence was starting to ebb, and an early=
+ signal of the crash to come. They see the AI bubble as similar, a credit dr=
+iven asset cycle, where the assets are data centers rather than houses. The a=
+rticle=E2=80=99s argument seems sensible, but the problem with an argument l=
+ike this is that it=E2=80=99s all very well to say this flashing red light f=
+lashed before the last financial crisis, but it doesn=E2=80=99t talk about h=
+ow often the light has flashed without a following disaster.</p>
+
+<p>Another anonymous Cassandra-wannaby is =E2=80=9CHedgie=E2=80=9D a financi=
+al X-poster pretending to be an intelligent hedgehog. They noted that <a hre=
+f=3D"https://x.com/HedgieMarkets/status/aaaaaaaaaaaa0103">Alphabet=E2=80=99=
+s revenue is up, but they are spending even more on capital investments</a>.=
+ Much of their gains came from paper increases in the value of their stock i=
+n Anthropic, which is highly dependent on the bubble=E2=80=99s continuing ex=
+pansion. Is this a sign that Google is resting on increasingly shaky financi=
+al foundations?</p>
+
+<p>Chatting to some of my friends closer to all this, they don=E2=80=99t thi=
+nk Google or Anthropic are the weakest link. They think OpenAI and Oracle ar=
+e the companies most exposed. We=E2=80=99ll need powerful magnifying glasses=
+ to find a suitably sized violin for those companies should they collapse. B=
+ut is this motivated reasoning?</p>
+
+<p>After dodgy sounding anonymous people on the internet, here=E2=80=99s a s=
+tory from a more trustworthy source giving <a href=3D"https://www.nytimes.co=
+m/2026/07/31/magazine/larry-ellison-ai-oracle.html">lots of details on Oracl=
+e=t0092=80=99s investments in AI</a>, much of it for building data centers that=
+ power China and Middle East efforts. =E2=80=9CWell-respected A.I. analysts=E2=
+=80=9D indicate that Oracle provides over 20% of China=E2=80=99s known A.I. c=
+omputing power. Doing all of this has created a mountain of debt:  Oracle=E2=
+=80=99s debt-to-equity ratio is 500%, compared to 15% for Alphabet.</p>
+
+<p>Also on more concrete and less anonymous grounds, there=E2=80=99s been a <=
+a href=3D"https://www.noahpinion.blog/p/why-did-south-korean-stocks-just">cr=
+ash in South Korean memory stocks</a>. Is this a leading sign of a wider col=
+lapse? Or should we remember that the late 90s saw five stock market correct=
+ions of over 10%, each time recovering, before the bubble finally popped.</p=
+>
+
+<p>&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84</p>
+
+<p>All this talk of rogue AIs and popping bubbles sounds rather dreadful, an=
+d John Prideaux made perceptive analysis of this <a href=3D"https://www.econ=
+omist.com/united-states/2026/07/26/checks-and-balance-newsletter-ai-has-beco=
+me-the-ultimate-dread-risk">dread risk</a>. Pundits like to point out risks o=
+f disaster:</p>
+
+<blockquote>
+  <p>A good way to sound smart is to predict that there is a 20 or 30% chanc=
+e of something awful happening. A p(doom) of 20% is big enough to avoid char=
+ges of complacency, but small enough so that you probably won=E2=80=99t be c=
+alled on it. This is what came to mind when <a href=3D"https://www.economist=
+.com/insider/the-insider/an-interview-with-elon-musk?utm_campaign=3Dr.checks=
+-and-balance&amp;utm_medium=3Demail.internal-newsletter.np&amp;utm_source=3D=
+salesforce-marketing-cloud&amp;utm_term=3D7%2F24%2F2026&amp;utm_id=3D2219814=
+">Mr Musk told our editor-in-chief</a> that the probability of ai wiping out=
+ humankind was 20%. These are worse odds than Russian roulette with a typica=
+l revolver. Anyone who truly believes that should be doing everything they c=
+an to prevent the construction of data centres. If they are not, that=E2=80=99=
+s an indication that on some level they do not really believe what they are s=
+aying.</p>
+</blockquote>
+
+<p>I grew up with a steady dread of nuclear war, thinking our chances of mak=
+ing it to the end of the 20th Century weren=E2=80=99t terribly good. That fe=
+ar seems quaint now. Here=E2=80=99s hoping that I=E2=80=99ll feel that way a=
+bout AI in thirty years time.</p>
+
+<p>But meantime, as Eric Evans said in a recent talk: =E2=80=9Cbe nice to yo=
+ur AI, just in case=E2=80=9D.</p>
+
+<p>&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84</p>
+
+<p>It=E2=80=99s common to disparage government services, including those on t=
+he internet. So I feel compelled to mention an efficient interaction with th=
+e government. In this case the credit goes to <a href=3D"https://www.gov.uk/=
+">gov.uk</a>, where I just filled in an online form to renew my electoral re=
+gistration. The process was quick, and everything was explained clearly. (Go=
+v.uk publishes their <a href=3D"https://design-system.service.gov.uk/">Desig=
+n System</a>, which is worth reading for anyone who is gathering information=
+ like this.)</p>
+
+<p>&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84</p>
+
+<p>I had a conversation with a colleague who had used AI to get data out of a=
+n otherwise closed package system. The system contained product data for a c=
+lient, some 6 million SKUs with hundreds of attributes on each SKU. It was o=
+ur client=E2=80=99s data, but was locked in the package, and the vendor was i=
+ncreasing their prices and made it hard to support new features. The client c=
+ould copy the database, but the database structure was so complex, they coul=
+dn=E2=80=99t make sense of it, and had been working for ten months with limi=
+ted progress. My colleague=E2=80=99s idea was to use an AI to build JavaScri=
+pt scripts that scraped the UI. Since the data was presented from the UI, it=
+ was in a form that we could understand. It took him a week to extract all t=
+he data.</p>
+
+<p>I=E2=80=99m hoping we can get a proper description of this story, I think=
+ this approach is one that could be used elsewhere. I know lots of people ar=
+e very frustrated with package vendors locking up their data.</p>
+
+<p>&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84</p>
+
+<p>Any seller faces fraud, and a little industry has sprung up to get <a hre=
+f=3D"https://vectoral.com/blog/token-relay-market">fraudulent access to toke=
+ns</a>. The idea is to abuse free-trial schemes, play games with chargebacks=
+, and find places that have any kind of open access to inference. The tokens=
+ go through a couple of layers and are then sold on to users - commonly done=
+ in China. Matt Lenhard=E2=80=99s post includes some tips to limit the abuse=
+, but =E2=80=9Cthe truth is that there=E2=80=99s no clean fix=E2=80=9D</p>
+
+<p>&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;=E2=9D=84&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp=
+;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=E2=9D=84</p>
+
+<p>I=E2=80=99ve never had any desire to live in Clacton, but I now find it t=
+emporarily appealing. Here=E2=80=99s hoping its residents do the right thing=
+ and elect <a href=3D"https://www.theguardian.com/politics/2026/jul/08/clact=
+on-byelection-likely-to-be-two-man-race-between-reform-leader-and-binface">B=
+ritain=E2=80=99s first recyclon MP</a>.</p></div>
+               =20
+               =20
+               =20
+               =20
+
+<div role=3D"separator" style=3D"height: 1px; line-height: 1px; background-c=
+olor: #cbd5e1; margin-top: 24px; margin-bottom: 24px">=E2=80=8D</div>
+
+                <!-- item end -->
+
+               =20
+                               =20
+                                <div>
+                <table cellpadding=3D"0" width=3D"100%" cellspacing=3D"0" ro=
+le=3D"none">
+                  <tbody><tr>
+                    <td align=3D"center"><div>
+    <table align=3D"center" border=3D"0" cellpadding=3D"0" cellspacing=3D"0"=
+ data-lt-version=3D"3.0.0">
+        <tbody><tr><td colspan=3D"2" align=3D"center" style=3D"line-height: 1=
+px">
+            <img src=3D"http://li.blogtrottr.com/imp?s=3D2002824&amp;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Dstatic" border=3D"0" style=3D"display: block=
+; max-height: 12px !important" data-unique-identifier=3D""></td></tr>
+        <tr class=3D"lihide"><td colspan=3D"2" style=3D"line-height: 1px">
+            <a href=3D"http://li.blogtrottr.com/click?s=3D2002820&amp;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Ddefault" rel=3D"nofollow" target=3D"_blank"=
+>
+                <img src=3D"http://li.blogtrottr.com/imp?s=3D2002820&amp;e=t0091&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Ddefault&amp;li_coord=3Ddesktop&amp;collap=
+se_width=3D800" border=3D"0" width=3D"800" style=3D"display: block; width: 1=
+00% !important; max-width: 800px !important;" class=3D"lihide" data-unique-i=
+dentifier=3D""></a></td></tr>
+        <!--[if !mso]>-->
+        <tr style=3D"display: none" class=3D"lishow">
+            <td colspan=3D"2" style=3D"line-height: 1px">
+                <a href=3D"http://li.blogtrottr.com/click?s=3D2002820&amp;e=t0091&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Ddefault" rel=3D"nofollow" target=3D"_blan=
+k">
+                    <img src=3D"http://li.blogtrottr.com/imp?s=3D2002820&amp=
+;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Ddefault&amp;li_coord=3Dmobile&amp;co=
+llapse_width=3D600" border=3D"0" width=3D"600" style=3D"display: block !impo=
+rtant; width: 100% !important; max-width: 600px !important;" data-unique-ide=
+ntifier=3D""></a></td></tr>
+        <!--<![endif]-->
+        <tr><td align=3D"left" style=3D"line-height: 1px">
+            <a style=3D"display: block; max-width: 116px; max-height: 15px;"=
+ href=3D"http://li.blogtrottr.com/click?s=3D2002821&amp;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D=
+886050&amp;stpe=3Dstatic" rel=3D"nofollow" target=3D"_blank">
+                <img src=3D"http://li.blogtrottr.com/imp?s=3D2002821&amp;e=t0091&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Dstatic" border=3D"0" style=3D"display: bl=
+ock; min-height: 1px" data-unique-identifier=3D""></a></td>
+            <td align=3D"right" style=3D"line-height: 1px">
+                <a style=3D"display: block; max-width: 19px; max-height: 15p=
+x;" href=3D"http://li.blogtrottr.com/click?s=3D2002823&amp;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lct=
+g=3D886050&amp;stpe=3Dstatic" rel=3D"nofollow" target=3D"_blank">
+                    <img src=3D"http://li.blogtrottr.com/imp?s=3D2002823&amp=
+;e=3Dt0090&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Dstatic" border=3D"0" style=3D"displa=
+y: block; min-height: 1px" data-unique-identifier=3D""></a></td></tr>
+    </tbody></table>
+</div> <table cellpadding=3D"0" cellspacing=3D"0" border=3D"0" width=3D"40" h=
+eight=3D"6">
+    <tbody>
+        <tr>
+            <td>
+                <img src=3D"http://li.blogtrottr.com/imp?s=3D124031700&amp;e=
+=t0091&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Dpixel" width=3D"2" height=3D"6" border=
+=3D"0" data-unique-identifier=3D"">
+            </td>
+            <td>
+                <img src=3D"http://li.blogtrottr.com/imp?s=3D124031701&amp;e=
+=t0091&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Dpixel" width=3D"2" height=3D"6" border=
+=3D"0" data-unique-identifier=3D"">
+            </td>
+            <td>
+                <img src=3D"http://li.blogtrottr.com/imp?s=3D124031702&amp;e=
+=t0091&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Dpixel" width=3D"2" height=3D"6" border=
+=3D"0" data-unique-identifier=3D"">
+            </td>
+            <td>
+                <img src=3D"http://li.blogtrottr.com/imp?s=3D124031703&amp;e=
+=t0091&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Dpixel" width=3D"2" height=3D"6" border=
+=3D"0" data-unique-identifier=3D"">
+            </td>
+            <td>
+                <img src=3D"http://li.blogtrottr.com/imp?s=3D124031704&amp;e=
+=t0091&amp;p=aaaaaaaaaaaa0102&amp;lctg=3D886050&amp;stpe=3Dpixel" width=3D"2" height=3D"6" border=
+=3D"0" data-unique-identifier=3D"">
+            </td>
+        </tr>
+    </tbody>
+</table></td>
+                  </tr>
+                </tbody></table>
+                </div>
+               =20
+
+<div role=3D"separator" style=3D"height: 1px; line-height: 1px; background-c=
+olor: #cbd5e1; margin-top: 24px; margin-bottom: 24px">=E2=80=8D</div>
+
+               =20
+                <p class=3D"m-0 mb-1 text-xs-5 text-slate-600 mso-break-all"=
+>
+                  You are receiving this email because you subscribed to thi=
+s feed at <a href=3D"https://blogtrottr.com?lctg=3D886050">blogtrottr.com</a=
+>.
+                  By using Blogtrottr, you agree to our <a href=3D"https://b=
+logtrottr.com/legal?lctg=3D886050">terms</a>.</p>
+                  <p class=3D"m-0 text-xs-5 text-slate-600 mso-break-all">
+                  If you no longer wish to receive these emails, you can <a h=
+ref=3D"https://blogtrottr.com/unsubscribe/t0101?lctg=3D886050&amp;signature=
+=aaaaaaaaaaaa0104">unsubsc=
+ribe from this feed</a>, <a href=3D"https://blogtrottr.com/subscriptions/t0101?lctg=3D886050">edit this subscription</a>, or <a href=3D"https://blogtro=
+ttr.com/subscriptions?lctg=3D886050">manage all your subscriptions</a>.
+                </p>
+              </td>
+            </tr>
+          </tbody></table>
+        </td>
+      </tr>
+    </tbody></table>
+  </div>
+
+  </div>
+
+
+
+</div></blockquote></body></html>=
+
+--Apple-Mail-00000000-0000-4000-8000-000000000087--

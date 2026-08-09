@@ -1,0 +1,1269 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="author" content=".NET Ketchup">
+    <meta name="description" content=".NET Ketchup - Week 32, 2026">
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@dotnetketchup" />
+    <meta name="twitter:creator" content="@dotnetketchup" />
+    <meta name="twitter:title" content=".NET Ketchup - Week 32, 2026" />
+    <meta name="twitter:image" content="https://cdn.dotnetketchup.com/images/dotnet-ketchup-banner.png" />
+    <meta property="og:url" content="https://dotnetketchup.com/?year=2026&amp;week=32" />
+    <meta property="og:title" content=".NET Ketchup - Week 32, 2026" />
+    <meta property="og:description" content="Catch up on the latest .NET news from around the world." />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:image" content="https://cdn.dotnetketchup.com/images/dotnet-ketchup-banner.png" />
+    <meta property="og:image:secure_url" content="https://cdn.dotnetketchup.com/images/dotnet-ketchup-banner.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content=".NET Ketchup">
+    <meta property="og:image:width" content="1272">
+    <meta property="og:image:height" content="600">
+
+    <title>.NET Ketchup - Week 32, 2026</title>
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+
+    <link href="/aaaaaaaaaaaa0108.css" rel="stylesheet">
+
+    <script>
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+
+        function toggleTheme() {
+            if (localStorage.theme === 'dark') {
+                localStorage.theme = 'light'
+                document.documentElement.classList.remove('dark')
+            } else {
+                localStorage.theme = 'dark'
+                document.documentElement.classList.add('dark')
+            }
+        }
+    </script>
+
+    
+<script src="/aaaaaaaaaaaa0109.js"></script>
+
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-800 transition-colors duration-200">
+    <header class="px-8 relative">
+        <div class="absolute top-4 right-4">
+            <button onclick="toggleTheme()"
+                class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none"
+                aria-label="Toggle Dark Mode">
+                
+                <svg class="w-6 h-6 text-gray-800 dark:text-gray-200 hidden dark:block" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                    </path>
+                </svg>
+                
+                <svg class="w-6 h-6 text-gray-800 dark:text-gray-200 block dark:hidden" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="max-w-screen-lg mx-auto mt-10 text-left">
+            <div class="flex flex-col items-center justify-center">
+                <div>
+                    <a href="/" title=".NET Ketchup">
+                        <div class="flex items-center justify-center">
+                            <img src="https://cdn.dotnetketchup.com/images/dotnet-ketchup-logo.svg" alt=".NET Ketchup"
+                                class="h-20 md:h-24">
+                            <h1 class="text-5xl md:text-6xl font-extrabold text-gray-700 dark:text-gray-200">
+                                <span class="hidden">.NET</span>
+                                <span class="ml-5">Ketchup</span>
+                            </h1>
+                        </div>
+                    </a>
+                    <h2
+                        class="text-base md:text-xl font-medium text-gray-500 dark:text-gray-400 mt-6 md:mt-4 text-center">
+                        Catch up on the
+                        latest .NET news from around the world</h2>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="px-4 md:px-8">
+        <div class="max-w-screen-lg mx-auto">
+            
+
+
+
+<section class="flex items-center my-10 md:my-20">
+
+    <div class="w-16 md:w-36 flex-none">
+        <div class="text-left text-red-600 dark:text-red-400">
+            
+            <a class="flex items-center justify-start" href="?year=2026&week=31"
+                title="Monday, 27 July 2026 - Sunday, 2 August 2026">
+                <svg class="w-12 md:w-5 mr-1" fill="currentColor" viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path xmlns="http://www.w3.org/2000/svg"
+                        d="M17.7071 5.29289C18.0976 5.68342 18.0976 6.31658 17.7071 6.70711L12.4142 12L17.7071 17.2929C18.0976 17.6834 18.0976 18.3166 17.7071 18.7071C17.3166 19.0976 16.6834 19.0976 16.2929 18.7071L10.2929 12.7071C9.90237 12.3166 9.90237 11.6834 10.2929 11.2929L16.2929 5.29289C16.6834 4.90237 17.3166 4.90237 17.7071 5.29289ZM11.7071 5.29289C12.0976 5.68342 12.0976 6.31658 11.7071 6.70711L6.41421 12L11.7071 17.2929C12.0976 17.6834 12.0976 18.3166 11.7071 18.7071C11.3166 19.0976 10.6834 19.0976 10.2929 18.7071L4.29289 12.7071C4.10536 12.5196 4 12.2652 4 12C4 11.7348 4.10536 11.4804 4.29289 11.2929L10.2929 5.29289C10.6834 4.90237 11.3166 4.90237 11.7071 5.29289Z">
+                    </path>
+                </svg>
+                <span class="hidden md:block">Week 31, 2026</span>
+            </a>
+            
+        </div>
+    </div>
+
+    <div class="flex-grow text-center">
+        <h2 class="text-3xl font-semibold text-gray-600 dark:text-gray-300">Week 32, 2026</h2>
+        <h3 class="hidden sm:block font-normal text-gray-400 dark:text-gray-400 mt-3">Monday, 3 August 2026 - Sunday, 9 August 2026</h3>
+    </div>
+
+    <div class="w-16 md:w-36 flex-none">
+        <div class="text-red-600 dark:text-red-400">
+            
+        </div>
+    </div>
+</section>
+
+
+
+<section class="my-5 p-3 md:my-10 text-center mx-auto bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded">
+	<button id="showFilterBtn"
+		class="w-full flex flex-row items-center justify-center text-gray-600 dark:text-gray-300">
+		<svg class="w-5 h-5 m-2" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path xmlns="http://www.w3.org/2000/svg"
+				d="M5.29289 6.29289C5.68342 5.90237 6.31658 5.90237 6.70711 6.29289L12 11.5858L17.2929 6.2929C17.6834 5.90237 18.3166 5.90237 18.7071 6.2929C19.0976 6.68342 19.0976 7.31658 18.7071 7.70711L12.7071 13.7071C12.3166 14.0976 11.6834 14.0976 11.2929 13.7071L5.29289 7.70711C4.90237 7.31658 4.90237 6.68342 5.29289 6.29289ZM5.29289 12.2929C5.68342 11.9024 6.31658 11.9024 6.70711 12.2929L12 17.5858L17.2929 12.2929C17.6834 11.9024 18.3166 11.9024 18.7071 12.2929C19.0976 12.6834 19.0976 13.3166 18.7071 13.7071L12.7071 19.7071C12.3166 20.0976 11.6834 20.0976 11.2929 19.7071L5.29289 13.7071C4.90237 13.3166 4.90237 12.6834 5.29289 12.2929Z"
+				fill="currentColor"></path>
+		</svg>
+		<span class="text-2xl font-semibold">Show filter</span>
+	</button>
+	<button id="hideFilterBtn"
+		class="w-full flex-row items-center justify-center pb-5 text-gray-600 dark:text-gray-300 hidden">
+		<svg class="w-5 h-5 m-2" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+			<path xmlns="http://www.w3.org/2000/svg"
+				d="M11.2929 4.29289C11.6834 3.90237 12.3166 3.90237 12.7071 4.29289L18.7071 10.2929C19.0976 10.6834 19.0976 11.3166 18.7071 11.7071C18.3166 12.0976 17.6834 12.0976 17.2929 11.7071L12 6.41421L6.70711 11.7071C6.31658 12.0976 5.68342 12.0976 5.29289 11.7071C4.90237 11.3166 4.90237 10.6834 5.29289 10.2929L11.2929 4.29289ZM12 12.4142L6.70711 17.7071C6.31658 18.0976 5.68342 18.0976 5.29289 17.7071C4.90237 17.3166 4.90237 16.6834 5.29289 16.2929L11.2929 10.2929C11.6834 9.90237 12.3166 9.90237 12.7071 10.2929L18.7071 16.2929C19.0976 16.6834 19.0976 17.3166 18.7071 17.7071C18.3166 18.0976 17.6834 18.0976 17.2929 17.7071L12 12.4142Z"
+				fill="currentColor"></path>
+		</svg>
+		<span class="text-2xl font-semibold">Hide filter</span>
+	</button>
+	<div id="filters" class="hidden px-2 my-2">
+		<div
+			class="grid grid-cols-2 sm:grid-cols-4 gap-2 justify-items-center md:flex md:flex-row md:flex-wrap md:justify-between text-gray-600 dark:text-gray-400">
+			
+			<div class="text-left w-36 md:w-auto">
+				
+<label class="checkbox">
+    
+    <input type="checkbox" id="csharp" name="csharp" value="csharp" checked>
+    
+    <svg viewBox="0 0 40 40">
+        <rect x="2" y="2" rx="4" ry="4" width="36" height="36" stroke-width="3"/>
+        <polyline points="10,20 18,27 30,12" stroke-width="4" />
+    </svg>
+    <span>C#</span>
+</label>
+
+			</div>
+			
+			<div class="text-left w-36 md:w-auto">
+				
+<label class="checkbox">
+    
+    <input type="checkbox" id="fsharp" name="fsharp" value="fsharp" checked>
+    
+    <svg viewBox="0 0 40 40">
+        <rect x="2" y="2" rx="4" ry="4" width="36" height="36" stroke-width="3"/>
+        <polyline points="10,20 18,27 30,12" stroke-width="4" />
+    </svg>
+    <span>F#</span>
+</label>
+
+			</div>
+			
+			<div class="text-left w-36 md:w-auto">
+				
+<label class="checkbox">
+    
+    <input type="checkbox" id="vbnet" name="vbnet" value="vbnet" checked>
+    
+    <svg viewBox="0 0 40 40">
+        <rect x="2" y="2" rx="4" ry="4" width="36" height="36" stroke-width="3"/>
+        <polyline points="10,20 18,27 30,12" stroke-width="4" />
+    </svg>
+    <span>VB.NET</span>
+</label>
+
+			</div>
+			
+			<div class="text-left w-36 md:w-auto">
+				
+<label class="checkbox">
+    
+    <input type="checkbox" id="aspnet" name="aspnet" value="aspnet" checked>
+    
+    <svg viewBox="0 0 40 40">
+        <rect x="2" y="2" rx="4" ry="4" width="36" height="36" stroke-width="3"/>
+        <polyline points="10,20 18,27 30,12" stroke-width="4" />
+    </svg>
+    <span>ASP.NET</span>
+</label>
+
+			</div>
+			
+			<div class="text-left w-36 md:w-auto">
+				
+<label class="checkbox">
+    
+    <input type="checkbox" id="blazor" name="blazor" value="blazor" checked>
+    
+    <svg viewBox="0 0 40 40">
+        <rect x="2" y="2" rx="4" ry="4" width="36" height="36" stroke-width="3"/>
+        <polyline points="10,20 18,27 30,12" stroke-width="4" />
+    </svg>
+    <span>Blazor</span>
+</label>
+
+			</div>
+			
+			<div class="text-left w-36 md:w-auto">
+				
+<label class="checkbox">
+    
+    <input type="checkbox" id="apps" name="apps" value="apps" checked>
+    
+    <svg viewBox="0 0 40 40">
+        <rect x="2" y="2" rx="4" ry="4" width="36" height="36" stroke-width="3"/>
+        <polyline points="10,20 18,27 30,12" stroke-width="4" />
+    </svg>
+    <span>Apps</span>
+</label>
+
+			</div>
+			
+			<div class="text-left w-36 md:w-auto">
+				
+<label class="checkbox">
+    
+    <input type="checkbox" id="tools" name="tools" value="tools" checked>
+    
+    <svg viewBox="0 0 40 40">
+        <rect x="2" y="2" rx="4" ry="4" width="36" height="36" stroke-width="3"/>
+        <polyline points="10,20 18,27 30,12" stroke-width="4" />
+    </svg>
+    <span>Tools</span>
+</label>
+
+			</div>
+			
+			<div class="text-left w-36 md:w-auto">
+				
+<label class="checkbox">
+    
+    <input type="checkbox" id="platform" name="platform" value="platform" checked>
+    
+    <svg viewBox="0 0 40 40">
+        <rect x="2" y="2" rx="4" ry="4" width="36" height="36" stroke-width="3"/>
+        <polyline points="10,20 18,27 30,12" stroke-width="4" />
+    </svg>
+    <span>Platform</span>
+</label>
+
+			</div>
+			
+			<div class="text-left w-36 md:w-auto">
+				
+<label class="checkbox">
+    
+    <input type="checkbox" id="random" name="random" value="random" checked>
+    
+    <svg viewBox="0 0 40 40">
+        <rect x="2" y="2" rx="4" ry="4" width="36" height="36" stroke-width="3"/>
+        <polyline points="10,20 18,27 30,12" stroke-width="4" />
+    </svg>
+    <span>Random</span>
+</label>
+
+			</div>
+			
+		</div>
+	</div>
+</section>
+
+
+<article class="bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded mt-5 flex items-stretch" data-id="aaaaaaaaaaaa0110"
+	data-topics="fsharp">
+
+	<aside class="hidden lg:flex w-36 p-12 flex-none items-center">
+		
+		<img class="flex-grow dark:invert" src="/images/blogpost.svg" alt="Blog Post">
+		
+	</aside>
+
+	<div
+		class="flex-initial w-full lg:pl-0 pl-3 pr-3 md:pl-10 md:pr-10 block md:flex flex-col content-between overflow-hidden">
+		<header
+			class="py-3 md:py-6 block md:flex items-center text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+
+			<div class="flex items-center">
+				<div class="flex mr-2 lg:hidden w-6 lg:mr-0 flex-none items-center">
+					
+					<img class="flex-grow max-h-5 relative -left-px dark:invert" src="/images/blogpost.svg" alt="Blog Post">
+					
+				</div>
+				<span class="hidden lg:inline w-5 mr-1">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V21C20 21.3746 19.7907 21.7178 19.4576 21.8892C19.1245 22.0606 18.7236 22.0315 18.4188 21.8137L12 17.2289L5.58124 21.8137C5.27642 22.0315 4.87549 22.0606 4.54242 21.8892C4.20935 21.7178 4 21.3746 4 21V4ZM18 4L6 4V19.0568L11.4188 15.1863C11.7665 14.9379 12.2335 14.9379 12.5812 15.1863L18 19.0568V4Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">BlogPost</span>
+			</div>
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Saturday, 8 August 2026 20:29 UTC</span>
+			</div>
+
+			
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round"
+							d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Sergey Tihon 🦔🦀🦋</span>
+			</div>
+			
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V7C22 7.74708 21.5904 8.39848 20.9835 8.74188C20.9944 8.82638 21 8.91253 21 9V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9C3 8.91253 3.00561 8.82638 3.0165 8.74188C2.40961 8.39848 2 7.74707 2 7V5ZM20 7V5H4V7H20ZM5 9V19H19V9H5ZM8 12C8 11.4477 8.44772 11 9 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H9C8.44772 13 8 12.5523 8 12Z">
+						</path>
+					</svg>
+				</span>
+				<span class="whitespace-nowrap">F#</span>
+			</div>
+		</header>
+
+		
+		<a href="https://sergeytihon.com/2026/08/08/f-weekly-32-2026-fsharp-data-8-2-0-mibo-4-0-and-f-mcp-ecosystem-grows/" target="_blank">
+			<h3 class="text-xl md:text-2xl text-left my-2 whitespace-normal break-words dark:text-gray-200">F# Weekly #32,  2026 — FSharp.Data 8.2.0, Mibo 4.0, and F# MCP Ecosystem Grows</h3>
+		</a>
+		
+
+		<footer class="py-3 md:py-6 text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+			<a class="flex items-center" href="https://sergeytihon.com/2026/08/08/f-weekly-32-2026-fsharp-data-8-2-0-mibo-4-0-and-f-mcp-ecosystem-grows/" target="_blank">
+				<span class="hidden md:inline-block w-5 mr-1">
+					<img src="https://cdn.dotnetketchup.com/images/link.svg" alt="Link">
+				</span>
+				<span class="break-normal whitespace-nowrap overflow-ellipsis overflow-hidden">https://sergeytihon.com/2026/08/08/f-weekly-32-2026-fsharp-data-8-2-0-mibo-4-0-and-f-mcp-ecosystem-grows/</span>
+			</a>
+		</footer>
+	</div>
+</article>
+
+<article class="bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded mt-5 flex items-stretch" data-id="aaaaaaaaaaaa0111"
+	data-topics="platform">
+
+	<aside class="hidden lg:flex w-36 p-12 flex-none items-center">
+		
+		<img class="flex-grow" src="/images/youtube.svg" alt="YouTube">
+		
+	</aside>
+
+	<div
+		class="flex-initial w-full lg:pl-0 pl-3 pr-3 md:pl-10 md:pr-10 block md:flex flex-col content-between overflow-hidden">
+		<header
+			class="py-3 md:py-6 block md:flex items-center text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+
+			<div class="flex items-center">
+				<div class="flex mr-2 lg:hidden w-6 lg:mr-0 flex-none items-center">
+					
+					<img class="flex-grow max-h-5" src="/images/youtube.svg" alt="YouTube">
+					
+				</div>
+				<span class="hidden lg:inline w-5 mr-1">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V21C20 21.3746 19.7907 21.7178 19.4576 21.8892C19.1245 22.0606 18.7236 22.0315 18.4188 21.8137L12 17.2289L5.58124 21.8137C5.27642 22.0315 4.87549 22.0606 4.54242 21.8892C4.20935 21.7178 4 21.3746 4 21V4ZM18 4L6 4V19.0568L11.4188 15.1863C11.7665 14.9379 12.2335 14.9379 12.5812 15.1863L18 19.0568V4Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Video</span>
+			</div>
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Friday, 7 August 2026 12:15 UTC</span>
+			</div>
+
+			
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round"
+							d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Milan Jovanović</span>
+			</div>
+			
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V7C22 7.74708 21.5904 8.39848 20.9835 8.74188C20.9944 8.82638 21 8.91253 21 9V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9C3 8.91253 3.00561 8.82638 3.0165 8.74188C2.40961 8.39848 2 7.74707 2 7V5ZM20 7V5H4V7H20ZM5 9V19H19V9H5ZM8 12C8 11.4477 8.44772 11 9 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H9C8.44772 13 8 12.5523 8 12Z">
+						</path>
+					</svg>
+				</span>
+				<span class="whitespace-nowrap">Platform</span>
+			</div>
+		</header>
+
+		
+		<a href="https://www.youtube.com/watch?v=6E7l2CRGtos" target="_blank">
+			<h3 class="text-xl md:text-2xl text-left my-2 whitespace-normal break-words dark:text-gray-200">Self-Host Your .NET App with Dokploy (full guide)</h3>
+		</a>
+		
+
+		<footer class="py-3 md:py-6 text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+			<a class="flex items-center" href="https://www.youtube.com/watch?v=6E7l2CRGtos" target="_blank">
+				<span class="hidden md:inline-block w-5 mr-1">
+					<img src="https://cdn.dotnetketchup.com/images/link.svg" alt="Link">
+				</span>
+				<span class="break-normal whitespace-nowrap overflow-ellipsis overflow-hidden">https://www.youtube.com/watch?v=6E7l2CRGtos</span>
+			</a>
+		</footer>
+	</div>
+</article>
+
+<article class="bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded mt-5 flex items-stretch" data-id="aaaaaaaaaaaa0112"
+	data-topics="platform apps">
+
+	<aside class="hidden lg:flex w-36 p-12 flex-none items-center">
+		
+		<img class="flex-grow" src="/images/youtube.svg" alt="YouTube">
+		
+	</aside>
+
+	<div
+		class="flex-initial w-full lg:pl-0 pl-3 pr-3 md:pl-10 md:pr-10 block md:flex flex-col content-between overflow-hidden">
+		<header
+			class="py-3 md:py-6 block md:flex items-center text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+
+			<div class="flex items-center">
+				<div class="flex mr-2 lg:hidden w-6 lg:mr-0 flex-none items-center">
+					
+					<img class="flex-grow max-h-5" src="/images/youtube.svg" alt="YouTube">
+					
+				</div>
+				<span class="hidden lg:inline w-5 mr-1">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V21C20 21.3746 19.7907 21.7178 19.4576 21.8892C19.1245 22.0606 18.7236 22.0315 18.4188 21.8137L12 17.2289L5.58124 21.8137C5.27642 22.0315 4.87549 22.0606 4.54242 21.8892C4.20935 21.7178 4 21.3746 4 21V4ZM18 4L6 4V19.0568L11.4188 15.1863C11.7665 14.9379 12.2335 14.9379 12.5812 15.1863L18 19.0568V4Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Video</span>
+			</div>
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Thursday, 6 August 2026 18:36 UTC</span>
+			</div>
+
+			
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round"
+							d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">.NET Foundation</span>
+			</div>
+			
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V7C22 7.74708 21.5904 8.39848 20.9835 8.74188C20.9944 8.82638 21 8.91253 21 9V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9C3 8.91253 3.00561 8.82638 3.0165 8.74188C2.40961 8.39848 2 7.74707 2 7V5ZM20 7V5H4V7H20ZM5 9V19H19V9H5ZM8 12C8 11.4477 8.44772 11 9 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H9C8.44772 13 8 12.5523 8 12Z">
+						</path>
+					</svg>
+				</span>
+				<span class="whitespace-nowrap">Platform, App Development</span>
+			</div>
+		</header>
+
+		
+		<a href="https://www.youtube.com/watch?v=Oz0rKKgqv2Q" target="_blank">
+			<h3 class="text-xl md:text-2xl text-left my-2 whitespace-normal break-words dark:text-gray-200">.NET MAUI Community Toolkit Monthly Standup, August 2026</h3>
+		</a>
+		
+
+		<footer class="py-3 md:py-6 text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+			<a class="flex items-center" href="https://www.youtube.com/watch?v=Oz0rKKgqv2Q" target="_blank">
+				<span class="hidden md:inline-block w-5 mr-1">
+					<img src="https://cdn.dotnetketchup.com/images/link.svg" alt="Link">
+				</span>
+				<span class="break-normal whitespace-nowrap overflow-ellipsis overflow-hidden">https://www.youtube.com/watch?v=Oz0rKKgqv2Q</span>
+			</a>
+		</footer>
+	</div>
+</article>
+
+<article class="bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded mt-5 flex items-stretch" data-id="aaaaaaaaaaaa0113"
+	data-topics="platform">
+
+	<aside class="hidden lg:flex w-36 p-12 flex-none items-center">
+		
+		<img class="flex-grow" src="/images/microsoft.svg" alt="Microsoft">
+		
+	</aside>
+
+	<div
+		class="flex-initial w-full lg:pl-0 pl-3 pr-3 md:pl-10 md:pr-10 block md:flex flex-col content-between overflow-hidden">
+		<header
+			class="py-3 md:py-6 block md:flex items-center text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+
+			<div class="flex items-center">
+				<div class="flex mr-2 lg:hidden w-6 lg:mr-0 flex-none items-center">
+					
+					<img class="flex-grow max-h-5" src="/images/microsoft.svg" alt="Microsoft">
+					
+				</div>
+				<span class="hidden lg:inline w-5 mr-1">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V21C20 21.3746 19.7907 21.7178 19.4576 21.8892C19.1245 22.0606 18.7236 22.0315 18.4188 21.8137L12 17.2289L5.58124 21.8137C5.27642 22.0315 4.87549 22.0606 4.54242 21.8892C4.20935 21.7178 4 21.3746 4 21V4ZM18 4L6 4V19.0568L11.4188 15.1863C11.7665 14.9379 12.2335 14.9379 12.5812 15.1863L18 19.0568V4Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">BlogPost</span>
+			</div>
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Thursday, 6 August 2026 17:05 UTC</span>
+			</div>
+
+			
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round"
+							d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Amaury Levé</span>
+			</div>
+			
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V7C22 7.74708 21.5904 8.39848 20.9835 8.74188C20.9944 8.82638 21 8.91253 21 9V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9C3 8.91253 3.00561 8.82638 3.0165 8.74188C2.40961 8.39848 2 7.74707 2 7V5ZM20 7V5H4V7H20ZM5 9V19H19V9H5ZM8 12C8 11.4477 8.44772 11 9 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H9C8.44772 13 8 12.5523 8 12Z">
+						</path>
+					</svg>
+				</span>
+				<span class="whitespace-nowrap">Platform</span>
+			</div>
+		</header>
+
+		
+		<a href="https://devblogs.microsoft.com/dotnet/microsoft-testing-platform-reporting/" target="_blank">
+			<h3 class="text-xl md:text-2xl text-left my-2 whitespace-normal break-words dark:text-gray-200">Test reporting in Microsoft.Testing.Platform: from red build to root cause</h3>
+		</a>
+		
+
+		<footer class="py-3 md:py-6 text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+			<a class="flex items-center" href="https://devblogs.microsoft.com/dotnet/microsoft-testing-platform-reporting/" target="_blank">
+				<span class="hidden md:inline-block w-5 mr-1">
+					<img src="https://cdn.dotnetketchup.com/images/link.svg" alt="Link">
+				</span>
+				<span class="break-normal whitespace-nowrap overflow-ellipsis overflow-hidden">https://devblogs.microsoft.com/dotnet/microsoft-testing-platform-reporting/</span>
+			</a>
+		</footer>
+	</div>
+</article>
+
+<article class="bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded mt-5 flex items-stretch" data-id="aaaaaaaaaaaa0114"
+	data-topics="platform">
+
+	<aside class="hidden lg:flex w-36 p-12 flex-none items-center">
+		
+		<img class="flex-grow dark:invert" src="/images/blogpost.svg" alt="Blog Post">
+		
+	</aside>
+
+	<div
+		class="flex-initial w-full lg:pl-0 pl-3 pr-3 md:pl-10 md:pr-10 block md:flex flex-col content-between overflow-hidden">
+		<header
+			class="py-3 md:py-6 block md:flex items-center text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+
+			<div class="flex items-center">
+				<div class="flex mr-2 lg:hidden w-6 lg:mr-0 flex-none items-center">
+					
+					<img class="flex-grow max-h-5 relative -left-px dark:invert" src="/images/blogpost.svg" alt="Blog Post">
+					
+				</div>
+				<span class="hidden lg:inline w-5 mr-1">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V21C20 21.3746 19.7907 21.7178 19.4576 21.8892C19.1245 22.0606 18.7236 22.0315 18.4188 21.8137L12 17.2289L5.58124 21.8137C5.27642 22.0315 4.87549 22.0606 4.54242 21.8892C4.20935 21.7178 4 21.3746 4 21V4ZM18 4L6 4V19.0568L11.4188 15.1863C11.7665 14.9379 12.2335 14.9379 12.5812 15.1863L18 19.0568V4Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">BlogPost</span>
+			</div>
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Wednesday, 5 August 2026 17:16 UTC</span>
+			</div>
+
+			
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round"
+							d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Isaac Levin</span>
+			</div>
+			
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V7C22 7.74708 21.5904 8.39848 20.9835 8.74188C20.9944 8.82638 21 8.91253 21 9V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9C3 8.91253 3.00561 8.82638 3.0165 8.74188C2.40961 8.39848 2 7.74707 2 7V5ZM20 7V5H4V7H20ZM5 9V19H19V9H5ZM8 12C8 11.4477 8.44772 11 9 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H9C8.44772 13 8 12.5523 8 12Z">
+						</path>
+					</svg>
+				</span>
+				<span class="whitespace-nowrap">Platform</span>
+			</div>
+		</header>
+
+		
+		<a href="https://blog.jetbrains.com/dotnet/2026/08/05/the-ultimate-dotnet-workflow-for-cursor/" target="_blank">
+			<h3 class="text-xl md:text-2xl text-left my-2 whitespace-normal break-words dark:text-gray-200">The Ultimate .NET Workflow for Cursor, Antigravity, and AI-First Editors</h3>
+		</a>
+		
+
+		<footer class="py-3 md:py-6 text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+			<a class="flex items-center" href="https://blog.jetbrains.com/dotnet/2026/08/05/the-ultimate-dotnet-workflow-for-cursor/" target="_blank">
+				<span class="hidden md:inline-block w-5 mr-1">
+					<img src="https://cdn.dotnetketchup.com/images/link.svg" alt="Link">
+				</span>
+				<span class="break-normal whitespace-nowrap overflow-ellipsis overflow-hidden">https://blog.jetbrains.com/dotnet/2026/08/05/the-ultimate-dotnet-workflow-for-cursor/</span>
+			</a>
+		</footer>
+	</div>
+</article>
+
+<article class="bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded mt-5 flex items-stretch" data-id="aaaaaaaaaaaa0115"
+	data-topics="csharp">
+
+	<aside class="hidden lg:flex w-36 p-12 flex-none items-center">
+		
+		<img class="flex-grow" src="/images/microsoft.svg" alt="Microsoft">
+		
+	</aside>
+
+	<div
+		class="flex-initial w-full lg:pl-0 pl-3 pr-3 md:pl-10 md:pr-10 block md:flex flex-col content-between overflow-hidden">
+		<header
+			class="py-3 md:py-6 block md:flex items-center text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+
+			<div class="flex items-center">
+				<div class="flex mr-2 lg:hidden w-6 lg:mr-0 flex-none items-center">
+					
+					<img class="flex-grow max-h-5" src="/images/microsoft.svg" alt="Microsoft">
+					
+				</div>
+				<span class="hidden lg:inline w-5 mr-1">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V21C20 21.3746 19.7907 21.7178 19.4576 21.8892C19.1245 22.0606 18.7236 22.0315 18.4188 21.8137L12 17.2289L5.58124 21.8137C5.27642 22.0315 4.87549 22.0606 4.54242 21.8892C4.20935 21.7178 4 21.3746 4 21V4ZM18 4L6 4V19.0568L11.4188 15.1863C11.7665 14.9379 12.2335 14.9379 12.5812 15.1863L18 19.0568V4Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">BlogPost</span>
+			</div>
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Tuesday, 4 August 2026 21:00 UTC</span>
+			</div>
+
+			
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round"
+							d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Bruno Capuano</span>
+			</div>
+			
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V7C22 7.74708 21.5904 8.39848 20.9835 8.74188C20.9944 8.82638 21 8.91253 21 9V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9C3 8.91253 3.00561 8.82638 3.0165 8.74188C2.40961 8.39848 2 7.74707 2 7V5ZM20 7V5H4V7H20ZM5 9V19H19V9H5ZM8 12C8 11.4477 8.44772 11 9 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H9C8.44772 13 8 12.5523 8 12Z">
+						</path>
+					</svg>
+				</span>
+				<span class="whitespace-nowrap">C#</span>
+			</div>
+		</header>
+
+		
+		<a href="https://devblogs.microsoft.com/dotnet/foundry-local-live-speech-to-text-csharp/" target="_blank">
+			<h3 class="text-xl md:text-2xl text-left my-2 whitespace-normal break-words dark:text-gray-200">Beyond Chat: live Speech-to-Text with Foundry Local and C#</h3>
+		</a>
+		
+
+		<footer class="py-3 md:py-6 text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+			<a class="flex items-center" href="https://devblogs.microsoft.com/dotnet/foundry-local-live-speech-to-text-csharp/" target="_blank">
+				<span class="hidden md:inline-block w-5 mr-1">
+					<img src="https://cdn.dotnetketchup.com/images/link.svg" alt="Link">
+				</span>
+				<span class="break-normal whitespace-nowrap overflow-ellipsis overflow-hidden">https://devblogs.microsoft.com/dotnet/foundry-local-live-speech-to-text-csharp/</span>
+			</a>
+		</footer>
+	</div>
+</article>
+
+<article class="bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded mt-5 flex items-stretch" data-id="aaaaaaaaaaaa0116"
+	data-topics="tools">
+
+	<aside class="hidden lg:flex w-36 p-12 flex-none items-center">
+		
+		<img class="flex-grow" src="/images/microsoft.svg" alt="Microsoft">
+		
+	</aside>
+
+	<div
+		class="flex-initial w-full lg:pl-0 pl-3 pr-3 md:pl-10 md:pr-10 block md:flex flex-col content-between overflow-hidden">
+		<header
+			class="py-3 md:py-6 block md:flex items-center text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+
+			<div class="flex items-center">
+				<div class="flex mr-2 lg:hidden w-6 lg:mr-0 flex-none items-center">
+					
+					<img class="flex-grow max-h-5" src="/images/microsoft.svg" alt="Microsoft">
+					
+				</div>
+				<span class="hidden lg:inline w-5 mr-1">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V21C20 21.3746 19.7907 21.7178 19.4576 21.8892C19.1245 22.0606 18.7236 22.0315 18.4188 21.8137L12 17.2289L5.58124 21.8137C5.27642 22.0315 4.87549 22.0606 4.54242 21.8892C4.20935 21.7178 4 21.3746 4 21V4ZM18 4L6 4V19.0568L11.4188 15.1863C11.7665 14.9379 12.2335 14.9379 12.5812 15.1863L18 19.0568V4Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">BlogPost</span>
+			</div>
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Tuesday, 4 August 2026 14:00 UTC</span>
+			</div>
+
+			
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round"
+							d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">James Rempt</span>
+			</div>
+			
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V7C22 7.74708 21.5904 8.39848 20.9835 8.74188C20.9944 8.82638 21 8.91253 21 9V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9C3 8.91253 3.00561 8.82638 3.0165 8.74188C2.40961 8.39848 2 7.74707 2 7V5ZM20 7V5H4V7H20ZM5 9V19H19V9H5ZM8 12C8 11.4477 8.44772 11 9 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H9C8.44772 13 8 12.5523 8 12Z">
+						</path>
+					</svg>
+				</span>
+				<span class="whitespace-nowrap">Tools</span>
+			</div>
+		</header>
+
+		
+		<a href="https://devblogs.microsoft.com/visualstudio/build-azure-skills-faster-with-cloud-academy-a-visual-studio-subscriber-benefit/" target="_blank">
+			<h3 class="text-xl md:text-2xl text-left my-2 whitespace-normal break-words dark:text-gray-200">Build Azure Skills Faster with Cloud Academy, a Visual Studio Subscriber Benefit</h3>
+		</a>
+		
+
+		<footer class="py-3 md:py-6 text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+			<a class="flex items-center" href="https://devblogs.microsoft.com/visualstudio/build-azure-skills-faster-with-cloud-academy-a-visual-studio-subscriber-benefit/" target="_blank">
+				<span class="hidden md:inline-block w-5 mr-1">
+					<img src="https://cdn.dotnetketchup.com/images/link.svg" alt="Link">
+				</span>
+				<span class="break-normal whitespace-nowrap overflow-ellipsis overflow-hidden">https://devblogs.microsoft.com/visualstudio/build-azure-skills-faster-with-cloud-academy-a-visual-studio-subscriber-benefit/</span>
+			</a>
+		</footer>
+	</div>
+</article>
+
+<article class="bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded mt-5 flex items-stretch" data-id="aaaaaaaaaaaa0117"
+	data-topics="platform">
+
+	<aside class="hidden lg:flex w-36 p-12 flex-none items-center">
+		
+		<img class="flex-grow dark:invert" src="/images/blogpost.svg" alt="Blog Post">
+		
+	</aside>
+
+	<div
+		class="flex-initial w-full lg:pl-0 pl-3 pr-3 md:pl-10 md:pr-10 block md:flex flex-col content-between overflow-hidden">
+		<header
+			class="py-3 md:py-6 block md:flex items-center text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+
+			<div class="flex items-center">
+				<div class="flex mr-2 lg:hidden w-6 lg:mr-0 flex-none items-center">
+					
+					<img class="flex-grow max-h-5 relative -left-px dark:invert" src="/images/blogpost.svg" alt="Blog Post">
+					
+				</div>
+				<span class="hidden lg:inline w-5 mr-1">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V21C20 21.3746 19.7907 21.7178 19.4576 21.8892C19.1245 22.0606 18.7236 22.0315 18.4188 21.8137L12 17.2289L5.58124 21.8137C5.27642 22.0315 4.87549 22.0606 4.54242 21.8892C4.20935 21.7178 4 21.3746 4 21V4ZM18 4L6 4V19.0568L11.4188 15.1863C11.7665 14.9379 12.2335 14.9379 12.5812 15.1863L18 19.0568V4Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">BlogPost</span>
+			</div>
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Tuesday, 4 August 2026 09:00 UTC</span>
+			</div>
+
+			
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round"
+							d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Andrew Lock</span>
+			</div>
+			
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V7C22 7.74708 21.5904 8.39848 20.9835 8.74188C20.9944 8.82638 21 8.91253 21 9V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9C3 8.91253 3.00561 8.82638 3.0165 8.74188C2.40961 8.39848 2 7.74707 2 7V5ZM20 7V5H4V7H20ZM5 9V19H19V9H5ZM8 12C8 11.4477 8.44772 11 9 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H9C8.44772 13 8 12.5523 8 12Z">
+						</path>
+					</svg>
+				</span>
+				<span class="whitespace-nowrap">Platform</span>
+			</div>
+		</header>
+
+		
+		<a href="https://andrewlock.net/exploring-the-dotnet-11-preview-6-automatic-csrf-protection-based-on-fetch-metadata-http-headers/" target="_blank">
+			<h3 class="text-xl md:text-2xl text-left my-2 whitespace-normal break-words dark:text-gray-200">Automatic CSRF protection based on Fetch Metadata headers: Exploring the .NET 11 preview - Part 6</h3>
+		</a>
+		
+
+		<footer class="py-3 md:py-6 text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+			<a class="flex items-center" href="https://andrewlock.net/exploring-the-dotnet-11-preview-6-automatic-csrf-protection-based-on-fetch-metadata-http-headers/" target="_blank">
+				<span class="hidden md:inline-block w-5 mr-1">
+					<img src="https://cdn.dotnetketchup.com/images/link.svg" alt="Link">
+				</span>
+				<span class="break-normal whitespace-nowrap overflow-ellipsis overflow-hidden">https://andrewlock.net/exploring-the-dotnet-11-preview-6-automatic-csrf-protection-based-on-fetch-metadata-http-headers/</span>
+			</a>
+		</footer>
+	</div>
+</article>
+
+<article class="bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded mt-5 flex items-stretch" data-id="aaaaaaaaaaaa0118"
+	data-topics="platform aspnet">
+
+	<aside class="hidden lg:flex w-36 p-12 flex-none items-center">
+		
+		<img class="flex-grow dark:invert" src="/images/blogpost.svg" alt="Blog Post">
+		
+	</aside>
+
+	<div
+		class="flex-initial w-full lg:pl-0 pl-3 pr-3 md:pl-10 md:pr-10 block md:flex flex-col content-between overflow-hidden">
+		<header
+			class="py-3 md:py-6 block md:flex items-center text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+
+			<div class="flex items-center">
+				<div class="flex mr-2 lg:hidden w-6 lg:mr-0 flex-none items-center">
+					
+					<img class="flex-grow max-h-5 relative -left-px dark:invert" src="/images/blogpost.svg" alt="Blog Post">
+					
+				</div>
+				<span class="hidden lg:inline w-5 mr-1">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V21C20 21.3746 19.7907 21.7178 19.4576 21.8892C19.1245 22.0606 18.7236 22.0315 18.4188 21.8137L12 17.2289L5.58124 21.8137C5.27642 22.0315 4.87549 22.0606 4.54242 21.8892C4.20935 21.7178 4 21.3746 4 21V4ZM18 4L6 4V19.0568L11.4188 15.1863C11.7665 14.9379 12.2335 14.9379 12.5812 15.1863L18 19.0568V4Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">BlogPost</span>
+			</div>
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Tuesday, 4 August 2026 07:11 UTC</span>
+			</div>
+
+			
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round"
+							d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap"> Ali Hamza Ansari </span>
+			</div>
+			
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V7C22 7.74708 21.5904 8.39848 20.9835 8.74188C20.9944 8.82638 21 8.91253 21 9V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9C3 8.91253 3.00561 8.82638 3.0165 8.74188C2.40961 8.39848 2 7.74707 2 7V5ZM20 7V5H4V7H20ZM5 9V19H19V9H5ZM8 12C8 11.4477 8.44772 11 9 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H9C8.44772 13 8 12.5523 8 12Z">
+						</path>
+					</svg>
+				</span>
+				<span class="whitespace-nowrap">Platform, ASP.NET</span>
+			</div>
+		</header>
+
+		
+		<a href="https://blog.elmah.io/modern-authentication-in-asp-net-ore-with-2fa-and-passkey/" target="_blank">
+			<h3 class="text-xl md:text-2xl text-left my-2 whitespace-normal break-words dark:text-gray-200"> Modern authentication in ASP.NET Core with 2FA and passkey </h3>
+		</a>
+		
+
+		<footer class="py-3 md:py-6 text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+			<a class="flex items-center" href="https://blog.elmah.io/modern-authentication-in-asp-net-ore-with-2fa-and-passkey/" target="_blank">
+				<span class="hidden md:inline-block w-5 mr-1">
+					<img src="https://cdn.dotnetketchup.com/images/link.svg" alt="Link">
+				</span>
+				<span class="break-normal whitespace-nowrap overflow-ellipsis overflow-hidden">https://blog.elmah.io/modern-authentication-in-asp-net-ore-with-2fa-and-passkey/</span>
+			</a>
+		</footer>
+	</div>
+</article>
+
+<article class="bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded mt-5 flex items-stretch" data-id="aaaaaaaaaaaa0119"
+	data-topics="tools">
+
+	<aside class="hidden lg:flex w-36 p-12 flex-none items-center">
+		
+		<img class="flex-grow" src="/images/microsoft.svg" alt="Microsoft">
+		
+	</aside>
+
+	<div
+		class="flex-initial w-full lg:pl-0 pl-3 pr-3 md:pl-10 md:pr-10 block md:flex flex-col content-between overflow-hidden">
+		<header
+			class="py-3 md:py-6 block md:flex items-center text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+
+			<div class="flex items-center">
+				<div class="flex mr-2 lg:hidden w-6 lg:mr-0 flex-none items-center">
+					
+					<img class="flex-grow max-h-5" src="/images/microsoft.svg" alt="Microsoft">
+					
+				</div>
+				<span class="hidden lg:inline w-5 mr-1">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V21C20 21.3746 19.7907 21.7178 19.4576 21.8892C19.1245 22.0606 18.7236 22.0315 18.4188 21.8137L12 17.2289L5.58124 21.8137C5.27642 22.0315 4.87549 22.0606 4.54242 21.8892C4.20935 21.7178 4 21.3746 4 21V4ZM18 4L6 4V19.0568L11.4188 15.1863C11.7665 14.9379 12.2335 14.9379 12.5812 15.1863L18 19.0568V4Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">BlogPost</span>
+			</div>
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Monday, 3 August 2026 18:10 UTC</span>
+			</div>
+
+			
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round"
+							d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">.NET Team</span>
+			</div>
+			
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V7C22 7.74708 21.5904 8.39848 20.9835 8.74188C20.9944 8.82638 21 8.91253 21 9V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9C3 8.91253 3.00561 8.82638 3.0165 8.74188C2.40961 8.39848 2 7.74707 2 7V5ZM20 7V5H4V7H20ZM5 9V19H19V9H5ZM8 12C8 11.4477 8.44772 11 9 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H9C8.44772 13 8 12.5523 8 12Z">
+						</path>
+					</svg>
+				</span>
+				<span class="whitespace-nowrap">Tools</span>
+			</div>
+		</header>
+
+		
+		<a href="https://devblogs.microsoft.com/dotnet/strengthening-nuget-supply-chain-security-reducing-api-key-lifetime/" target="_blank">
+			<h3 class="text-xl md:text-2xl text-left my-2 whitespace-normal break-words dark:text-gray-200">Strengthening NuGet Supply Chain Security: Reducing API Key Lifetime</h3>
+		</a>
+		
+
+		<footer class="py-3 md:py-6 text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+			<a class="flex items-center" href="https://devblogs.microsoft.com/dotnet/strengthening-nuget-supply-chain-security-reducing-api-key-lifetime/" target="_blank">
+				<span class="hidden md:inline-block w-5 mr-1">
+					<img src="https://cdn.dotnetketchup.com/images/link.svg" alt="Link">
+				</span>
+				<span class="break-normal whitespace-nowrap overflow-ellipsis overflow-hidden">https://devblogs.microsoft.com/dotnet/strengthening-nuget-supply-chain-security-reducing-api-key-lifetime/</span>
+			</a>
+		</footer>
+	</div>
+</article>
+
+<article class="bg-[#edeff0] dark:bg-gray-700 dark:bg-opacity-60 rounded mt-5 flex items-stretch" data-id="aaaaaaaaaaaa0120"
+	data-topics="csharp">
+
+	<aside class="hidden lg:flex w-36 p-12 flex-none items-center">
+		
+		<img class="flex-grow" src="/images/youtube.svg" alt="YouTube">
+		
+	</aside>
+
+	<div
+		class="flex-initial w-full lg:pl-0 pl-3 pr-3 md:pl-10 md:pr-10 block md:flex flex-col content-between overflow-hidden">
+		<header
+			class="py-3 md:py-6 block md:flex items-center text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+
+			<div class="flex items-center">
+				<div class="flex mr-2 lg:hidden w-6 lg:mr-0 flex-none items-center">
+					
+					<img class="flex-grow max-h-5" src="/images/youtube.svg" alt="YouTube">
+					
+				</div>
+				<span class="hidden lg:inline w-5 mr-1">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M4 4C4 2.89543 4.89543 2 6 2H18C19.1046 2 20 2.89543 20 4V21C20 21.3746 19.7907 21.7178 19.4576 21.8892C19.1245 22.0606 18.7236 22.0315 18.4188 21.8137L12 17.2289L5.58124 21.8137C5.27642 22.0315 4.87549 22.0606 4.54242 21.8892C4.20935 21.7178 4 21.3746 4 21V4ZM18 4L6 4V19.0568L11.4188 15.1863C11.7665 14.9379 12.2335 14.9379 12.5812 15.1863L18 19.0568V4Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Video</span>
+			</div>
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4ZM2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12ZM12 6C12.5523 6 13 6.44772 13 7V11.5858L15.7071 14.2929C16.0976 14.6834 16.0976 15.3166 15.7071 15.7071C15.3166 16.0976 14.6834 16.0976 14.2929 15.7071L11.2929 12.7071C11.1054 12.5196 11 12.2652 11 12V7C11 6.44772 11.4477 6 12 6Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">Monday, 3 August 2026 12:00 UTC</span>
+			</div>
+
+			
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round"
+							d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z">
+						</path>
+					</svg>
+				</span>
+				<span class="mr-5 whitespace-nowrap">IAmTimCorey</span>
+			</div>
+			
+
+			<div class="flex items-center mt-1 md:mt-0">
+				<span class="w-5 mr-2">
+					<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path xmlns="http://www.w3.org/2000/svg"
+							d="M2 5C2 3.89543 2.89543 3 4 3H20C21.1046 3 22 3.89543 22 5V7C22 7.74708 21.5904 8.39848 20.9835 8.74188C20.9944 8.82638 21 8.91253 21 9V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9C3 8.91253 3.00561 8.82638 3.0165 8.74188C2.40961 8.39848 2 7.74707 2 7V5ZM20 7V5H4V7H20ZM5 9V19H19V9H5ZM8 12C8 11.4477 8.44772 11 9 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H9C8.44772 13 8 12.5523 8 12Z">
+						</path>
+					</svg>
+				</span>
+				<span class="whitespace-nowrap">C#</span>
+			</div>
+		</header>
+
+		
+		<a href="https://www.youtube.com/watch?v=DFYHcI2WqK0" target="_blank">
+			<h3 class="text-xl md:text-2xl text-left my-2 whitespace-normal break-words dark:text-gray-200">Testing DateTime in C# using TimeProvider</h3>
+		</a>
+		
+
+		<footer class="py-3 md:py-6 text-gray-500 dark:text-gray-400 font-normal text-xs md:text-sm">
+			<a class="flex items-center" href="https://www.youtube.com/watch?v=DFYHcI2WqK0" target="_blank">
+				<span class="hidden md:inline-block w-5 mr-1">
+					<img src="https://cdn.dotnetketchup.com/images/link.svg" alt="Link">
+				</span>
+				<span class="break-normal whitespace-nowrap overflow-ellipsis overflow-hidden">https://www.youtube.com/watch?v=DFYHcI2WqK0</span>
+			</a>
+		</footer>
+	</div>
+</article>
+
+
+
+
+<section class="flex items-center my-10 md:my-20">
+
+    <div class="w-16 md:w-36 flex-none">
+        <div class="text-left text-red-600 dark:text-red-400">
+            
+            <a class="flex items-center justify-start" href="?year=2026&week=31"
+                title="Monday, 27 July 2026 - Sunday, 2 August 2026">
+                <svg class="w-12 md:w-5 mr-1" fill="currentColor" viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path xmlns="http://www.w3.org/2000/svg"
+                        d="M17.7071 5.29289C18.0976 5.68342 18.0976 6.31658 17.7071 6.70711L12.4142 12L17.7071 17.2929C18.0976 17.6834 18.0976 18.3166 17.7071 18.7071C17.3166 19.0976 16.6834 19.0976 16.2929 18.7071L10.2929 12.7071C9.90237 12.3166 9.90237 11.6834 10.2929 11.2929L16.2929 5.29289C16.6834 4.90237 17.3166 4.90237 17.7071 5.29289ZM11.7071 5.29289C12.0976 5.68342 12.0976 6.31658 11.7071 6.70711L6.41421 12L11.7071 17.2929C12.0976 17.6834 12.0976 18.3166 11.7071 18.7071C11.3166 19.0976 10.6834 19.0976 10.2929 18.7071L4.29289 12.7071C4.10536 12.5196 4 12.2652 4 12C4 11.7348 4.10536 11.4804 4.29289 11.2929L10.2929 5.29289C10.6834 4.90237 11.3166 4.90237 11.7071 5.29289Z">
+                    </path>
+                </svg>
+                <span class="hidden md:block">Week 31, 2026</span>
+            </a>
+            
+        </div>
+    </div>
+
+    <div class="flex-grow">
+    </div>
+
+    <div class="w-16 md:w-36 flex-none">
+        <div class="text-red-600 dark:text-red-400">
+            
+        </div>
+    </div>
+</section>
+
+
+
+
+        </div>
+    </main>
+    <footer class="px-8">
+        <nav class="my-10 text-gray-500 dark:text-gray-400 text-center lowercase">
+            <a class="hover:text-red-600 dark:hover:text-red-400" href="/">/home</a>
+            <a class="ml-5 hover:text-red-600 dark:hover:text-red-400" href="/calendar">/calendar</a>
+            <a class="ml-5 hover:text-red-600 dark:hover:text-red-400" href="/faq">/faq</a>
+            <a class="ml-5 hover:text-red-600 dark:hover:text-red-400" href="/rss">/rss</a>
+        </nav>
+        <div class="max-w-screen-lg mx-auto">
+            <p class="my-10 text-gray-400 dark:text-gray-500 text-base text-center">Copyright &copy; 2026,
+                .NET Ketchup</p>
+        </div>
+    </footer>
+</body>
+
+</html>

@@ -1,0 +1,969 @@
+Delivered-To: inbox@fixture.test
+Received: by 2002:a05:701b:21c8:b0:13f:c80c:d596 with SMTP id r8csp446375dla;
+        Sat, 8 Aug 2026 09:28:10 -0700 (PDT)
+X-Received: by 2002:a05:6000:2681:b0:47f:eb5c:9b25 with SMTP id ffacd0b85a97d-47fec513144mr45218828f8f.10.1786206489794;
+        Sat, 08 Aug 2026 09:28:09 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1786206489; cv=none;
+        d=google.com; s=arc-20260327;
+        b=XKUUk9ymV8MIlKoY1ZJX+tN6GFgZfw9QWE/t0061+2wFBDk
+         IhXebvy5biyuPQ2Mt8IOh9lYjR1fG9iiLPV0nUNrtWDSwLAsrW4PvnDvajqaX0xCtnLl
+         vELA5+U1SxQeQTtaUi9UmOZsFFbr8dlZzPQBxUuaBcmqji2ImIMaR9jG0K/yU4BrONim
+         shhxSwUVjizw7c85MTxualaGjymGb9kP+GhfvqUatoaC0lQM+oO5JD9YXDErXj59MU2M
+         7LTBLVzFR4zpbnE/t0062
+         w4iw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=to:references:message-id:subject:date:mime-version:from
+         :content-transfer-encoding:dkim-signature;
+        bh=H3HDufQlLNLjDrXm+jmY+MwtkQcabNPhRq8Z5UYLw9k=;
+        fh=2d2LkZ5xJxt2RnLYvOfQ29SMCFGw48RFlkYFEgaEobM=;
+        b=fJ00T2rBibkfWe2zyCestJWGcfJGMS+u3sOo9R+kPtkM/1+XF0Np5FLeomkOgPewsW
+         cENPOKUa8yCdjrwwcY/t0063/ev1xTNC
+         QIlaazMLrzpnpAe6vWzAaUKEwdTeJd7hjzPCfnz0YIFjOyHYBHiKy6jlM17xO9jhhJpo
+         8UB4w7U8UTIZH7Lc1CGeZm6zBvCcUrYrLJeNSZ/t0064
+         OQvObXLwztV3n9uwGZnUFNpJESU63SsHTttl3XsbrRD8mW1MQbcWpOx+5qIBBsu9wNyh
+         wd4A==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@aruba.it header.s=a1 header.b=WwpGPdED;
+       spf=pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) smtp.mailfrom=reader@fixture.test;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=fixture.test
+Return-Path: <reader@fixture.test>
+Received: from smtpcmd01-sp1.aruba.it (smtpcmd01-sp1.aruba.it. [62.149.158.218])
+        by mx.google.com with ESMTPS id ffacd0b85a97d-480022457fasi9111524f8f.268.2026.08.08.09.28.09
+        for <inbox@fixture.test>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256);
+        Sat, 08 Aug 2026 09:28:09 -0700 (PDT)
+Received-SPF: pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) client-ip=62.149.158.218;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@aruba.it header.s=a1 header.b=WwpGPdED;
+       spf=pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) smtp.mailfrom=reader@fixture.test;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=fixture.test
+Received: from smtpclient.apple ([93.45.31.109])
+	by Aruba SMTP with ESMTPSA
+	id sjtKwnbmh3Fmdsju5wdYpc; Sat, 08 Aug 2026 18:28:09 +0200
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=aruba.it; s=a1;
+	t=1786206489; bh=fWN1eOpqJuTdyMh3X/4CkPlq2+JEDDzGWDxpWYA46to=;
+	h=Content-Type:From:Mime-Version:Date:Subject:To;
+	b=WwpGPdED+fSKuTk2yx0XSFE5wqZ9/05TfwOQA2KWHFs+sLrNFzzy1dtK71wuHHrwf
+	 apsFLmBvcUY2KyjeUcPtBxU0ASF5ExjZCF8aXjxRKzTCV+C08UEjdKo6eBZnQ+W3wT
+	 sMSc3kbX/TwtXDd/t0065
+	 t9z4zjDKeUMAQTFnlIZ8Q2+Y543Htc1HSAUpOt1i4USu8VN4eacHU3ScXHjbshKWlJ
+	 xlzKzw7U0fBbt1aGv1xHN1Ny86JHqGNDKm5KNXBKEHVIf1bvw5uCCEBik/hA/G714I
+	 1tOh/47SW9+sQ==
+Content-Type: multipart/alternative; boundary=Apple-Mail-00000000-0000-4000-8000-000000000052
+Content-Transfer-Encoding: 7bit
+From: reader <reader@fixture.test>
+Mime-Version: 1.0 (1.0)
+Date: Sat, 8 Aug 2026 18:27:59 +0200
+Subject: Fwd: ASP.NET Core News - 08/07/2026
+Message-Id: <00000000-0000-4000-8000-000000000053@fixture.test>
+References: <person68@fixture.test>
+To: inbox@fixture.test
+X-Mailer: iPhone Mail (23F84)
+X-CMAE-Envelope: MS4xfPmNP8UFGwBMaulHr4hIRcrcrAwgzUPQlDWcUQyxloVy3HyhKFysMkJ4w1TVJhEa2sA5zw+c1lWrg89pkrSFz0Zy0+0h2e5zBNQ+/2htPOPwhjlcDzGc
+ 7cwCmICV2lqRXjtIumguTSoPJRr9u5xucpbM72J2iRKI3ive22DRCZlhMfUGwniurv54QQYxl2o+ySFocW37LmjHAaj1lV6VV5s=
+
+
+--Apple-Mail-00000000-0000-4000-8000-000000000052
+Content-Type: text/html;
+	charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<html class=3D"apple-mail-supports-explicit-dark-mode"><head><meta http-equi=
+v=3D"content-type" content=3D"text/html; charset=3Dutf-8"></head><body dir=3D=
+"auto"><div dir=3D"ltr"></div><div dir=3D"ltr"><br><br><br>Inizio messaggio i=
+noltrato:<br><br></div><blockquote type=3D"cite"><div dir=3D"ltr"><b>Da:</b>=
+ "ASP.NET Core News" &lt;person69@fixture.test&gt;<br><b>Data:</b> 7 agosto 2=
+026 alle ore 14:04:50 CEST<br><b>A:</b> reader@fixture.test<br><b>Oggetto:</=
+b> <b>ASP.NET Core News - 08/07/2026</b><br><b>Rispondi a:</b> "ASP.NET Core=
+ News" &lt;person69@fixture.test&gt;<br><br></div></blockquote><blockquote ty=
+pe=3D"cite"><div dir=3D"ltr">=EF=BB=BF
+
+
+   =20
+        <!-- NAME: 1 COLUMN -->
+        <!--[if gte mso 15]>
+        <xml>
+            <o:OfficeDocumentSettings>
+            <o:AllowPNG/>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+        <![endif]-->
+        <meta charset=3D"UTF-8">
+        <meta http-equiv=3D"X-UA-Compatible" content=3D"IE=3Dedge">
+        <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-sca=
+le=3D1">
+        <title>ASP.NET Core News - 08/07/2026</title>
+
+   =20
+   =20
+        <!--
+-->
+        <center>
+            <table align=3D"center" border=3D"0" cellpadding=3D"0" cellspaci=
+ng=3D"0" height=3D"100%" width=3D"100%" id=3D"bodyTable" style=3D"border-col=
+lapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-ad=
+just: 100%;-webkit-text-size-adjust: 100%;height: 100%;margin: 0;padding: 0;=
+width: 100%;background-color: #FAFAFA;">
+                <tbody><tr>
+                    <td align=3D"center" valign=3D"top" id=3D"bodyCell" styl=
+e=t0004"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-s=
+ize-adjust: 100%;height: 100%;margin: 0;padding: 10px;width: 100%;border-top=
+: 0;">
+                        <!-- BEGIN TEMPLATE // -->
+                        <!--[if (gte mso 9)|(IE)]>
+                        <table align=3D"center" border=3D"0" cellspacing=3D"=
+0" cellpadding=3D"0" width=3D"600" style=3D"width:600px;">
+                        <tr>
+                        <td align=3D"center" valign=3D"top" width=3D"600" st=
+yle=3D"width:600px;">
+                        <![endif]-->
+                        <table border=3D"0" cellpadding=3D"0" cellspacing=3D=
+"0" width=3D"100%" class=3D"templateContainer" style=3D"border-collapse: col=
+lapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%=
+;-webkit-text-size-adjust: 100%;border: 0;max-width: 600px !important;">
+                            <tbody><tr>
+                                <td valign=3D"top" id=3D"templatePreheader" s=
+tyle=3D"background: #FAFAFA none no-repeat center/cover;mso-line-height-rule=
+: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;backgrou=
+nd-color: #FAFAFA;background-image: none;background-repeat: no-repeat;backgr=
+ound-position: center;background-size: cover;border-top: 0;border-bottom: 0;=
+padding-top: 9px;padding-bottom: 9px;"><table border=3D"0" cellpadding=3D"0"=
+ cellspacing=3D"0" width=3D"100%" class=3D"mcnTextBlock" style=3D"min-width:=
+ 100%;border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;=
+-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+    <tbody class=3D"mcnTextBlockOuter">
+        <tr>
+            <td valign=3D"top" class=3D"mcnTextBlockInner" style=3D"padding-=
+top: 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-te=
+xt-size-adjust: 100%;">
+              	<!--[if mso]>
+				<table align=3D"left" border=3D"0" cellspac=
+ing=3D"0" cellpadding=3D"0" width=3D"100%" style=3D"width:100%;">
+				<tr>
+				<![endif]-->
+		=09
+				<!--[if mso]>
+				<td valign=3D"top" width=3D"600" style=3D"w=
+idth:600px;">
+				<![endif]-->
+                <table align=3D"left" border=3D"0" cellpadding=3D"0" cellspa=
+cing=3D"0" style=3D"max-width: 100%;min-width: 100%;border-collapse: collaps=
+e;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-we=
+bkit-text-size-adjust: 100%;float: left;" width=3D"100%" class=3D"mcnTextCon=
+tentContainer">
+                    <tbody><tr>
+
+                        <td valign=3D"top" class=3D"mcnTextContent" style=3D=
+"padding: 0px 18px 9px;text-align: center;mso-line-height-rule: exactly;-ms-=
+text-size-adjust: 100%;-webkit-text-size-adjust: 100%;word-break: break-word=
+;color: #656565;font-family: Helvetica;font-size: 12px;line-height: 150%;">
+
+                            <a href=3D"https://us7.campaign-archive.com/?e=t0057&amp;u=3Dt0058&amp;id=3Da8c4cf58b7" target=3D"=
+_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-w=
+ebkit-text-size-adjust: 100%;color: #656565;font-weight: normal;text-decorat=
+ion: underline;">View this email in your browser</a>
+                        </td>
+                    </tr>
+                </tbody></table>
+				<!--[if mso]>
+				</td>
+				<![endif]-->
+
+				<!--[if mso]>
+				</tr>
+				</table>
+				<![endif]-->
+            </td>
+        </tr>
+    </tbody>
+</table></td>
+                            </tr>
+                            <tr>
+                                <td valign=3D"top" id=3D"templateHeader" sty=
+le=3D"background: #FFFFFF none no-repeat center/cover;mso-line-height-rule: e=
+xactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;background-=
+color: #FFFFFF;background-image: none;background-repeat: no-repeat;backgroun=
+d-position: center;background-size: cover;border-top: 0;border-bottom: 0;pad=
+ding-top: 9px;padding-bottom: 0;"><table border=3D"0" cellpadding=3D"0" cell=
+spacing=3D"0" width=3D"100%" class=3D"mcnImageBlock" style=3D"min-width: 100=
+%;border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-=
+text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+    <tbody class=3D"mcnImageBlockOuter">
+            <tr>
+                <td valign=3D"top" style=3D"padding: 9px;mso-line-height-rul=
+e: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;" class=
+=3D"mcnImageBlockInner">
+                    <table align=3D"left" width=3D"100%" border=3D"0" cellpa=
+dding=3D"0" cellspacing=3D"0" class=3D"mcnImageContentContainer" style=3D"mi=
+n-width: 100%;border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspa=
+ce: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;float: lef=
+t;">
+                        <tbody><tr>
+                            <td class=3D"mcnImageContent" valign=3D"top" sty=
+le=3D"padding-right: 9px;padding-left: 9px;padding-top: 0;padding-bottom: 0;=
+text-align: center;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;=
+-webkit-text-size-adjust: 100%;">
+
+                                    <a href=3D"https://us.list-manage.com/2j=
+vwVw4yd5Q?e=3Dt0059&amp;c2id=3Dt0060" title=3D=
+"" class=3D"" target=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-t=
+ext-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                        <img align=3D"center" alt=3D"" src=3D=
+"https://mcusercontent.com/t0058/images/00000000-0000-4000-8000-000000000054.png" width=3D"564" style=3D"max-width: 600px;padding-bo=
+ttom: 0;display: inline !important;vertical-align: bottom;border: 0;height: a=
+uto;outline: none;text-decoration: none;-ms-interpolation-mode: bicubic;" cl=
+ass=3D"mcnImage" data-unique-identifier=3D"">
+                                    </a>
+
+                            </td>
+                        </tr>
+                    </tbody></table>
+                </td>
+            </tr>
+    </tbody>
+</table></td>
+                            </tr>
+                            <tr>
+                                <td valign=3D"top" id=3D"templateBody" style=
+=3D"background: #FFFFFF none no-repeat center/cover;mso-line-height-rule: ex=
+actly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;background-c=
+olor: #FFFFFF;background-image: none;background-repeat: no-repeat;background=
+-position: center;background-size: cover;border-top: 0;border-bottom: 2px so=
+lid #EAEAEA;padding-top: 0;padding-bottom: 9px;"><table border=3D"0" cellpad=
+ding=3D"0" cellspacing=3D"0" width=3D"100%" class=3D"mcnTextBlock" style=3D"=
+min-width: 100%;border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rs=
+pace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+    <tbody class=3D"mcnTextBlockOuter">
+        <tr>
+            <td valign=3D"top" class=3D"mcnTextBlockInner" style=3D"padding-=
+top: 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-te=
+xt-size-adjust: 100%;">
+              	<!--[if mso]>
+				<table align=3D"left" border=3D"0" cellspac=
+ing=3D"0" cellpadding=3D"0" width=3D"100%" style=3D"width:100%;">
+				<tr>
+				<![endif]-->
+		=09
+				<!--[if mso]>
+				<td valign=3D"top" width=3D"599" style=3D"w=
+idth:599px;">
+				<![endif]-->
+                <table align=3D"left" border=3D"0" cellpadding=3D"0" cellspa=
+cing=3D"0" style=3D"max-width: 100%;min-width: 100%;border-collapse: collaps=
+e;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-we=
+bkit-text-size-adjust: 100%;float: left;" width=3D"100%" class=3D"mcnTextCon=
+tentContainer">
+                    <tbody><tr>
+
+                        <td valign=3D"top" class=3D"mcnTextContent" style=3D=
+"padding-top: 0;padding-right: 18px;padding-bottom: 9px;padding-left: 18px;m=
+so-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-ad=
+just: 100%;word-break: break-word;color: #202020;font-family: Helvetica;font=
+-size: 16px;line-height: 150%;text-align: left;">
+
+                            <p style=3D"margin: 10px 0;padding: 0;mso-line-h=
+eight-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100=
+%;color: #202020;font-family: Helvetica;font-size: 16px;line-height: 150%;te=
+xt-align: left;">Get ready for this weeks best blog posts about <span>ASP.</=
+span>NET Core!</p>
+
+                        </td>
+                    </tr>
+                </tbody></table>
+				<!--[if mso]>
+				</td>
+				<![endif]-->
+
+				<!--[if mso]>
+				</tr>
+				</table>
+				<![endif]-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100=
+%" class=3D"mcnCaptionBlock" style=3D"border-collapse: collapse;mso-table-ls=
+pace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size=
+-adjust: 100%;">
+    <tbody class=3D"mcnCaptionBlockOuter">
+        <tr>
+            <td class=3D"mcnCaptionBlockInner" valign=3D"top" style=3D"paddi=
+ng: 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-tex=
+t-size-adjust: 100%;">
+
+
+<table align=3D"left" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" class=
+=3D"mcnCaptionBottomContent mcnBlockFloatLeft" style=3D"border-collapse: col=
+lapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%=
+;-webkit-text-size-adjust: 100%;float: left;">
+    <tbody><tr>
+        <td class=3D"mcnCaptionBottomImageContent" align=3D"center" valign=3D=
+"top" style=3D"padding: 0 9px 9px 9px;mso-line-height-rule: exactly;-ms-text=
+-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+
+
+            <a href=3D"https://us.list-manage.com/O_NqLOCnc0j?e=3Dt0059=
+&amp;c2id=3Dt0060" title=3D"" class=3D"" target=3D=
+"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-=
+webkit-text-size-adjust: 100%;">
+
+
+            <img alt=3D"" src=3D"https://mcusercontent.com/t0058/images/00000000-0000-4000-8000-000000000055.png" width=3D"564" styl=
+e=t0004"max-width: 600px;border: 0;height: auto;outline: none;text-decoration: n=
+one;-ms-interpolation-mode: bicubic;vertical-align: bottom;" class=3D"mcnIma=
+ge" data-unique-identifier=3D"">
+            </a>
+
+        </td>
+    </tr>
+    <tr>
+        <td class=3D"mcnTextContent" valign=3D"top" style=3D"padding: 0 9px 0=
+ 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-s=
+ize-adjust: 100%;word-break: break-word;color: #202020;font-family: Helvetic=
+a;font-size: 16px;line-height: 150%;text-align: left;" width=3D"564">
+            <strong>Word from our sponsor: </strong>Native VS debugger and c=
+ompliance logger. Blazing fast compiled rule evaluation. NuGet reference - y=
+our data and logic stay in your .NET app. Perpetual license - no SaaS tax. FR=
+EE EDITION AVAILABLE.
+        </td>
+    </tr>
+</tbody></table>
+
+
+
+
+
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100=
+%" class=3D"mcnTextBlock" style=3D"min-width: 100%;border-collapse: collapse=
+;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-web=
+kit-text-size-adjust: 100%;">
+    <tbody class=3D"mcnTextBlockOuter">
+        <tr>
+            <td valign=3D"top" class=3D"mcnTextBlockInner" style=3D"padding-=
+top: 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-te=
+xt-size-adjust: 100%;">
+              	<!--[if mso]>
+				<table align=3D"left" border=3D"0" cellspac=
+ing=3D"0" cellpadding=3D"0" width=3D"100%" style=3D"width:100%;">
+				<tr>
+				<![endif]-->
+		=09
+				<!--[if mso]>
+				<td valign=3D"top" width=3D"NaN" style=3D"w=
+idth:NaNpx;">
+				<![endif]-->
+                <table align=3D"left" border=3D"0" cellpadding=3D"0" cellspa=
+cing=3D"0" style=3D"max-width: 100%;min-width: 100%;border-collapse: collaps=
+e;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-we=
+bkit-text-size-adjust: 100%;float: left;" width=3D"100%" class=3D"mcnTextCon=
+tentContainer">
+                    <tbody><tr>
+
+                        <td valign=3D"top" class=3D"mcnTextContent" style=3D=
+"padding-top: 0;padding-right: 18px;padding-bottom: 9px;padding-left: 18px;m=
+so-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-ad=
+just: 100%;word-break: break-word;color: #202020;font-family: Helvetica;font=
+-size: 16px;line-height: 150%;text-align: left;">
+
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/y7=
+tOvyJROyR?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">Getting Started with NLog in ASP.NET Core</a><br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;devleaderca</span>=
+</li>
+</ul>
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/10=
+SCRbST4g3?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">.NET Aspire: The price of forgetting WithReference</a><=
+br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;Bart Wullems</span=
+></li>
+</ul>
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/5I=
+q5yrVxWFW?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">ASP.NET Core Scheduler Features Every Developer Should K=
+now</a><br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;Manikanda Akash Mu=
+nisamy</span></li>
+</ul>
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/tG=
+5e3s6YjYe?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">ASP.NET Core Integration Testing: WebApplicationFactory=
+ + Testcontainers Done Right</a><br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;Jeff Zuerlein</spa=
+n></li>
+</ul>
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/Mv=
+oeKe_TK5c?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">What's New in Blazor 2026 Volume 2: AI, Analytics, and P=
+roductivity Enhancements</a><br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;Rajendran R</span>=
+</li>
+</ul>
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/7L=
+ryESLE3Rr?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">Modern authentication in ASP.NET Core with 2FA and pass=
+key</a><br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;Ali Hamza Ansari</=
+span></li>
+</ul>
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/IU=
+bmyFipYHD?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">Understanding the Fetch Metadata HTTP headers: Sec-Fetc=
+h-Site and friends</a><br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;andrewlocknet</spa=
+n></li>
+</ul>
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/11=
+uwcseBNFI?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">Set LogLevel of Blazor</a><br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;Steven Giesel</spa=
+n></li>
+</ul>
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/4H=
+rH5nbjAyt?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">Apache Camel for .NET, dissected: the HTTP connector wi=
+th no ASP.NET MVC + the Content-Based Router pattern</a><br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;Rinat Kozin</span>=
+</li>
+</ul>
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/Pd=
+yMO1p5SAX?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">ASP.NET Core Minimal API Parameter Binding - full guide=
+ with codes</a><br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;yogihosting</span>=
+</li>
+</ul>
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/Wq=
+ppgefZvca?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">ASP.NET Core Request Paths Reference</a><br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;sebnilsson</span><=
+/li>
+</ul>
+
+<ul>
+	<li style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;"><a href=3D"https://us.list-manage.com/ao=
+6XMPgPsa2?e=3Dt0059&amp;c2id=3Dt0060" target=
+=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-dec=
+oration: underline;">.NET and .NET Framework July 2026 servicing releases up=
+dates</a><br>
+	<span style=3D"font-size:11px">=E2=80=94 by&nbsp;raalhul</span></li=
+>
+</ul>
+
+                        </td>
+                    </tr>
+                </tbody></table>
+				<!--[if mso]>
+				</td>
+				<![endif]-->
+
+				<!--[if mso]>
+				</tr>
+				</table>
+				<![endif]-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100=
+%" class=3D"mcnCaptionBlock" style=3D"border-collapse: collapse;mso-table-ls=
+pace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size=
+-adjust: 100%;">
+    <tbody class=3D"mcnCaptionBlockOuter">
+        <tr>
+            <td class=3D"mcnCaptionBlockInner" valign=3D"top" style=3D"paddi=
+ng: 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-tex=
+t-size-adjust: 100%;">
+
+
+<table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" class=3D"mcnCaptionL=
+eftContentOuter" width=3D"100%" style=3D"border-collapse: collapse;mso-table=
+-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-s=
+ize-adjust: 100%;">
+    <tbody><tr>
+        <td valign=3D"top" class=3D"mcnCaptionLeftContentInner" style=3D"pad=
+ding: 0 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit=
+-text-size-adjust: 100%;">
+            <table align=3D"right" border=3D"0" cellpadding=3D"0" cellspacin=
+g=3D"0" class=3D"mcnCaptionLeftImageContentContainer" width=3D"132" style=3D=
+"border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-t=
+ext-size-adjust: 100%;-webkit-text-size-adjust: 100%;float: right;">
+                <tbody><tr>
+                    <td class=3D"mcnCaptionLeftImageContent" align=3D"right"=
+ valign=3D"top" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;">
+
+
+                        <a href=3D"https://us.list-manage.com/iptFBRRvk_K?e=t0057&amp;c2id=3Dt0060" title=3D"" class=3D"=
+" target=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adj=
+ust: 100%;-webkit-text-size-adjust: 100%;">
+
+                        <img alt=3D"" src=3D"https://mcusercontent.com/t0058/images/00000000-0000-4000-8000-000000000056.png" width=3D=
+"132" style=3D"max-width: 400px;border: 0;height: auto;outline: none;text-de=
+coration: none;-ms-interpolation-mode: bicubic;vertical-align: bottom;" clas=
+s=3D"mcnImage" data-unique-identifier=3D"">
+                        </a>
+
+                    </td>
+                </tr>
+            </tbody></table>
+            <table class=3D"mcnCaptionLeftTextContentContainer" align=3D"lef=
+t" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"396" style=3D"b=
+order-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-tex=
+t-size-adjust: 100%;-webkit-text-size-adjust: 100%;float: left;">
+                <tbody><tr>
+                    <td valign=3D"top" class=3D"mcnTextContent" style=3D"fon=
+t-size: 16px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webki=
+t-text-size-adjust: 100%;word-break: break-word;color: #202020;font-family: H=
+elvetica;line-height: 150%;text-align: left;">
+                        <div style=3D"text-align: center; margin-top: 15px">=
+Learn all about logging in your web applications with the free eBook <strong=
+>.NET Web Application Logging Essentials</strong>. This is an exclusive offe=
+r for our newsletter subscribers. Download the eBook here: <a href=3D"https:=
+//us.list-manage.com/yTLi4WaeY2n?e=3Dt0059&amp;c2id=3Dt0060" target=3D"_blank" style=3D"mso-line-height-rule: exactly;-m=
+s-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;color: #007C89;font-=
+weight: normal;text-decoration: underline;">https://leanpub.com/net-web-appl=
+ication-logging-essentials/c/aspnetcorenewsletter</a></div>
+
+                    </td>
+                </tr>
+            </tbody></table>
+        </td>
+    </tr>
+</tbody></table>
+
+
+
+
+
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100=
+%" class=3D"mcnTextBlock" style=3D"min-width: 100%;border-collapse: collapse=
+;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-web=
+kit-text-size-adjust: 100%;">
+    <tbody class=3D"mcnTextBlockOuter">
+        <tr>
+            <td valign=3D"top" class=3D"mcnTextBlockInner" style=3D"padding-=
+top: 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-te=
+xt-size-adjust: 100%;">
+              	<!--[if mso]>
+				<table align=3D"left" border=3D"0" cellspac=
+ing=3D"0" cellpadding=3D"0" width=3D"100%" style=3D"width:100%;">
+				<tr>
+				<![endif]-->
+		=09
+				<!--[if mso]>
+				<td valign=3D"top" width=3D"600" style=3D"w=
+idth:600px;">
+				<![endif]-->
+                <table align=3D"left" border=3D"0" cellpadding=3D"0" cellspa=
+cing=3D"0" style=3D"max-width: 100%;min-width: 100%;border-collapse: collaps=
+e;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-we=
+bkit-text-size-adjust: 100%;float: left;" width=3D"100%" class=3D"mcnTextCon=
+tentContainer">
+                    <tbody><tr>
+
+                        <td valign=3D"top" class=3D"mcnTextContent" style=3D=
+"padding-top: 0;padding-right: 18px;padding-bottom: 9px;padding-left: 18px;m=
+so-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-ad=
+just: 100%;word-break: break-word;color: #202020;font-family: Helvetica;font=
+-size: 16px;line-height: 150%;text-align: left;">
+
+                            <div style=3D"border-top: 1px solid #EAEAEA; mar=
+gin: 0px -18px -5px -18px">&nbsp;</div>
+
+<p style=3D"text-align: center;margin: 10px 0;padding: 0;mso-line-height-rul=
+e: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;color: #=
+202020;font-family: Helvetica;font-size: 16px;line-height: 150%;">This newsl=
+etter is currently accepting sponsors. Would you like to get in front of tho=
+usands of developers like yourself? Check out the&nbsp;<a href=3D"https://us=
+.list-manage.com/10PUcNZ5MKP?e=3Dt0059&amp;c2id=3Dt0060" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;color: #007C89;font-weight: normal;text-de=
+coration: underline;">Media Kit</a>&nbsp;for details.</p>
+
+                        </td>
+                    </tr>
+                </tbody></table>
+				<!--[if mso]>
+				</td>
+				<![endif]-->
+
+				<!--[if mso]>
+				</tr>
+				</table>
+				<![endif]-->
+            </td>
+        </tr>
+    </tbody>
+</table></td>
+                            </tr>
+                            <tr>
+                                <td valign=3D"top" id=3D"templateFooter" sty=
+le=3D"background: #FAFAFA none no-repeat center/cover;mso-line-height-rule: e=
+xactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;background-=
+color: #FAFAFA;background-image: none;background-repeat: no-repeat;backgroun=
+d-position: center;background-size: cover;border-top: 0;border-bottom: 0;pad=
+ding-top: 9px;padding-bottom: 9px;"><table border=3D"0" cellpadding=3D"0" ce=
+llspacing=3D"0" width=3D"100%" class=3D"mcnFollowBlock" style=3D"min-width: 1=
+00%;border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-m=
+s-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+    <tbody class=3D"mcnFollowBlockOuter">
+        <tr>
+            <td align=3D"center" valign=3D"top" style=3D"padding: 9px;mso-li=
+ne-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust:=
+ 100%;" class=3D"mcnFollowBlockInner">
+                <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" widt=
+h=3D"100%" class=3D"mcnFollowContentContainer" style=3D"min-width: 100%;bord=
+er-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-s=
+ize-adjust: 100%;-webkit-text-size-adjust: 100%;">
+    <tbody><tr>
+        <td align=3D"center" style=3D"padding-left: 9px;padding-right: 9px;m=
+so-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-ad=
+just: 100%;">
+            <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D=
+"100%" style=3D"min-width: 100%;border-collapse: collapse;mso-table-lspace: 0=
+pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust=
+: 100%;" class=3D"mcnFollowContent">
+                <tbody><tr>
+                    <td align=3D"center" valign=3D"top" style=3D"padding-top=
+: 9px;padding-right: 9px;padding-left: 9px;mso-line-height-rule: exactly;-ms=
+-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                        <table align=3D"center" border=3D"0" cellpadding=3D"=
+0" cellspacing=3D"0" style=3D"border-collapse: collapse;mso-table-lspace: 0p=
+t;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust:=
+ 100%;">
+                            <tbody><tr>
+                                <td align=3D"center" valign=3D"top" style=3D=
+"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-=
+adjust: 100%;">
+                                    <!--[if mso]>
+                                    <table align=3D"center" border=3D"0" cel=
+lspacing=3D"0" cellpadding=3D"0">
+                                    <tr>
+                                    <![endif]-->
+
+                                        <!--[if mso]>
+                                        <td align=3D"center" valign=3D"top">=
+
+                                        <![endif]-->
+
+
+                                            <table align=3D"left" border=3D"=
+0" cellpadding=3D"0" cellspacing=3D"0" class=3D"mcnBlockFloatLeft" style=3D"=
+display: inline;border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rs=
+pace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;float: l=
+eft;">
+                                                <tbody><tr>
+                                                    <td valign=3D"top" style=
+=3D"padding-right: 10px;padding-bottom: 9px;mso-line-height-rule: exactly;-m=
+s-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;" class=3D"mcnFollow=
+ContentItemContainer">
+                                                        <table border=3D"0" c=
+ellpadding=3D"0" cellspacing=3D"0" width=3D"100%" class=3D"mcnFollowContentI=
+tem" style=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspa=
+ce: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                            <tbody><tr>
+                                                                <td align=3D=
+"left" valign=3D"middle" style=3D"padding-top: 5px;padding-right: 10px;paddi=
+ng-bottom: 5px;padding-left: 9px;mso-line-height-rule: exactly;-ms-text-size=
+-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                                    <table a=
+lign=3D"left" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"" st=
+yle=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt=
+;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;float: left;">
+                                                                        <tbo=
+dy><tr>
+
+                                                                            =
+    <td align=3D"center" valign=3D"middle" width=3D"24" class=3D"mcnFollowIc=
+onContent" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%=
+;-webkit-text-size-adjust: 100%;">
+                                                                            =
+        <a href=3D"https://us.list-manage.com/kTvXkYniGaf?e=3Dt0059&amp=
+;c2id=3Dt0060" target=3D"_blank" style=3D"mso-lin=
+e-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 1=
+00%;"><img src=3D"https://cdn-images.mailchimp.com/icons/social-block-v2/col=
+or-twitter-48.png" alt=3D"Twitter" style=3D"display: block;border: 0;height:=
+ auto;outline: none;text-decoration: none;-ms-interpolation-mode: bicubic;" h=
+eight=3D"24" width=3D"24" class=3D"" data-unique-identifier=3D""></a>
+                                                                            =
+    </td>
+
+
+                                                                        </tr=
+>
+                                                                    </tbody>=
+</table>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>
+                                            </tbody></table>
+
+                                        <!--[if mso]>
+                                        </td>
+                                        <![endif]-->
+
+                                        <!--[if mso]>
+                                        <td align=3D"center" valign=3D"top">=
+
+                                        <![endif]-->
+
+
+                                            <table align=3D"left" border=3D"=
+0" cellpadding=3D"0" cellspacing=3D"0" class=3D"mcnBlockFloatLeft" style=3D"=
+display: inline;border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rs=
+pace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;float: l=
+eft;">
+                                                <tbody><tr>
+                                                    <td valign=3D"top" style=
+=3D"padding-right: 0;padding-bottom: 9px;mso-line-height-rule: exactly;-ms-t=
+ext-size-adjust: 100%;-webkit-text-size-adjust: 100%;" class=3D"mcnFollowCon=
+tentItemContainer">
+                                                        <table border=3D"0" c=
+ellpadding=3D"0" cellspacing=3D"0" width=3D"100%" class=3D"mcnFollowContentI=
+tem" style=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspa=
+ce: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                            <tbody><tr>
+                                                                <td align=3D=
+"left" valign=3D"middle" style=3D"padding-top: 5px;padding-right: 10px;paddi=
+ng-bottom: 5px;padding-left: 9px;mso-line-height-rule: exactly;-ms-text-size=
+-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                                    <table a=
+lign=3D"left" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"" st=
+yle=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt=
+;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;float: left;">
+                                                                        <tbo=
+dy><tr>
+
+                                                                            =
+    <td align=3D"center" valign=3D"middle" width=3D"24" class=3D"mcnFollowIc=
+onContent" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%=
+;-webkit-text-size-adjust: 100%;">
+                                                                            =
+        <a href=3D"https://us.list-manage.com/YkQzhJvJ2mZ?e=3Dt0059&amp=
+;c2id=3Dt0060" target=3D"_blank" style=3D"mso-lin=
+e-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 1=
+00%;"><img src=3D"https://cdn-images.mailchimp.com/icons/social-block-v2/col=
+or-link-48.png" alt=3D"Website" style=3D"display: block;border: 0;height: au=
+to;outline: none;text-decoration: none;-ms-interpolation-mode: bicubic;" hei=
+ght=3D"24" width=3D"24" class=3D"" data-unique-identifier=3D""></a>
+                                                                            =
+    </td>
+
+
+                                                                        </tr=
+>
+                                                                    </tbody>=
+</table>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>
+                                            </tbody></table>
+
+                                        <!--[if mso]>
+                                        </td>
+                                        <![endif]-->
+
+                                    <!--[if mso]>
+                                    </tr>
+                                    </table>
+                                    <![endif]-->
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </td>
+                </tr>
+            </tbody></table>
+        </td>
+    </tr>
+</tbody></table>
+
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100=
+%" class=3D"mcnDividerBlock" style=3D"min-width: 100%;border-collapse: colla=
+pse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-=
+webkit-text-size-adjust: 100%;table-layout: fixed !important;">
+    <tbody class=3D"mcnDividerBlockOuter">
+        <tr>
+            <td class=3D"mcnDividerBlockInner" style=3D"min-width: 100%;padd=
+ing: 10px 18px 25px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%=
+;-webkit-text-size-adjust: 100%;">
+                <table class=3D"mcnDividerContent" border=3D"0" cellpadding=3D=
+"0" cellspacing=3D"0" width=3D"100%" style=3D"min-width: 100%;border-top: 2p=
+x solid #EEEEEE;border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rs=
+pace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                    <tbody><tr>
+                        <td style=3D"mso-line-height-rule: exactly;-ms-text-=
+size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                            <span></span>
+                        </td>
+                    </tr>
+                </tbody></table>
+<!--
+                <td class=3D"mcnDividerBlockInner" style=3D"padding: 18px;">=
+
+                <hr class=3D"mcnDividerContent" style=3D"border-bottom-color=
+:none; border-left-color:none; border-right-color:none; border-bottom-width:=
+0; border-left-width:0; border-right-width:0; margin-top:0; margin-right:0; m=
+argin-bottom:0; margin-left:0;" />
+-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100=
+%" class=3D"mcnTextBlock" style=3D"min-width: 100%;border-collapse: collapse=
+;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-web=
+kit-text-size-adjust: 100%;">
+    <tbody class=3D"mcnTextBlockOuter">
+        <tr>
+            <td valign=3D"top" class=3D"mcnTextBlockInner" style=3D"padding-=
+top: 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-te=
+xt-size-adjust: 100%;">
+              	<!--[if mso]>
+				<table align=3D"left" border=3D"0" cellspac=
+ing=3D"0" cellpadding=3D"0" width=3D"100%" style=3D"width:100%;">
+				<tr>
+				<![endif]-->
+		=09
+				<!--[if mso]>
+				<td valign=3D"top" width=3D"600" style=3D"w=
+idth:600px;">
+				<![endif]-->
+                <table align=3D"left" border=3D"0" cellpadding=3D"0" cellspa=
+cing=3D"0" style=3D"max-width: 100%;min-width: 100%;border-collapse: collaps=
+e;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-we=
+bkit-text-size-adjust: 100%;float: left;" width=3D"100%" class=3D"mcnTextCon=
+tentContainer">
+                    <tbody><tr>
+
+                        <td valign=3D"top" class=3D"mcnTextContent" style=3D=
+"padding-top: 0;padding-right: 18px;padding-bottom: 9px;padding-left: 18px;m=
+so-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-ad=
+just: 100%;word-break: break-word;color: #656565;font-family: Helvetica;font=
+-size: 12px;line-height: 150%;text-align: center;">
+
+                            <em>Copyright =C2=A9 2026 ASP.NET Core News, All=
+ rights reserved.</em><br>
+<br>
+Would you like to advertise with us? Visit the <a href=3D"https://us.list-ma=
+nage.com/193IC2L7IH0?e=3Dt0059&amp;c2id=3Dt0060" target=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-=
+adjust: 100%;-webkit-text-size-adjust: 100%;color: #656565;font-weight: norm=
+al;text-decoration: underline;">Media Kit</a> for details on how to sponsor t=
+his newsletter with thousands of readers every week.<br>
+<br>
+Want to change how you receive these emails?<br>
+You can <a href=3D"https://news.us7.list-manage.com/profile?u=3Dt0058&amp;id=3D25e58ef874&amp;e=3Dt0059&amp;c=3Da8c4cf58b7" sty=
+le=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-=
+size-adjust: 100%;color: #656565;font-weight: normal;text-decoration: underl=
+ine;">update your preferences</a> or <a href=3D"https://news.us7.list-manage=
+.com/unsubscribe?u=3Dt0058&amp;id=3D25e58ef874&amp;t=3Db=
+&amp;e=3Dt0059&amp;c=3Da8c4cf58b7" style=3D"mso-line-height-rule: exact=
+ly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;color: #656565;=
+font-weight: normal;text-decoration: underline;">unsubscribe from this list<=
+/a>.<br>
+<br>
+ <a href=3D"https://login.mailchimp.com/signup/email-referral/?aid=aaaaaaaaaaaa0067"><img src=3D"https://cdn-images.mailchimp.com/monkey_rewa=
+rds/intuit-mc-rewards-2.png" border=3D"0" alt=3D"Email Marketing Powered by M=
+ailchimp" title=3D"Mailchimp Email Marketing" width=3D"137" height=3D"53" st=
+yle=3D"max-width: 100%; height: auto;" data-unique-identifier=3D""></a>
+                        </td>
+                    </tr>
+                </tbody></table>
+				<!--[if mso]>
+				</td>
+				<![endif]-->
+
+				<!--[if mso]>
+				</tr>
+				</table>
+				<![endif]-->
+            </td>
+        </tr>
+    </tbody>
+</table></td>
+                            </tr>
+                        </tbody></table>
+                        <!--[if (gte mso 9)|(IE)]>
+                        </td>
+                        </tr>
+                        </table>
+                        <![endif]-->
+                        <!-- // END TEMPLATE -->
+                    </td>
+                </tr>
+            </tbody></table>
+        </center>
+    <div style=3D"display:none;"><img src=3D"https://us.list-manage.com/t0066?e=3Dt0059&amp;c2id=3Dt0060" height=3D"1" width=3D"1" style=3D"display:none;" alt=3D"" data-unique-ide=
+ntifier=3D""></div>
+</div></blockquote></body></html>=
+
+--Apple-Mail-00000000-0000-4000-8000-000000000052--

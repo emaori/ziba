@@ -1,0 +1,278 @@
+Delivered-To: inbox@fixture.test
+Received: by 2002:a05:701b:21c8:b0:13f:c80c:d596 with SMTP id r8csp446567dla;
+        Sat, 8 Aug 2026 09:28:25 -0700 (PDT)
+X-Received: by 2002:a05:600c:1d23:b0:499:51cc:4e57 with SMTP id 5b1f17b1804b1-499617f7699mr97416055e9.0.1786206504876;
+        Sat, 08 Aug 2026 09:28:24 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1786206504; cv=none;
+        d=google.com; s=arc-20260327;
+        b=QmLvxJHaHaobgBWQOwkBGw2K4tBsz16h5Ilx2Ax22FyrMkEn5bVRrk17Hala/Ioh8i
+         t4q7LpaZmrldMp1Hra/reFFq/t0006+sVa9mc1JTf9MhJZ3NOnfo
+         zA+53Q1yaGT1d+2tSBIHuOCBfzSha19+Wm1yD4u42oUKGecBnxOWuAEP/s7eT19/Q4Qd
+         Y4KF4vbWghphTWs7FhH+2Q72qnZWcdrZhDU8i5r6hToy5bmAxzv9gUSkaH4lG7uz2hRr
+         GJJHXIsAaowzrHR1cCbS9pKVnFC0rI6qYJJSCvUuZQgyoTQi5Ny+cOdx+eN/wkZjuLfd
+         X3SQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=to:references:message-id:subject:date:mime-version:from
+         :content-transfer-encoding:dkim-signature;
+        bh=39r8MCpN8X3dYO+xFft3z/VLV3DZ6Cft5/OLD+gmvLM=;
+        fh=2d2LkZ5xJxt2RnLYvOfQ29SMCFGw48RFlkYFEgaEobM=;
+        b=WTi9B25CZgUC4qR4Jzfi618suxmBrdBOvF/t0007
+         O0UNxA/t0008/t0009
+         QhgM0IuxaIeZijU0VyjOvc59m0/t0010/t0011
+         rmEMDgx1YGnFaZZeBpMf9j2nfV/NCAHYalk9mAdk/t0012
+         e2MZQ1AlWBXj82PBxfTWE2qQ+ODI9pJ4OzgMXsesFpysg7DTyVZeM0ajqK06iZjdFPo/
+         pDgg==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@aruba.it header.s=a1 header.b=ejG6DYvv;
+       spf=pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) smtp.mailfrom=reader@fixture.test;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=fixture.test
+Return-Path: <reader@fixture.test>
+Received: from smtpcmd01-sp1.aruba.it (smtpcmd01-sp1.aruba.it. [62.149.158.218])
+        by mx.google.com with ESMTPS id 5b1f17b1804b1-499542badf2si170033065e9.19.2026.08.08.09.28.24
+        for <inbox@fixture.test>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256);
+        Sat, 08 Aug 2026 09:28:24 -0700 (PDT)
+Received-SPF: pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) client-ip=62.149.158.218;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@aruba.it header.s=a1 header.b=ejG6DYvv;
+       spf=pass (google.com: domain of reader@fixture.test designates 62.149.158.218 as permitted sender) smtp.mailfrom=reader@fixture.test;
+       dmarc=pass (p=NONE sp=NONE dis=NONE) header.from=fixture.test
+Received: from smtpclient.apple ([93.45.31.109])
+	by Aruba SMTP with ESMTPSA
+	id sjtKwnbmh3FmdsjuKwdYsD; Sat, 08 Aug 2026 18:28:24 +0200
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=aruba.it; s=a1;
+	t=1786206504; bh=mGuRq4TDLgRviGThYlE1RN/xfECGtDaLIiyMDRhIRGw=;
+	h=Content-Type:From:Mime-Version:Date:Subject:To;
+	b=ejG6DYvv7aA6iGuSXqWuUS17hKfcgpz1wb7DM3UPLrXuMUUH8D17djPbgnwImrr78
+	 Gax1T49SsHtOIu6ZC8uPsPIvHPnAMbKf4s1uxAa1vezTqufbE/6fj/0nmPqgT+ouCi
+	 duU2k6tQUa4+LNHobz+UTDIcgh5TBo5TO3/a78Fhns+/w8Q+QUh/rM9r4yIfWxcgTN
+	 5xRO5xii0IKU4GDAIv6FrMZPNANrgQ5wggDqsUJufcilChV64mUogWToha1F/NjTWl
+	 NRSu+QLl7+unjW9NHTORl9+VEOby96EojuusEyh0/3YjJjknj/t0013
+	 6qBmlcH8LIpPA==
+Content-Type: multipart/alternative; boundary=Apple-Mail-00000000-0000-4000-8000-000000000001
+Content-Transfer-Encoding: 7bit
+From: reader <reader@fixture.test>
+Mime-Version: 1.0 (1.0)
+Date: Sat, 8 Aug 2026 18:28:14 +0200
+Subject: Fwd: CD#619 2026 .NET interview guide
+Message-Id: <00000000-0000-4000-8000-000000000002@fixture.test>
+References: <person15@fixture.test>
+To: inbox@fixture.test
+X-Mailer: iPhone Mail (23F84)
+X-CMAE-Envelope: MS4xfFFwGJNSmb67R+FZVVfVUU7koEznv8xyxAK3rTzTUIrFqKFmN3sGnbxlbKrrmpXK0ptuV0J0kIpKb2VNqpxfNcjvGwF0r9gU6DmU6h7g9Cj/b3Ipme0U
+ Z7P7r1msQJVTEX/GeC/NgKXkgJoQWI/t0014+VO+g/c=
+
+
+--Apple-Mail-00000000-0000-4000-8000-000000000001
+Content-Type: text/html;
+	charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<html class=3D"apple-mail-supports-explicit-dark-mode"><head><meta http-equi=
+v=3D"content-type" content=3D"text/html; charset=3Dutf-8"></head><body dir=3D=
+"auto"><div dir=3D"ltr"></div><div dir=3D"ltr"><br><br><br>Inizio messaggio i=
+noltrato:<br><br></div><blockquote type=3D"cite"><div dir=3D"ltr"><b>Da:</b>=
+ C# Digest &lt;person16@fixture.test&gt;<br><b>Data:</b> 2 agosto 2026 alle=
+ ore 20:21:42 CEST<br><b>A:</b> reader@fixture.test<br><b>Oggetto:</b> <b>CD=
+#619 2026 .NET interview guide</b><br><br></div></blockquote><blockquote typ=
+e=t0004"cite"><div dir=3D"ltr">=EF=BB=BF
+
+ =20
+    <meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8"=
+>
+    <meta charset=3D"utf-8">
+    <meta name=3D"viewport" content=3D"width=3Ddevice-width, initial-scale=3D=
+1.0">
+   =20
+ =20
+
+ =20
+    <div class=3D"body" style=3D"max-width: 640px;">
+      <!-- start text/html -->
+<div class=3D"preheader" style=3D"display: none; font-size: 1px; color: #fff=
+; line-height: 1px; max-height: Opx; max-width: Opx; opacity: 0; overflow: h=
+idden;">
+  modern .NET interviews focus on real scenarios, not definitions
+</div>
+<div style=3D"display: none; max-height: 0px; overflow: hidden;">
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+  =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87=
+ =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=
+=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbs=
+p; =E2=80=87 =C2=AD =CD=8F =E2=80=8C &nbsp; =E2=80=87 =C2=AD =CD=8F =E2=80=8C=
+ &nbsp; =E2=80=87 =C2=AD
+</div>
+<!-- end text/html -->
+
+<p class=3D"header" style=3D"font-size: 85%;" align=3D"right">August 02, 202=
+6 | <a href=3D"https://csharpdigest.net/newsletters/2333?sid=3Dt0005" style=3D"text-decoration: underline; color: #9b55a3=
+;">Read Online</a></p>
+
+<p><a href=3D"https://csharpdigest.net/links/22896/00000000-0000-4000-8000-000000000003/email" style=3D"text-decoration: underline; color: #9b55a3;">202=
+6 guide to .NET interviews</a><br><em style=3D"font-style: italic;">18 minut=
+es</em> by Mukesh Murugan</p>
+<p>Modern .NET interviews focus on real scenarios, not definitions. Question=
+s like "you injected a scoped service into a singleton and data is corruptin=
+g in production, why?" reveal far more than asking someone to define depende=
+ncy injection. Strong candidates reason through trade-offs, state a clear de=
+fault, and explain when they would deviate. Weak ones recite textbook answer=
+s, say "it depends" without follow-up, or stay stuck on outdated patterns.</=
+p>
+<p><a href=3D"https://csharpdigest.net/links/22897/00000000-0000-4000-8000-000000000003/email" style=3D"text-decoration: underline; color: #9b55a3;">You=
+r Agent Needs Its Own Computer</a><br><em style=3D"font-style: italic;">spon=
+sored by LangChain</em></p>
+<p>Agents can write and run code seconds before execution, often without hum=
+an review.&nbsp; Local environments and standard containers weren=E2=80=99t d=
+esigned for that level of autonomy. LangChain=E2=80=99s latest guide explain=
+s what safe agent execution requires, including isolation, permissions, obse=
+rvability, fast provisioning, and persistent state. Read the guide to learn w=
+hen a managed sandbox makes sense, what capabilities to look for, and how to=
+ give agents the tools they need without handing them your infrastructure.</=
+p>
+<p><a href=3D"https://csharpdigest.net/links/22898/00000000-0000-4000-8000-000000000003/email" style=3D"text-decoration: underline; color: #9b55a3;">An a=
+rchitectural view of ML.NET</a><br><em style=3D"font-style: italic;">9 minut=
+es</em> by Abdul Rahman</p>
+<p>Machine learning in .NET no longer requires Python. ML.NET lets you train=
+ and run models using standard C# patterns, keeping everything in one codeba=
+se without extra interop layers or separate deployment pipelines. A typical s=
+olution splits into three projects: a trainer, a shared schema library, and a=
+ client app. You build pipelines by chaining transforms and a trainer, then c=
+all Fit once to run the whole thing.</p>
+<p><a href=3D"https://csharpdigest.net/links/22899/00000000-0000-4000-8000-000000000003/email" style=3D"text-decoration: underline; color: #9b55a3;">Val=
+idation in FastEndpoints: Pipelines, pitfalls, and patterns</a><br><em style=
+=3D"font-style: italic;">14 minutes</em> by Barret Blake</p>
+<p>FastEndpoints validators sit between request binding and handler executio=
+n, automatically rejecting malformed requests with a 400 response. Validator=
+s are singletons, so scoped services like a database context must be resolve=
+d inside rules rather than injected through the constructor. Use validators o=
+nly to check whether input is well formed, and push business rule checks lik=
+e duplicate names or full party slots into the handler using AddError and Th=
+rowIfAnyErrors. Keeping that boundary clean makes both layers easier to test=
+ and reason about.</p>
+<p><a href=3D"https://csharpdigest.net/links/22900/00000000-0000-4000-8000-000000000003/email" style=3D"text-decoration: underline; color: #9b55a3;">How=
+ to write the fastest code with BenchmarkDotNet</a><br><em style=3D"font-sty=
+le: italic;">23 minutes</em> by Yoshifumi Kawai</p>
+<p>BenchmarkDotNet now pairs well with AI when you add JIT disassembly and b=
+ranch misprediction counters to your runs. With that richer data, an AI can r=
+ead machine code directly and iterate on optimizations that go far beyond wh=
+at most humans would attempt manually. Applied to a MessagePack integer enco=
+der, this approach turned a branchy if-else cascade into a branchless lookup=
+-table design, dropping mixed-input latency from 8.5 ns to 1.6 ns.</p>
+<p><a href=3D"https://csharpdigest.net/links/22901/00000000-0000-4000-8000-000000000003/email" style=3D"text-decoration: underline; color: #9b55a3;">Bul=
+kSynchronize in EF Core: Mirror your data in one operation</a><br><em style=3D=
+"font-style: italic;">14 minutes</em> by Chris Woodruff</p>
+<p>Keeping a database table in sync with an external data source usually mea=
+ns writing fragile, slow code that loads everything into memory just to diff=
+ it. BulkSynchronize from Entity Framework Extensions replaces that pattern w=
+ith a single call that stages data in a temp table and runs a server-side me=
+rge covering inserts, updates, and deletes in one transaction. The key detai=
+l to get right is scoping the delete branch so it only touches the rows you i=
+ntend to sync, leaving other data untouched.</p>
+<p>And the most popular article from the last issue was:</p>
+<ul>
+<li><a href=3D"https://csharpdigest.net/links/22902/00000000-0000-4000-8000-000000000003/email" style=3D"text-decoration: underline; color: #9b55a3;">Ho=
+w to prevent duplicate API requests in .NET</a></li>
+</ul>
+
+<h2>newsletters</h2>
+<ul>
+    <li><a href=3D"https://programmingdigest.net/?utm_medium=3Dcampaign&amp;=
+utm_source=3Dcsharp" target=3D"_blank" rel=3D"noopener" style=3D"text-decora=
+tion: underline; color: #9b55a3;">Programming Digest</a></li>
+    <li><a href=3D"https://leadershipintech.com/?utm_medium=3Dcampaign&amp;u=
+tm_source=3Dcsharp" target=3D"_blank" rel=3D"noopener" style=3D"text-decorat=
+ion: underline; color: #9b55a3;">Leadership in Tech</a></li>
+    <li><a href=3D"https://reactdigest.net/?utm_medium=3Dcampaign&amp;utm_so=
+urce=3Dcsharp" target=3D"_blank" rel=3D"noopener" style=3D"text-decoration: u=
+nderline; color: #9b55a3;">React Digest</a></li>
+</ul>
+
+<hr style=3D"margin: 2rem; border: 1px solid whitesmoke;">
+<p>Would you like to <a href=3D"https://bonobopress.com/" style=3D"text-deco=
+ration: underline; color: #9b55a3;">advertise</a> in the newsletter? Check o=
+ut our <a href=3D"https://bonobopress.com/media-kit/" style=3D"text-decorati=
+on: underline; color: #9b55a3;">media kit</a> and get in touch.</p>
+
+<!-- start text/html -->
+<!-- end text/html -->
+
+
+      <hr style=3D"margin: 2rem; border: 1px solid whitesmoke;">
+      <div class=3D"footer" style=3D"color: dimgray;">
+        <p>=C2=A9 2026 <a target=3D"_blank" rel=3D"noopener" href=3D"https:/=
+/bonobopress.com/" style=3D"text-decoration: underline; color: dimgray !impo=
+rtant;">Bonobo Press</a></p>
+        <p>
+        <small>
+          Jakub Chodounsky (dba. Bonobo Press)<br>
+          1/25 Mana Street<br>
+          Wellington, New Zealand<br>
+          <a target=3D"_blank" rel=3D"noopener" href=3D"https://csharpdigest=
+.net/privacy" style=3D"text-decoration: underline; color: dimgray !important=
+;">Privacy Policy</a>
+        </small>
+        </p>
+        <p><small>If you no longer wish to receive these emails, click to <a=
+ href=3D"https://csharpdigest.net/subscribers/t0005/unsubscribe" style=3D"text-decoration: underline; color: dimgray !imp=
+ortant;">unsubscribe</a>.</small></p>
+      </div>
+          <img alt=3D"" src=3D"https://csharpdigest.net/newsletters/2333/ope=
+n/00000000-0000-4000-8000-000000000003.gif" width=3D"1" height=3D"1" data-un=
+ique-identifier=3D"">
+
+    </div>
+ =20
+<!-- =E2=84=A2 -->
+</div></blockquote></body></html>=
+
+--Apple-Mail-00000000-0000-4000-8000-000000000001--

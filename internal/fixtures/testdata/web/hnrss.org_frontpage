@@ -1,0 +1,101 @@
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Hacker News: Front Page</title><link>https://news.ycombinator.com/</link><description>Hacker News RSS</description><docs>https://hnrss.org/</docs><generator>hnrss v2.1.1</generator><lastBuildDate>Sun, 09 Aug 2026 14:29:04 +0000</lastBuildDate><atom:link href="https://hnrss.org/frontpage" rel="self" type="application/rss+xml"></atom:link><item><title><![CDATA[Mea Culpa – Dark Hours]]></title><description><![CDATA[
+<p>Article URL: <a href="https://blog.terrygodier.com/2026/08/09/mea-culpa-dark-hours.html">https://blog.terrygodier.com/2026/08/09/mea-culpa-dark-hours.html</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49231154">https://news.ycombinator.com/item?id=49231154</a></p>
+<p>Points: 94</p>
+<p># Comments: 36</p>
+]]></description><pubDate>Sun, 09 Aug 2026 13:20:43 +0000</pubDate><link>https://blog.terrygodier.com/2026/08/09/mea-culpa-dark-hours.html</link><dc:creator>satvikpendem</dc:creator><comments>https://news.ycombinator.com/item?id=49231154</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49231154</guid></item><item><title><![CDATA[Show HN: A Project Oberon System version running on RISC-V instead of RISC-5]]></title><description><![CDATA[
+<p>Article URL: <a href="https://github.com/rochus-keller/OberonSystem/tree/op2-rv32">https://github.com/rochus-keller/OberonSystem/tree/op2-rv32</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49230891">https://news.ycombinator.com/item?id=49230891</a></p>
+<p>Points: 20</p>
+<p># Comments: 2</p>
+]]></description><pubDate>Sun, 09 Aug 2026 12:43:16 +0000</pubDate><link>https://github.com/rochus-keller/OberonSystem/tree/op2-rv32</link><dc:creator>Rochus</dc:creator><comments>https://news.ycombinator.com/item?id=49230891</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49230891</guid></item><item><title><![CDATA[Why Wall Street Is Ignoring Big Tech's Debt]]></title><description><![CDATA[
+<p>Article URL: <a href="https://www.youtube.com/watch?v=NufJ7g63KSY">https://www.youtube.com/watch?v=NufJ7g63KSY</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49230630">https://news.ycombinator.com/item?id=49230630</a></p>
+<p>Points: 34</p>
+<p># Comments: 12</p>
+]]></description><pubDate>Sun, 09 Aug 2026 12:01:39 +0000</pubDate><link>https://www.youtube.com/watch?v=NufJ7g63KSY</link><dc:creator>johnbarron</dc:creator><comments>https://news.ycombinator.com/item?id=49230630</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49230630</guid></item><item><title><![CDATA[70% of AI revenue comes from OpenAI and Anthropic]]></title><description><![CDATA[
+<p>Article URL: <a href="https://www.youtube.com/watch?v=68X8yEatepQ">https://www.youtube.com/watch?v=68X8yEatepQ</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49230605">https://news.ycombinator.com/item?id=49230605</a></p>
+<p>Points: 17</p>
+<p># Comments: 1</p>
+]]></description><pubDate>Sun, 09 Aug 2026 11:56:16 +0000</pubDate><link>https://www.youtube.com/watch?v=68X8yEatepQ</link><dc:creator>johnbarron</dc:creator><comments>https://news.ycombinator.com/item?id=49230605</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49230605</guid></item><item><title><![CDATA[Reviving a four year old reMarkable 2]]></title><description><![CDATA[
+<p>Article URL: <a href="https://oskrim.github.io/hardware/2026/08/09/remarkable-over-ssh.html">https://oskrim.github.io/hardware/2026/08/09/remarkable-over-ssh.html</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49230514">https://news.ycombinator.com/item?id=49230514</a></p>
+<p>Points: 59</p>
+<p># Comments: 48</p>
+]]></description><pubDate>Sun, 09 Aug 2026 11:39:25 +0000</pubDate><link>https://oskrim.github.io/hardware/2026/08/09/remarkable-over-ssh.html</link><dc:creator>tremguy</dc:creator><comments>https://news.ycombinator.com/item?id=49230514</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49230514</guid></item><item><title><![CDATA[Everything You Do Is Being Recorded]]></title><description><![CDATA[
+<p>Article URL: <a href="https://www.theatlantic.com/technology/2026/05/ai-wearable-surveillance-countermeasures/687203/">https://www.theatlantic.com/technology/2026/05/ai-wearable-surveillance-countermeasures/687203/</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49230477">https://news.ycombinator.com/item?id=49230477</a></p>
+<p>Points: 88</p>
+<p># Comments: 75</p>
+]]></description><pubDate>Sun, 09 Aug 2026 11:30:48 +0000</pubDate><link>https://www.theatlantic.com/technology/2026/05/ai-wearable-surveillance-countermeasures/687203/</link><dc:creator>ike_usawa</dc:creator><comments>https://news.ycombinator.com/item?id=49230477</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49230477</guid></item><item><title><![CDATA[CSS: The bomb inside your inbox]]></title><description><![CDATA[
+<p>Article URL: <a href="https://portswigger.net/research/css-the-bomb-inside-your-inbox">https://portswigger.net/research/css-the-bomb-inside-your-inbox</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49230066">https://news.ycombinator.com/item?id=49230066</a></p>
+<p>Points: 51</p>
+<p># Comments: 18</p>
+]]></description><pubDate>Sun, 09 Aug 2026 10:17:52 +0000</pubDate><link>https://portswigger.net/research/css-the-bomb-inside-your-inbox</link><dc:creator>ashurandi</dc:creator><comments>https://news.ycombinator.com/item?id=49230066</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49230066</guid></item><item><title><![CDATA[The Alpha 21264 CPU: NT's Greatest RISC (1998)]]></title><description><![CDATA[
+<p>Article URL: <a href="https://halfhill.com/byte/1998-12_alpha.html">https://halfhill.com/byte/1998-12_alpha.html</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49230022">https://news.ycombinator.com/item?id=49230022</a></p>
+<p>Points: 40</p>
+<p># Comments: 20</p>
+]]></description><pubDate>Sun, 09 Aug 2026 10:06:37 +0000</pubDate><link>https://halfhill.com/byte/1998-12_alpha.html</link><dc:creator>Lammy</dc:creator><comments>https://news.ycombinator.com/item?id=49230022</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49230022</guid></item><item><title><![CDATA[Show HN: Airy – Free, fast, and simple voice content creation]]></title><description><![CDATA[
+<p>Article URL: <a href="https://airy.so">https://airy.so</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49229848">https://news.ycombinator.com/item?id=49229848</a></p>
+<p>Points: 13</p>
+<p># Comments: 7</p>
+]]></description><pubDate>Sun, 09 Aug 2026 09:29:32 +0000</pubDate><link>https://airy.so</link><dc:creator>login588</dc:creator><comments>https://news.ycombinator.com/item?id=49229848</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49229848</guid></item><item><title><![CDATA[There Are Magic Hexagons of Every Order]]></title><description><![CDATA[
+<p>Article URL: <a href="https://gukov.dev/math/2026/08/02/new-magic-hexagons.html">https://gukov.dev/math/2026/08/02/new-magic-hexagons.html</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49229174">https://news.ycombinator.com/item?id=49229174</a></p>
+<p>Points: 109</p>
+<p># Comments: 19</p>
+]]></description><pubDate>Sun, 09 Aug 2026 07:19:58 +0000</pubDate><link>https://gukov.dev/math/2026/08/02/new-magic-hexagons.html</link><dc:creator>gukoff</dc:creator><comments>https://news.ycombinator.com/item?id=49229174</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49229174</guid></item><item><title><![CDATA[Microsoft Word for Windows 1.1a, Native X64 Port]]></title><description><![CDATA[
+<p>Article URL: <a href="https://github.com/jmarshall23/msword">https://github.com/jmarshall23/msword</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49228663">https://news.ycombinator.com/item?id=49228663</a></p>
+<p>Points: 111</p>
+<p># Comments: 50</p>
+]]></description><pubDate>Sun, 09 Aug 2026 05:23:41 +0000</pubDate><link>https://github.com/jmarshall23/msword</link><dc:creator>BruceEel</dc:creator><comments>https://news.ycombinator.com/item?id=49228663</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49228663</guid></item><item><title><![CDATA[The original URL for this prediction will no longer be available in 11 years (2011)]]></title><description><![CDATA[
+<p>Article URL: <a href="http://longbets.org/601/">http://longbets.org/601/</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49228458">https://news.ycombinator.com/item?id=49228458</a></p>
+<p>Points: 176</p>
+<p># Comments: 81</p>
+]]></description><pubDate>Sun, 09 Aug 2026 04:30:26 +0000</pubDate><link>http://longbets.org/601/</link><dc:creator>doubletwoyou</dc:creator><comments>https://news.ycombinator.com/item?id=49228458</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49228458</guid></item><item><title><![CDATA[Real-time MCP interceptor that blocks .env reads and dangerous commands agents]]></title><description><![CDATA[
+<p>Article URL: <a href="https://marketnow.site/">https://marketnow.site/</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49228086">https://news.ycombinator.com/item?id=49228086</a></p>
+<p>Points: 12</p>
+<p># Comments: 2</p>
+]]></description><pubDate>Sun, 09 Aug 2026 03:13:01 +0000</pubDate><link>https://marketnow.site/</link><dc:creator>eddyflores</dc:creator><comments>https://news.ycombinator.com/item?id=49228086</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49228086</guid></item><item><title><![CDATA[TheoremDB – A public workspace for machine mathematics]]></title><description><![CDATA[
+<p>Article URL: <a href="https://theoremdb.org/">https://theoremdb.org/</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49227505">https://news.ycombinator.com/item?id=49227505</a></p>
+<p>Points: 65</p>
+<p># Comments: 8</p>
+]]></description><pubDate>Sun, 09 Aug 2026 01:23:36 +0000</pubDate><link>https://theoremdb.org/</link><dc:creator>frozenseven</dc:creator><comments>https://news.ycombinator.com/item?id=49227505</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49227505</guid></item><item><title><![CDATA[Os8088: A powerful Mac-like OS for the IBM XT, 286, 386]]></title><description><![CDATA[
+<p>Article URL: <a href="https://os8088.com/">https://os8088.com/</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49226923">https://news.ycombinator.com/item?id=49226923</a></p>
+<p>Points: 211</p>
+<p># Comments: 128</p>
+]]></description><pubDate>Sat, 08 Aug 2026 23:37:27 +0000</pubDate><link>https://os8088.com/</link><dc:creator>jggonz</dc:creator><comments>https://news.ycombinator.com/item?id=49226923</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49226923</guid></item><item><title><![CDATA[Dithered QR Codes]]></title><description><![CDATA[
+<p>Article URL: <a href="https://www.andrewt.net/dithered-qr-codes/wtf/">https://www.andrewt.net/dithered-qr-codes/wtf/</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49226742">https://news.ycombinator.com/item?id=49226742</a></p>
+<p>Points: 281</p>
+<p># Comments: 27</p>
+]]></description><pubDate>Sat, 08 Aug 2026 23:05:24 +0000</pubDate><link>https://www.andrewt.net/dithered-qr-codes/wtf/</link><dc:creator>jmusall</dc:creator><comments>https://news.ycombinator.com/item?id=49226742</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49226742</guid></item><item><title><![CDATA[My server is a phone now]]></title><description><![CDATA[
+<p>Article URL: <a href="https://seg6.space/posts/phone-server/">https://seg6.space/posts/phone-server/</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49226636">https://news.ycombinator.com/item?id=49226636</a></p>
+<p>Points: 407</p>
+<p># Comments: 181</p>
+]]></description><pubDate>Sat, 08 Aug 2026 22:49:23 +0000</pubDate><link>https://seg6.space/posts/phone-server/</link><dc:creator>seg6</dc:creator><comments>https://news.ycombinator.com/item?id=49226636</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49226636</guid></item><item><title><![CDATA[Should you stop cracking your knuckles?]]></title><description><![CDATA[
+<p>Article URL: <a href="https://www.bbc.com/future/article/20260807-should-i-stop-cracking-my-knuckles">https://www.bbc.com/future/article/20260807-should-i-stop-cracking-my-knuckles</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49226563">https://news.ycombinator.com/item?id=49226563</a></p>
+<p>Points: 83</p>
+<p># Comments: 89</p>
+]]></description><pubDate>Sat, 08 Aug 2026 22:36:25 +0000</pubDate><link>https://www.bbc.com/future/article/20260807-should-i-stop-cracking-my-knuckles</link><dc:creator>tchalla</dc:creator><comments>https://news.ycombinator.com/item?id=49226563</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49226563</guid></item><item><title><![CDATA[Shopify replaced Redis with MySQL for inventory reservations–and it scaled]]></title><description><![CDATA[
+<p>Article URL: <a href="https://shopify.engineering/scaling-inventory-reservations">https://shopify.engineering/scaling-inventory-reservations</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49226536">https://news.ycombinator.com/item?id=49226536</a></p>
+<p>Points: 267</p>
+<p># Comments: 176</p>
+]]></description><pubDate>Sat, 08 Aug 2026 22:32:50 +0000</pubDate><link>https://shopify.engineering/scaling-inventory-reservations</link><dc:creator>adletbalzhanov</dc:creator><comments>https://news.ycombinator.com/item?id=49226536</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49226536</guid></item><item><title><![CDATA[Open-source interactive map for the Aug 12 total solar eclipse]]></title><description><![CDATA[
+<p>Article URL: <a href="https://eclipsefan.org/?v=2&t=max&layers=eclipse%2Cbesselian%2Cumbra-live%2Cshadow-3d%2Ccloud-projection%2Cosm&lat=43.4623&lon=-3.8099&opacity=besselian%3A0.2%2Cumbra-live%3A0.2&zoom=6&palier=minute">https://eclipsefan.org/?v=2&t=max&layers=eclipse%2Cbesselian%2Cumbra-live%2Cshadow-3d%2Ccloud-projection%2Cosm&lat=43.4623&lon=-3.8099&opacity=besselian%3A0.2%2Cumbra-live%3A0.2&zoom=6&palier=minute</a></p>
+<p>Comments URL: <a href="https://news.ycombinator.com/item?id=49225139">https://news.ycombinator.com/item?id=49225139</a></p>
+<p>Points: 174</p>
+<p># Comments: 54</p>
+]]></description><pubDate>Sat, 08 Aug 2026 19:38:08 +0000</pubDate><link>https://eclipsefan.org/?v=2&amp;t=max&amp;layers=eclipse%2Cbesselian%2Cumbra-live%2Cshadow-3d%2Ccloud-projection%2Cosm&amp;lat=43.4623&amp;lon=-3.8099&amp;opacity=besselian%3A0.2%2Cumbra-live%3A0.2&amp;zoom=6&amp;palier=minute</link><dc:creator>MarcoDewey</dc:creator><comments>https://news.ycombinator.com/item?id=49225139</comments><guid isPermaLink="false">https://news.ycombinator.com/item?id=49225139</guid></item></channel></rss>

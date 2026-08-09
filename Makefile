@@ -21,7 +21,7 @@ SSH_HOST ?= homeserver
 DB_PORT  ?= 5432
 
 .PHONY: build run test test-integration fmt vet tidy check clean \
-        dev image deploy up down restart ps logs app-logs db-psql db-tunnel migrate collect process digest run-once serve
+        capture dev image deploy up down restart ps logs app-logs db-psql db-tunnel migrate collect process digest run-once serve
 
 ## build: compile the binary into bin/
 build:
@@ -54,6 +54,13 @@ vet:
 ## tidy: sync go.mod with the imports actually used
 tidy:
 	go mod tidy
+
+## capture: refresh the fixture corpus from the real sources and mailbox.
+## Reaches the network and writes into the repository. Everything is scrubbed on
+## the way in, and a file that still looks identifying is refused rather than
+## written.
+capture: .env
+	set -a; . ./.env; set +a; go test -tags=capture -count=1 -v -timeout 5m -run TestCaptureFixtures ./internal/fixtures/
 
 ## test-integration: run the real-data tests — real sources, real database
 ## Uses a separate `ziba_integration` database, never the application's own.
