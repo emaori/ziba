@@ -326,6 +326,17 @@ code {
   color: var(--ink-soft);
 }
 
+/* A heading below .section, for the tables that break one section into parts.
+   Same family and colour, not uppercase and not spaced out: the distinction has
+   to be visible at a glance without introducing a third kind of heading. */
+.subsection {
+  margin: 1.8rem 0 0.6rem;
+  font-size: 0.85rem;
+  font-family: system-ui, sans-serif;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
 /* The headline figures, as a grid that reflows rather than a row that squeezes. */
 .figures {
   display: grid;

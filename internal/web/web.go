@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,7 +31,12 @@ var templateFuncs = template.FuncMap{
 	"shortDate":  shortDate,
 	"join":       strings.Join,
 	"add":        func(a, b int) int { return a + b },
-	"isoDate":    func(t time.Time) string { return t.Format(time.DateOnly) },
+
+	// Token counts run to seven figures, and an unbroken run of digits cannot
+	// be read at a glance — the difference between 1904322 and 190432 is the
+	// whole point of the table.
+	"thousands": thousands,
+	"isoDate":   func(t time.Time) string { return t.Format(time.DateOnly) },
 
 	// pathEscape, not the built-in urlquery, for anything that lands in a URL
 	// *path*. urlquery writes a space as "+", which a query string decodes back
@@ -156,4 +162,30 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /static/", http.FileServerFS(assets))
 
 	return mux
+}
+
+// thousands groups a number with thin spaces, so seven figures can be read
+// without counting digits. A space rather than a comma or a full stop: the
+// reader is Italian and English, and those two disagree about which of them
+// means the decimal point.
+// thousandsSeparator is a thin space (U+2009). Named rather than written
+// inline because it is invisible in source: a test asserting on it with a
+// literal would be a string nobody can read or retype correctly.
+const thousandsSeparator = "\u2009"
+
+func thousands(n int64) string {
+	digits := strconv.FormatInt(n, 10)
+	sign := ""
+	if strings.HasPrefix(digits, "-") {
+		sign, digits = "-", digits[1:]
+	}
+
+	var b strings.Builder
+	for i, r := range digits {
+		if i > 0 && (len(digits)-i)%3 == 0 {
+			b.WriteString(thousandsSeparator)
+		}
+		b.WriteRune(r)
+	}
+	return sign + b.String()
 }

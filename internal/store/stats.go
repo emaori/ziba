@@ -141,6 +141,118 @@ func (t *Tally) add(other Tally) {
 	t.Unknown += other.Unknown
 }
 
+// TokenTally is what the AI pipeline spent, for one interest, one day, or in
+// total.
+//
+// Input and output are kept apart because they are priced apart — output costs
+// several times input on every model this project has used — so a single total
+// would hide the number that actually moves the bill.
+//
+// Articles counts how many articles the figures cover, which is what makes them
+// comparable: a day that analyzed four hundred articles and a day that analyzed
+// four are not usefully compared on totals alone.
+type TokenTally struct {
+	Label    string // the interest, or empty on a total
+	Day      time.Time
+	Articles int
+	Input    int64
+	Output   int64
+}
+
+// Total is the two added together.
+func (t TokenTally) Total() int64 { return t.Input + t.Output }
+
+// PerArticle is the average cost of an article in this group, or zero when the
+// group is empty.
+func (t TokenTally) PerArticle() int64 {
+	if t.Articles == 0 {
+		return 0
+	}
+	return t.Total() / int64(t.Articles)
+}
+
+// tokenColumns is the same projection wherever tokens are counted.
+//
+// Only analyzed articles are counted. An article that has never been through
+// the pipeline has zero tokens for the same reason an offline one does, and
+// including it would drag every average towards nothing.
+const tokenColumns = `
+	count(*),
+	COALESCE(sum(input_tokens), 0),
+	COALESCE(sum(output_tokens), 0)`
+
+// Tokens reports what the pipeline has spent in total.
+func (s *Store) Tokens(ctx context.Context) (TokenTally, error) {
+	var t TokenTally
+	err := s.pool.QueryRow(ctx, `
+		SELECT`+tokenColumns+`
+		FROM articles WHERE processed_at IS NOT NULL`).
+		Scan(&t.Articles, &t.Input, &t.Output)
+	if err != nil {
+		return t, fmt.Errorf("query token totals: %w", err)
+	}
+	return t, nil
+}
+
+// TokensByInterest reports the same per configured interest, costliest first.
+//
+// An article in three interests is counted in all three, so these rows add up
+// to more than the total above. That is the honest arrangement: the question is
+// what each interest costs to maintain, and an article shared between two of
+// them is a cost to both. The page says so rather than leaving it to be noticed.
+//
+// The interests are passed in because they live in configuration and the
+// database should not hold a second opinion about which ones exist.
+func (s *Store) TokensByInterest(ctx context.Context, interests []string) ([]TokenTally, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT interest,`+tokenColumns+`
+		FROM articles, unnest(categories) AS interest
+		WHERE processed_at IS NOT NULL AND interest = ANY($1::text[])
+		GROUP BY interest
+		ORDER BY sum(input_tokens) + sum(output_tokens) DESC, interest`, interests)
+	if err != nil {
+		return nil, fmt.Errorf("query tokens by interest: %w", err)
+	}
+
+	tallies, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (TokenTally, error) {
+		var t TokenTally
+		return t, row.Scan(&t.Label, &t.Articles, &t.Input, &t.Output)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read tokens by interest: %w", err)
+	}
+	return tallies, nil
+}
+
+// TokensByDay reports the same per day of analysis, newest first.
+//
+// The day is when the model ran, not when the article was collected — the two
+// other tables on this page group by collection, and this one cannot: a
+// backfill spends every token on one afternoon for articles gathered over
+// weeks, and reporting that against their collection dates would spread a cost
+// across days on which nothing was spent.
+func (s *Store) TokensByDay(ctx context.Context, limit int) ([]TokenTally, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT processed_at::date AS day,`+tokenColumns+`
+		FROM articles
+		WHERE processed_at IS NOT NULL
+		GROUP BY day
+		ORDER BY day DESC
+		LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query tokens by day: %w", err)
+	}
+
+	tallies, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (TokenTally, error) {
+		var t TokenTally
+		return t, row.Scan(&t.Day, &t.Articles, &t.Input, &t.Output)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read tokens by day: %w", err)
+	}
+	return tallies, nil
+}
+
 // ArticleStats is what happened to the articles themselves, after collection.
 type ArticleStats struct {
 	Total      int

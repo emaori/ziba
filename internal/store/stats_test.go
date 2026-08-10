@@ -292,3 +292,100 @@ func TestDayNavigation(t *testing.T) {
 		t.Errorf("Prev = %v, want 2026-08-05", nav.Prev)
 	}
 }
+
+// The token figures are three different questions over one column pair, and the
+// interesting one is the interest breakdown: an article in two interests must
+// count towards both, so the rows deliberately add up to more than the total.
+func TestTokenTallies(t *testing.T) {
+	db := testStore(t)
+	ctx := context.Background()
+
+	source, err := db.SyncSources(ctx, []domain.Source{{
+		Name: "Feed", Type: domain.SourceTypeRSS, URL: "https://example.com/feed", Enabled: true,
+	}})
+	if err != nil {
+		t.Fatalf("sync sources: %v", err)
+	}
+
+	analyzed := time.Date(2026, 8, 10, 9, 0, 0, 0, time.UTC)
+	articles := []struct {
+		url           string
+		categories    []string
+		in, out       int
+		processed     bool
+		processedWhen time.Time
+	}{
+		{"https://example.com/1", []string{"AI"}, 1000, 100, true, analyzed},
+		{"https://example.com/2", []string{"AI", "Computer Science"}, 2000, 200, true, analyzed},
+		{"https://example.com/3", []string{"Computer Science"}, 500, 50, true, analyzed.AddDate(0, 0, -1)},
+		// Analyzed offline: no tokens, but it is analyzed and must be counted.
+		{"https://example.com/4", []string{"AI"}, 0, 0, true, analyzed},
+		// Never analyzed: must not be counted at all, or it drags the averages.
+		{"https://example.com/5", nil, 0, 0, false, time.Time{}},
+	}
+	for _, a := range articles {
+		article := domain.Article{
+			SourceID: source[0].ID, URL: a.url, Title: "T", CollectedAt: analyzed,
+			FullText: "text",
+		}
+		id, _, err := db.SaveArticle(ctx, article)
+		if err != nil {
+			t.Fatalf("save %s: %v", a.url, err)
+		}
+		if !a.processed {
+			continue
+		}
+		article.ID, article.Categories = id, a.categories
+		article.Entities, article.Tone = []string{}, "analysis"
+		article.InputTokens, article.OutputTokens = a.in, a.out
+		article.AnalyzedAt = a.processedWhen
+		if err := db.SaveAnalysis(ctx, article); err != nil {
+			t.Fatalf("save analysis for %s: %v", a.url, err)
+		}
+	}
+
+	total, err := db.Tokens(ctx)
+	if err != nil {
+		t.Fatalf("Tokens: %v", err)
+	}
+	if total.Articles != 4 {
+		t.Errorf("articles = %d, want 4: the unanalyzed one is not counted", total.Articles)
+	}
+	if total.Input != 3500 || total.Output != 350 {
+		t.Errorf("total = %d in / %d out, want 3500 / 350", total.Input, total.Output)
+	}
+	if got := total.PerArticle(); got != 962 {
+		t.Errorf("per article = %d, want 962 (3850 over 4)", got)
+	}
+
+	byInterest, err := db.TokensByInterest(ctx, []string{"AI", "Computer Science"})
+	if err != nil {
+		t.Fatalf("TokensByInterest: %v", err)
+	}
+	if len(byInterest) != 2 {
+		t.Fatalf("got %d interests, want 2", len(byInterest))
+	}
+	// Costliest first, and article 2 counts towards both.
+	if byInterest[0].Label != "AI" || byInterest[0].Articles != 3 || byInterest[0].Input != 3000 {
+		t.Errorf("AI row = %+v, want 3 articles and 3000 in", byInterest[0])
+	}
+	if byInterest[1].Label != "Computer Science" || byInterest[1].Articles != 2 || byInterest[1].Input != 2500 {
+		t.Errorf("Computer Science row = %+v, want 2 articles and 2500 in", byInterest[1])
+	}
+
+	byDay, err := db.TokensByDay(ctx, 30)
+	if err != nil {
+		t.Fatalf("TokensByDay: %v", err)
+	}
+	if len(byDay) != 2 {
+		t.Fatalf("got %d days, want 2", len(byDay))
+	}
+	// Newest first, and grouped on the day the model ran rather than the day
+	// everything was collected — all five share a collection date.
+	if byDay[0].Articles != 3 || byDay[0].Input != 3000 {
+		t.Errorf("newest day = %+v, want 3 articles and 3000 in", byDay[0])
+	}
+	if byDay[1].Articles != 1 || byDay[1].Input != 500 {
+		t.Errorf("older day = %+v, want 1 article and 500 in", byDay[1])
+	}
+}

@@ -163,8 +163,9 @@ func (c *Claude) Assess(ctx context.Context, a domain.Article, declared []string
 		Score      int      `json:"score"`
 		Reason     string   `json:"reason"`
 	}
-	if err := c.ask(ctx, c.fastModel, 1024, system, articlePrompt(a),
-		assessmentSchema(c.interests, declared), &result); err != nil {
+	used, err := c.ask(ctx, c.fastModel, 1024, system, articlePrompt(a),
+		assessmentSchema(c.interests, declared), &result)
+	if err != nil {
 		return Assessment{}, err
 	}
 
@@ -183,12 +184,13 @@ func (c *Claude) Assess(ctx context.Context, a domain.Article, declared []string
 		Tone:       result.Tone,
 		Score:      domain.RelevanceScore(score),
 		Reason:     result.Reason,
+		Usage:      used,
 	}, nil
 }
 
 // Summarize implements Summarizer. This is the only stage that runs on the
 // capable model, and only for articles above threshold.
-func (c *Claude) Summarize(ctx context.Context, a domain.Article, _ Assessment) (string, error) {
+func (c *Claude) Summarize(ctx context.Context, a domain.Article, _ Assessment) (string, Usage, error) {
 	system := summarySystemPrompt(c.interests)
 
 	message, err := c.client.Messages.New(ctx, anthropic.MessageNewParams{
@@ -200,20 +202,27 @@ func (c *Claude) Summarize(ctx context.Context, a domain.Article, _ Assessment) 
 		},
 	})
 	if err != nil {
-		return "", fmt.Errorf("summarize: %w", err)
+		return "", Usage{}, fmt.Errorf("summarize: %w", err)
 	}
 
+	// Reported even when the reply is unusable: the call was charged for.
+	used := usageOfMessage(message)
 	summary := strings.TrimSpace(textOf(message))
 	if summary == "" {
-		return "", fmt.Errorf("summarize: model returned no text")
+		return "", used, fmt.Errorf("summarize: model returned no text")
 	}
-	return summary, nil
+	return summary, used, nil
+}
+
+// usageOfMessage reads what the provider says the call cost.
+func usageOfMessage(m *anthropic.Message) Usage {
+	return Usage{Input: int(m.Usage.InputTokens), Output: int(m.Usage.OutputTokens)}
 }
 
 // ask sends one request constrained to a JSON schema and decodes the answer
 // into out.
 func (c *Claude) ask(ctx context.Context, model string, maxTokens int64,
-	system, prompt string, schema map[string]any, out any) error {
+	system, prompt string, schema map[string]any, out any) (Usage, error) {
 
 	message, err := c.client.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     model,
@@ -227,17 +236,18 @@ func (c *Claude) ask(ctx context.Context, model string, maxTokens int64,
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("call %s: %w", model, err)
+		return Usage{}, fmt.Errorf("call %s: %w", model, err)
 	}
+	used := usageOfMessage(message)
 
 	text := textOf(message)
 	if text == "" {
-		return fmt.Errorf("call %s: model returned no text", model)
+		return used, fmt.Errorf("call %s: model returned no text", model)
 	}
 	if err := json.Unmarshal([]byte(text), out); err != nil {
-		return fmt.Errorf("call %s: decode response: %w", model, err)
+		return used, fmt.Errorf("call %s: decode response: %w", model, err)
 	}
-	return nil
+	return used, nil
 }
 
 // textOf joins the text blocks of a response, ignoring any other block type.

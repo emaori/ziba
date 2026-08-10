@@ -67,6 +67,23 @@ func (f *fakeStore) Archive(context.Context, int, int, []string) ([]domain.Artic
 	return f.articles, nil
 }
 
+func (f *fakeStore) Tokens(context.Context) (store.TokenTally, error) {
+	return store.TokenTally{Articles: 40, Input: 1904322, Output: 20480}, nil
+}
+
+func (f *fakeStore) TokensByInterest(_ context.Context, _ []string) ([]store.TokenTally, error) {
+	return []store.TokenTally{
+		{Label: "AI", Articles: 25, Input: 1200000, Output: 12000},
+		{Label: "Computer Science", Articles: 15, Input: 704322, Output: 8480},
+	}, nil
+}
+
+func (f *fakeStore) TokensByDay(_ context.Context, _ int) ([]store.TokenTally, error) {
+	return []store.TokenTally{
+		{Day: date(2026, 8, 10), Articles: 40, Input: 1904322, Output: 20480},
+	}, nil
+}
+
 func (f *fakeStore) TalliesBySource(context.Context) ([]store.Tally, error) {
 	return []store.Tally{{
 		Source: "IEEE Spectrum", Links: 30, Stored: 24, Duplicate: 4, Skipped: 2,
@@ -740,6 +757,61 @@ func TestStatsPage(t *testing.T) {
 	for _, want := range []string{"Il Post", "Newsletters", `class="day-source"`} {
 		if !strings.Contains(byDay, want) {
 			t.Errorf("the by-day table is missing %q", want)
+		}
+	}
+}
+
+// The token figures are the reason the page is worth opening now: they are the
+// only place the running cost of this project is visible.
+func TestStatsPageShowsTokens(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{})
+
+	code, body := get(t, handler, "/stats")
+	if code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", code)
+	}
+
+	// Expectations are written with ordinary spaces and converted, because the
+	// separator is a thin space: a literal one is invisible in source, and an
+	// expectation nobody can read or retype correctly is worse than no test.
+	grouped := func(s string) string { return strings.ReplaceAll(s, " ", thousandsSeparator) }
+
+	tokens := body[strings.Index(body, ">Tokens<"):]
+	for _, want := range []string{
+		grouped("1 924 802"), // the overall total: 1904322 in + 20480 out
+		grouped("1 904 322"), // input alone, because it is priced separately
+		grouped("20 480"),    // and output
+		grouped("48 120"),    // per article: 1924802 / 40
+		"Computer Science",
+		grouped("704 322"), // the interest row
+	} {
+		if !strings.Contains(tokens, want) {
+			t.Errorf("the token section is missing %q", want)
+		}
+	}
+
+	// An interest row leads to the articles behind it, as the day rows do.
+	if !strings.Contains(tokens, `href="/interest/Computer%20Science"`) {
+		t.Error("an interest row does not link to its articles")
+	}
+	// The by-day figures are labelled by analysis, not collection: the same page
+	// already has two tables grouped by collection and confusing them would make
+	// a backfill look like a month of spending.
+	if !strings.Contains(tokens, "By day analyzed") {
+		t.Error("the token day table does not say which day it means")
+	}
+}
+
+// Seven-figure counts have to be readable at a glance, and the separator must
+// not turn into a decimal point for one of the reader's two languages.
+func TestThousands(t *testing.T) {
+	for input, want := range map[int64]string{
+		0: "0", 7: "7", 999: "999", 1000: "1 000",
+		20480: "20 480", 1904322: "1 904 322", -4310: "-4 310",
+	} {
+		want = strings.ReplaceAll(want, " ", thousandsSeparator)
+		if got := thousands(input); got != want {
+			t.Errorf("thousands(%d) = %q, want %q", input, got, want)
 		}
 	}
 }

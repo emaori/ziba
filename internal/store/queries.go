@@ -282,10 +282,12 @@ func (s *Store) SaveAnalysis(ctx context.Context, a domain.Article) error {
 	tag, err := s.pool.Exec(ctx, `
 		UPDATE articles
 		SET categories = $2, entities = $3, tone = $4,
-		    summary = $5, score = $6, score_reason = $7, processed_at = $8
+		    summary = $5, score = $6, score_reason = $7, processed_at = $8,
+		    input_tokens = $9, output_tokens = $10
 		WHERE id = $1`,
 		a.ID, a.Categories, a.Entities, a.Tone,
-		a.Summary, int16(a.Score), a.ScoreReason, a.AnalyzedAt)
+		a.Summary, int16(a.Score), a.ScoreReason, a.AnalyzedAt,
+		a.InputTokens, a.OutputTokens)
 	if err != nil {
 		return fmt.Errorf("save analysis for article %d: %w", a.ID, err)
 	}

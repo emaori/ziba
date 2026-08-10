@@ -35,6 +35,10 @@ type Store interface {
 	TalliesBySource(ctx context.Context) ([]store.Tally, error)
 	TalliesByDay(ctx context.Context, limit int) ([]store.DayTally, error)
 	Articles(ctx context.Context, interests []string, threshold int) (store.ArticleStats, error)
+
+	Tokens(ctx context.Context) (store.TokenTally, error)
+	TokensByInterest(ctx context.Context, interests []string) ([]store.TokenTally, error)
+	TokensByDay(ctx context.Context, limit int) ([]store.TokenTally, error)
 }
 
 // page is the data every template receives. The interests appear in the tab bar
@@ -44,19 +48,23 @@ type page struct {
 	Interests []string
 	Active    string // which tab is highlighted, if any
 
-	Digest    domain.Digest
-	Article   domain.Article
-	Articles  []domain.Article
-	Nav       store.DayNavigation
-	Day       time.Time
-	Interest  string
-	BySource  []store.Tally
-	ByDay     []store.DayTally
-	Library   store.ArticleStats
-	Unknown   int
-	Offset    int
-	PageSize  int
-	Threshold domain.RelevanceScore
+	Digest   domain.Digest
+	Article  domain.Article
+	Articles []domain.Article
+	Nav      store.DayNavigation
+	Day      time.Time
+	Interest string
+	BySource []store.Tally
+	ByDay    []store.DayTally
+	Library  store.ArticleStats
+	Unknown  int
+
+	Tokens           store.TokenTally
+	TokensByInterest []store.TokenTally
+	TokensByDay      []store.TokenTally
+	Offset           int
+	PageSize         int
+	Threshold        domain.RelevanceScore
 }
 
 // handleInterest lists one interest's unread articles, most relevant first.
@@ -243,6 +251,21 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
+	tokens, err := s.store.Tokens(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	tokensByInterest, err := s.store.TokensByInterest(r.Context(), s.interests)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	tokensByDay, err := s.store.TokensByDay(r.Context(), statsDays)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
 
 	// Rows that finished before outcomes were recorded. Worth naming rather
 	// than folding into another column, so the totals stay honest.
@@ -254,6 +277,7 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "stats.html", &page{
 		Title: "Statistics", BySource: bySource, ByDay: byDay,
 		Library: library, Unknown: unknown,
+		Tokens: tokens, TokensByInterest: tokensByInterest, TokensByDay: tokensByDay,
 	})
 }
 

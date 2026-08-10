@@ -98,7 +98,7 @@ func (d *Deterministic) Assess(_ context.Context, a domain.Article, declared []s
 
 // Summarize returns the opening of the article. It is a placeholder, and says
 // so, rather than inventing prose no model wrote.
-func (d *Deterministic) Summarize(_ context.Context, a domain.Article, _ Assessment) (string, error) {
+func (d *Deterministic) Summarize(_ context.Context, a domain.Article, _ Assessment) (string, Usage, error) {
 	const maxRunes = 400
 
 	text := strings.Join(strings.Fields(a.FullText), " ")
@@ -107,9 +107,11 @@ func (d *Deterministic) Summarize(_ context.Context, a domain.Article, _ Assessm
 		text = strings.TrimSpace(string(runes[:maxRunes])) + "…"
 	}
 	if text == "" {
-		return "", fmt.Errorf("article has no text to summarize")
+		return "", Usage{}, fmt.Errorf("article has no text to summarize")
 	}
-	return "[offline] " + text, nil
+	// No tokens, truthfully: an offline run costs nothing, and reporting zero
+	// is what makes the statistics page distinguish it from an unanalyzed one.
+	return "[offline] " + text, Usage{}, nil
 }
 
 // termPattern builds a matcher for one interest term that will not fire inside

@@ -98,6 +98,93 @@
     </table>
   </div>
 
+  <h2 class="section">Tokens</h2>
+
+  <section class="figures">
+    <p><strong>{{thousands .Tokens.Total}}</strong><span>tokens, all analysis</span></p>
+    <p><strong>{{thousands .Tokens.Input}}</strong><span>in</span></p>
+    <p><strong>{{thousands .Tokens.Output}}</strong><span>out</span></p>
+    <p><strong>{{thousands .Tokens.PerArticle}}</strong><span>per article analyzed</span></p>
+  </section>
+
+  <h3 class="subsection">By interest</h3>
+
+  <div class="scroller">
+    <table class="figures-table">
+      <thead>
+        <tr>
+          <th>Interest</th>
+          <th class="n">Articles</th>
+          <th class="n" title="Tokens sent: the article text and the instructions">In</th>
+          <th class="n" title="Tokens produced, including any the model spent reasoning">Out</th>
+          <th class="n">Total</th>
+          <th class="n">Per article</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .TokensByInterest}}
+          <tr>
+            <td><a href="/interest/{{pathEscape .Label}}">{{.Label}}</a></td>
+            <td class="n">{{.Articles}}</td>
+            <td class="n">{{thousands .Input}}</td>
+            <td class="n">{{thousands .Output}}</td>
+            <td class="n">{{thousands .Total}}</td>
+            <td class="n">{{thousands .PerArticle}}</td>
+          </tr>
+        {{else}}
+          <tr><td colspan="6">Nothing analyzed by a model yet.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="subsection">By day analyzed</h3>
+
+  <div class="scroller">
+    <table class="figures-table">
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th class="n">Articles</th>
+          <th class="n">In</th>
+          <th class="n">Out</th>
+          <th class="n">Total</th>
+          <th class="n">Per article</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .TokensByDay}}
+          <tr>
+            <td>{{shortDate .Day}}</td>
+            <td class="n">{{.Articles}}</td>
+            <td class="n">{{thousands .Input}}</td>
+            <td class="n">{{thousands .Output}}</td>
+            <td class="n">{{thousands .Total}}</td>
+            <td class="n">{{thousands .PerArticle}}</td>
+          </tr>
+        {{else}}
+          <tr><td colspan="6">Nothing analyzed by a model yet.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note">
+    Tokens are counted as the provider reported them, not estimated. Input and
+    output are kept apart because they are priced apart — output costs several
+    times more per token, so a single total would hide the figure that moves the
+    bill.
+  </p>
+
+  <p class="note">
+    The interest rows count an article once for each interest it belongs to, so
+    they add up to more than the overall total: an article filed under two
+    subjects cost something to both. The day is the day the model ran, not the
+    day the article was collected — the two tables above group by collection,
+    and a backfill spends every token in one afternoon on articles gathered over
+    weeks. Articles analyzed offline count as zero, which is what they cost.
+  </p>
+
   <p class="note">
     <strong>Collected</strong> counts what reached the database. It is not what
     the sources offered: an item published before its source's cutoff, and a

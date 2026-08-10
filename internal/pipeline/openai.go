@@ -169,8 +169,9 @@ func (o *OpenAI) Assess(ctx context.Context, a domain.Article, declared []string
 		Score      int      `json:"score"`
 		Reason     string   `json:"reason"`
 	}
-	if err := o.ask(ctx, o.fastModel, o.fastEffort, system, articlePrompt(a),
-		"assessment", forStrictMode(assessmentSchema(o.interests, declared)), &result); err != nil {
+	used, err := o.ask(ctx, o.fastModel, o.fastEffort, system, articlePrompt(a),
+		"assessment", forStrictMode(assessmentSchema(o.interests, declared)), &result)
+	if err != nil {
 		return Assessment{}, err
 	}
 
@@ -187,13 +188,14 @@ func (o *OpenAI) Assess(ctx context.Context, a domain.Article, declared []string
 		Tone:       result.Tone,
 		Score:      domain.RelevanceScore(score),
 		Reason:     result.Reason,
+		Usage:      used,
 	}, nil
 }
 
 // Summarize implements Summarizer, on the more capable model.
-func (o *OpenAI) Summarize(ctx context.Context, a domain.Article, _ Assessment) (string, error) {
+func (o *OpenAI) Summarize(ctx context.Context, a domain.Article, _ Assessment) (string, Usage, error) {
 	if strings.TrimSpace(a.FullText) == "" {
-		return "", fmt.Errorf("article has no text to summarize")
+		return "", Usage{}, fmt.Errorf("article has no text to summarize")
 	}
 
 	params := openai.ChatCompletionNewParams{
@@ -207,17 +209,30 @@ func (o *OpenAI) Summarize(ctx context.Context, a domain.Article, _ Assessment) 
 
 	completion, err := o.client.Chat.Completions.New(ctx, params)
 	if err != nil {
-		return "", fmt.Errorf("call %s: %w", o.capableModel, err)
+		return "", Usage{}, fmt.Errorf("call %s: %w", o.capableModel, err)
 	}
+	// Reported even when the reply turns out to be unusable: a call that
+	// produced nothing was still charged for, and a bill that only counts
+	// successes is the wrong bill.
+	used := usageOf(completion)
 	if len(completion.Choices) == 0 {
-		return "", fmt.Errorf("call %s: no reply", o.capableModel)
+		return "", used, fmt.Errorf("call %s: no reply", o.capableModel)
 	}
 
 	summary := strings.TrimSpace(completion.Choices[0].Message.Content)
 	if summary == "" {
-		return "", fmt.Errorf("call %s: empty summary", o.capableModel)
+		return "", used, fmt.Errorf("call %s: empty summary", o.capableModel)
 	}
-	return summary, nil
+	return summary, used, nil
+}
+
+// usageOf reads what the provider says the call cost. Reasoning tokens are
+// already inside completion tokens, so they are not added again.
+func usageOf(completion *openai.ChatCompletion) Usage {
+	return Usage{
+		Input:  int(completion.Usage.PromptTokens),
+		Output: int(completion.Usage.CompletionTokens),
+	}
 }
 
 // ask makes one structured-output call and decodes the reply.
@@ -226,7 +241,7 @@ func (o *OpenAI) Summarize(ctx context.Context, a domain.Article, _ Assessment) 
 // safe to unmarshal without checking every field: the categories can only be
 // the reader's own interests, and the score can only be an integer in range.
 func (o *OpenAI) ask(ctx context.Context, model string, effort config.ReasoningEffort,
-	system, prompt, schemaName string, schema map[string]any, out any) error {
+	system, prompt, schemaName string, schema map[string]any, out any) (Usage, error) {
 
 	params := openai.ChatCompletionNewParams{
 		Model: model,
@@ -248,18 +263,19 @@ func (o *OpenAI) ask(ctx context.Context, model string, effort config.ReasoningE
 
 	completion, err := o.client.Chat.Completions.New(ctx, params)
 	if err != nil {
-		return fmt.Errorf("call %s: %w", model, err)
+		return Usage{}, fmt.Errorf("call %s: %w", model, err)
 	}
+	used := usageOf(completion)
 	if len(completion.Choices) == 0 {
-		return fmt.Errorf("call %s: no reply", model)
+		return used, fmt.Errorf("call %s: no reply", model)
 	}
 
 	text := completion.Choices[0].Message.Content
 	if strings.TrimSpace(text) == "" {
-		return fmt.Errorf("call %s: model returned no text", model)
+		return used, fmt.Errorf("call %s: model returned no text", model)
 	}
 	if err := json.Unmarshal([]byte(text), out); err != nil {
-		return fmt.Errorf("call %s: decode response: %w", model, err)
+		return used, fmt.Errorf("call %s: decode response: %w", model, err)
 	}
-	return nil
+	return used, nil
 }

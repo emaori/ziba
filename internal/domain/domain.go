@@ -259,6 +259,12 @@ type Article struct {
 	ScoreReason string
 	AnalyzedAt  time.Time
 
+	// InputTokens and OutputTokens are what the analysis cost, summed over the
+	// assessment and the summary. Zero for an article analyzed offline, which
+	// is a true answer rather than a missing one: that run cost nothing.
+	InputTokens  int
+	OutputTokens int
+
 	// ArchivedAt is when the reader marked this read. While it is set the
 	// article is out of circulation: gone from the interest tabs and from the
 	// daily selection, though still present in the day-by-day view, which shows

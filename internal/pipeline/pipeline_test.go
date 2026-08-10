@@ -13,8 +13,9 @@ import (
 
 // stubAnalyzer records what it was asked and returns what the test tells it to.
 type stubAnalyzer struct {
-	assessment Assessment
-	summary    string
+	assessment   Assessment
+	summary      string
+	summaryUsage Usage
 
 	assessErr    error
 	summarizeErr error
@@ -28,9 +29,9 @@ func (s *stubAnalyzer) Assess(_ context.Context, _ domain.Article, declared []st
 	return s.assessment, s.assessErr
 }
 
-func (s *stubAnalyzer) Summarize(context.Context, domain.Article, Assessment) (string, error) {
+func (s *stubAnalyzer) Summarize(context.Context, domain.Article, Assessment) (string, Usage, error) {
 	s.summarizeCalls++
-	return s.summary, s.summarizeErr
+	return s.summary, s.summaryUsage, s.summarizeErr
 }
 
 func testLogger() *slog.Logger {
