@@ -63,7 +63,11 @@ func TestAnalyzeSummarizesOnlyAboveThreshold(t *testing.T) {
 			}
 			p := New(stub, 60, testLogger())
 
-			got, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com/a"}, nil)
+			// The text matters: an article with none is never summarized
+			// whatever it scores, which is a different test below.
+			got, err := p.Analyze(context.Background(), domain.Article{
+				URL: "https://example.com/a", FullText: "The article's text.",
+			}, nil)
 			if err != nil {
 				t.Fatalf("Analyze returned error: %v", err)
 			}
@@ -168,5 +172,55 @@ func TestDeterministicIsDeterministic(t *testing.T) {
 	assessment, _ := analyzer.Assess(ctx, unrelated, nil)
 	if assessment.Score >= 60 {
 		t.Errorf("Score = %d for an unrelated article, want below threshold", assessment.Score)
+	}
+}
+
+// An article whose page could not be read has nothing to summarize, and the
+// call must not be built at all.
+//
+// Every provider already refused it, but only after the request had been
+// assembled and sent — and a source that declares its categories bypasses the
+// threshold, so this happened on every textless article it produced. The first
+// full run over the archive paid for two such calls.
+func TestAnalyzeDoesNotSummarizeAnArticleWithNoText(t *testing.T) {
+	tests := []struct {
+		name     string
+		declared []string
+	}{
+		{"inferred", nil},
+		{"declared, which otherwise always gets a summary", []string{"AI"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stub := &stubAnalyzer{
+				assessment: Assessment{
+					Score: 90, // well above the threshold, so only the text stops it
+					Usage: Usage{Input: 1200, Output: 80},
+				},
+				summary: "a summary that should never be asked for",
+			}
+			p := New(stub, 60, testLogger())
+
+			got, err := p.Analyze(context.Background(),
+				domain.Article{URL: "https://example.com/paywalled", FullText: "  \n "}, tt.declared)
+			if err != nil {
+				t.Fatalf("Analyze: %v", err)
+			}
+			if stub.summarizeCalls != 0 {
+				t.Errorf("the summarizer was called %d times for an article with no text",
+					stub.summarizeCalls)
+			}
+			if got.Summary != "" {
+				t.Errorf("summary = %q, want empty", got.Summary)
+			}
+			// The assessment still happened and still cost something.
+			if got.InputTokens != 1200 || got.OutputTokens != 80 {
+				t.Errorf("tokens = %d/%d, want 1200/80: the assessment was still paid for",
+					got.InputTokens, got.OutputTokens)
+			}
+			if got.Score != 90 {
+				t.Errorf("score = %d, want 90: the article keeps its assessment", got.Score)
+			}
+		})
 	}
 }

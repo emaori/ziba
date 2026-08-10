@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/emaori/ziba/internal/domain"
@@ -118,6 +119,20 @@ func (p *Pipeline) Analyze(ctx context.Context, a domain.Article, declared []str
 	// what was summarized would understate the bill by every article that was
 	// looked at and set aside.
 	spent := assessment.Usage
+
+	// Nothing to summarize is decided here rather than left to the provider.
+	//
+	// The rule existed already, inside each provider, which meant the call was
+	// built and sent before anything noticed there was no text — and for a
+	// source that declares its categories, and so bypasses the threshold below,
+	// that happened every time. The first full run asked the expensive model to
+	// summarize two empty articles. Whether to summarize is this stage's
+	// decision, so the reason not to belongs here too.
+	if strings.TrimSpace(a.FullText) == "" {
+		p.log.Debug("no text retrieved, not summarized", "url", a.URL)
+		a.InputTokens, a.OutputTokens = spent.Input, spent.Output
+		return a, nil
+	}
 
 	// A declared source is always shown, so it always gets a summary: leaving
 	// it out would put an article on the page with nothing to read beneath it.
