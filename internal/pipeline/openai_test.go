@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -167,5 +168,45 @@ func TestReasoningEffortGoesOnlyToModelsThatReason(t *testing.T) {
 				t.Errorf("temperature sent = %v, want %v", got, tt.wantTemp)
 			}
 		})
+	}
+}
+
+// The category limit has to be stated in words, not only in the schema.
+//
+// maxItems is one of the keywords OpenAI's strict mode refuses, so it is
+// stripped before the request is sent and the model is told nothing. The first
+// real call returned four categories for an article that was squarely about
+// one. Anthropic honours the schema, so without this the same article would be
+// filed under a different number of interests depending on which company
+// answered — the divergence that sharing the prompts exists to prevent.
+func TestTheCategoryLimitSurvivesStrictMode(t *testing.T) {
+	interests := schemaInterests()
+
+	prompt := assessSystemPrompt(interests, nil)
+	if !strings.Contains(prompt, fmt.Sprintf("at most %d", maxCategories)) {
+		t.Errorf("the assessment prompt never states the limit of %d categories", maxCategories)
+	}
+
+	// And in the one place a description survives stripping.
+	stripped := forStrictMode(assessmentSchema(interests, nil))
+	categories := stripped["properties"].(map[string]any)["categories"].(map[string]any)
+	if _, present := categories["maxItems"]; present {
+		t.Fatal("maxItems survived; strict mode would refuse the call")
+	}
+	description, _ := categories["description"].(string)
+	if !strings.Contains(description, fmt.Sprintf("at most %d", maxCategories)) {
+		t.Errorf("the categories description does not state the limit: %q", description)
+	}
+
+	// Anthropic still gets the enforceable version.
+	full := assessmentSchema(interests, nil)["properties"].(map[string]any)["categories"].(map[string]any)
+	if full["maxItems"] != maxCategories {
+		t.Errorf("maxItems = %v, want %d", full["maxItems"], maxCategories)
+	}
+
+	// A declared source is not asked the question at all, so the limit is
+	// meaningless there and must not be claimed.
+	if strings.Contains(assessSystemPrompt(interests, []string{".NET"}), "at most") {
+		t.Error("the declared prompt talks about choosing categories it never asks for")
 	}
 }

@@ -106,11 +106,15 @@ func assessmentSchema(interests config.Interests, declared []string) map[string]
 		"type": "object",
 		"properties": map[string]any{
 			"categories": map[string]any{
-				"type":        "array",
-				"items":       map[string]any{"type": "string", "enum": names},
-				"minItems":    0,
-				"maxItems":    3,
-				"description": "Which of the reader's interests this article belongs to. Choose only those it genuinely is about; an empty list is correct for an article that fits none.",
+				"type":     "array",
+				"items":    map[string]any{"type": "string", "enum": names},
+				"minItems": 0,
+				"maxItems": maxCategories,
+				// The limit is repeated in words because maxItems does not
+				// survive OpenAI's strict mode. A description does.
+				"description": fmt.Sprintf("Which of the reader's interests this article belongs to, at most %d. "+
+					"Choose only those it genuinely is about; an empty list is correct for an article that fits none.",
+					maxCategories),
 			},
 			"entities": map[string]any{
 				"type":        "array",

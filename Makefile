@@ -51,6 +51,7 @@ vet:
 	go vet -tags=integration ./...
 	go vet -tags=trace ./...
 	go vet -tags=dryrun ./...
+	go vet -tags=realrun ./...
 	go vet -tags=capture ./...
 
 ## tidy: sync go.mod with the imports actually used
@@ -72,6 +73,14 @@ capture: .env
 dryrun: .env
 	set -a; . ./.env; ZIBA_INTERESTS_FILE=$(CURDIR)/config/interests.yaml; set +a; \
 	go test -tags=dryrun -count=1 -v -run TestDryRun ./internal/pipeline/
+
+## realrun: analyze ONE article for real, against the configured provider.
+## This costs money. It reports the model's answer and the tokens it billed,
+## and writes nothing back to the database. Defaults to the longest article;
+## choose another with ZIBA_ARTICLE_ID=762 make realrun
+realrun: .env
+	set -a; . ./.env; ZIBA_INTERESTS_FILE=$(CURDIR)/config/interests.yaml; set +a; \
+	go test -tags=realrun -count=1 -v -timeout 10m -run TestRealRun ./internal/pipeline/
 
 ## test-integration: run the real-data tests — real sources, real database
 ## Uses a separate `ziba_integration` database, never the application's own.

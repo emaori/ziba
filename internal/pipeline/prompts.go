@@ -14,6 +14,19 @@ import (
 // wording, the comparison would measure the prompts and not the models — and
 // the wording would drift, so that improving one silently left the other behind.
 
+// maxCategories is how many interests one article may be filed under.
+//
+// The number lives here because it now has to be said twice: once in the schema,
+// where Anthropic enforces it, and once in the instructions, because OpenAI's
+// strict mode refuses maxItems and strips it before the request is sent. The
+// first real OpenAI call returned four categories for an article about CSS
+// sanitisation — AI, Computer Science, Programming and Software Architecture —
+// and nothing in the request had told it three was the limit.
+//
+// Three because the tabs are a reading order, not an index. An article filed
+// under everything it touches on is findable in five places and useful in none.
+const maxCategories = 3
+
 // scoreBands anchor the number to something describable.
 //
 // Without them a model invents a scale, and a small one invents a different
@@ -75,6 +88,11 @@ The reader's interests, most important first:
 
 %s
 
+Choose at most %d of them, and only the ones the article is genuinely about. An
+article that fits none is correctly given none. Listing every interest a piece
+touches on is worse than listing one: it puts the article in front of the reader
+in several places without telling them what it is.
+
 Rate from 0 to 100, using these bands:
 
 %s
@@ -85,7 +103,8 @@ it is excellent in general.
 
 %s
 
-Answer only with the requested structure.`, interests.Describe(), scoreBands, workedExample)
+Answer only with the requested structure.`,
+		interests.Describe(), maxCategories, scoreBands, workedExample)
 }
 
 // summarySystemPrompt asks for the summary shown under a headline.
