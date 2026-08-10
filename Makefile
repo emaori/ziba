@@ -21,7 +21,7 @@ SSH_HOST ?= homeserver
 DB_PORT  ?= 5432
 
 .PHONY: build run test test-integration fmt vet tidy check clean \
-        capture dev image deploy up down restart ps logs app-logs db-psql db-tunnel migrate collect process digest run-once serve
+        capture dryrun dev image deploy up down restart ps logs app-logs db-psql db-tunnel migrate collect process digest run-once serve
 
 ## build: compile the binary into bin/
 build:
@@ -61,6 +61,15 @@ tidy:
 ## written.
 capture: .env
 	set -a; . ./.env; set +a; go test -tags=capture -count=1 -v -timeout 5m -run TestCaptureFixtures ./internal/fixtures/
+
+## dryrun: print the API calls one article would make, without making them.
+## Nothing reaches the provider and nothing is billed. Pick the article with
+## ZIBA_ARTICLE_ID=775 make dryrun; the default is the newest with enough text.
+## A test runs in its own package directory, so the configuration is named
+## absolutely rather than relative to the repository root.
+dryrun: .env
+	set -a; . ./.env; ZIBA_INTERESTS_FILE=$(CURDIR)/config/interests.yaml; set +a; \
+	go test -tags=dryrun -count=1 -v -run TestDryRun ./internal/pipeline/
 
 ## test-integration: run the real-data tests — real sources, real database
 ## Uses a separate `ziba_integration` database, never the application's own.
