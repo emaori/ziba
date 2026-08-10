@@ -5,6 +5,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 )
@@ -42,6 +43,13 @@ type Config struct {
 	FastModel    string
 	CapableModel string
 
+	// FastEffort and CapableEffort are how hard each model is asked to think.
+	// Empty takes the provider's default. They are ignored by models that have
+	// no reasoning setting, which is not an error: the same configuration has
+	// to work when the models change.
+	FastEffort    ReasoningEffort
+	CapableEffort ReasoningEffort
+
 	// CollectEvery is how often the unattended schedule collects and analyzes.
 	CollectEvery time.Duration
 
@@ -66,6 +74,13 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	cfg.Provider = provider
+
+	if cfg.FastEffort, err = ParseEffort("ZIBA_FAST_EFFORT", os.Getenv("ZIBA_FAST_EFFORT")); err != nil {
+		return Config{}, err
+	}
+	if cfg.CapableEffort, err = ParseEffort("ZIBA_CAPABLE_EFFORT", os.Getenv("ZIBA_CAPABLE_EFFORT")); err != nil {
+		return Config{}, err
+	}
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("ZIBA_DATABASE_URL is not set")
 	}
@@ -125,6 +140,54 @@ func ParseProvider(raw string) (Provider, error) {
 		return "", fmt.Errorf("ZIBA_AI_PROVIDER is %q; it must be %q or %q",
 			raw, ProviderAnthropic, ProviderOpenAI)
 	}
+}
+
+// ReasoningEffort is how hard a reasoning model is asked to think before it
+// answers. It replaces temperature on the models that have it, and it is the
+// only knob that meaningfully moves the bill: reasoning tokens are charged as
+// output, and output costs six times input on every model in the GPT-5 line.
+//
+// Empty means send nothing and take the provider's own default, which is
+// model-dependent and, on the models documented so far, medium. That is a
+// deliberate default rather than an omission — unlike a model name, which
+// cannot be guessed and so has none, "whatever the provider thinks" is a
+// coherent answer here. It is also the expensive one, which is why both roles
+// are worth setting explicitly.
+type ReasoningEffort string
+
+// The values the API accepts, cheapest first. None skips reasoning entirely.
+const (
+	EffortNone    ReasoningEffort = "none"
+	EffortMinimal ReasoningEffort = "minimal"
+	EffortLow     ReasoningEffort = "low"
+	EffortMedium  ReasoningEffort = "medium"
+	EffortHigh    ReasoningEffort = "high"
+	EffortXHigh   ReasoningEffort = "xhigh"
+	EffortMax     ReasoningEffort = "max"
+)
+
+var validEfforts = []ReasoningEffort{
+	EffortNone, EffortMinimal, EffortLow, EffortMedium, EffortHigh, EffortXHigh, EffortMax,
+}
+
+// ParseEffort reads one of the effort variables. A misspelling is refused at
+// startup: sent to the API it would fail every call, and sent nowhere it would
+// silently leave the run on the provider's default and the expensive setting.
+func ParseEffort(variable, raw string) (ReasoningEffort, error) {
+	value := ReasoningEffort(strings.ToLower(strings.TrimSpace(raw)))
+	if value == "" {
+		return "", nil
+	}
+	if slices.Contains(validEfforts, value) {
+		return value, nil
+	}
+
+	names := make([]string, 0, len(validEfforts))
+	for _, effort := range validEfforts {
+		names = append(names, string(effort))
+	}
+	return "", fmt.Errorf("%s is %q; it must be one of %s, or empty for the provider's default",
+		variable, raw, strings.Join(names, ", "))
 }
 
 // APIKey returns the key for the configured provider, and the name of the

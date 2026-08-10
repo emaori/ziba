@@ -66,9 +66,11 @@ func TestDryRun(t *testing.T) {
 			option.WithAPIKey(cfg.OpenAIAPIKey),
 			option.WithHTTPClient(&http.Client{Transport: capture}),
 		),
-		fastModel:    cfg.FastModel,
-		capableModel: cfg.CapableModel,
-		interests:    interests,
+		fastModel:     cfg.FastModel,
+		capableModel:  cfg.CapableModel,
+		fastEffort:    cfg.FastEffort,
+		capableEffort: cfg.CapableEffort,
+		interests:     interests,
 	}
 
 	fmt.Printf("Article %d: %q\n", article.ID, article.Title)

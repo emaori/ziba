@@ -3,6 +3,10 @@ package pipeline
 import (
 	"strings"
 	"testing"
+
+	"github.com/openai/openai-go/v3"
+
+	"github.com/emaori/ziba/internal/config"
 )
 
 // A model name is required. OpenAI renames and retires models faster than a
@@ -35,16 +39,23 @@ func TestNewOpenAIRequiresModels(t *testing.T) {
 	}
 }
 
-// The o-series rejects temperature outright, so sending it would fail the call
-// rather than be ignored — which is what a run configured with o4-mini would
-// hit on its first article.
+// The o-series and the GPT-5 line reject temperature outright, so sending it
+// fails the call rather than being ignored.
+//
+// The gpt-5 rows were once asserted the other way round, which is the whole
+// reason they are worth listing: the configured capable model is a gpt-5, and
+// the pipeline demotes a failed summary to a warning, so the mistake would have
+// cost every summary in a run without failing one of them.
 func TestTemperatureIsOmittedForReasoningModels(t *testing.T) {
 	tests := []struct {
 		model string
 		send  bool
 	}{
 		{"gpt-4o-mini", true},
-		{"gpt-5.6", true},
+		{"gpt-4o", true},
+		{"gpt-5.6", false},
+		{"gpt-5.6-luna", false},
+		{"gpt-5", false},
 		{"o4-mini", false},
 		{"o3", false},
 		{"o1-preview", false},
@@ -123,5 +134,38 @@ func TestBothProvidersShareTheirPrompts(t *testing.T) {
 	// reader's interests as something to judge against.
 	if strings.Contains(declared, "Do not question whether the subject is relevant") == false {
 		t.Error("the declared prompt no longer says the subject is settled")
+	}
+}
+
+// The effort is the only setting that meaningfully moves the bill, because
+// reasoning tokens are billed as output and output costs six times input. The
+// rules that matter: it goes only to models that reason, it is left out when
+// unset so the provider chooses, and it is never sent alongside a temperature —
+// no model accepts both, so sending both would fail every call.
+func TestReasoningEffortGoesOnlyToModelsThatReason(t *testing.T) {
+	tests := []struct {
+		name       string
+		model      string
+		effort     config.ReasoningEffort
+		wantEffort string
+		wantTemp   bool
+	}{
+		{"a reasoning model takes the effort", "gpt-5.6-luna", config.EffortLow, "low", false},
+		{"unset leaves the choice to the provider", "gpt-5.6-terra", "", "", false},
+		{"a model with a temperature is not sent an effort", "gpt-4o-mini", config.EffortLow, "", true},
+		{"the o-series reasons too", "o4-mini", config.EffortMinimal, "minimal", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var params openai.ChatCompletionNewParams
+			tune(&params, tt.model, tt.effort)
+
+			if got := string(params.ReasoningEffort); got != tt.wantEffort {
+				t.Errorf("reasoning_effort = %q, want %q", got, tt.wantEffort)
+			}
+			if got := params.Temperature.Valid(); got != tt.wantTemp {
+				t.Errorf("temperature sent = %v, want %v", got, tt.wantTemp)
+			}
+		})
 	}
 }

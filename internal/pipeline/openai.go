@@ -28,10 +28,12 @@ import (
 // provider's. If they differed, a comparison between the two would be measuring
 // the prompts rather than the models.
 type OpenAI struct {
-	client       openai.Client
-	fastModel    string
-	capableModel string
-	interests    config.Interests
+	client        openai.Client
+	fastModel     string
+	capableModel  string
+	fastEffort    config.ReasoningEffort
+	capableEffort config.ReasoningEffort
+	interests     config.Interests
 }
 
 // OpenAIOptions configures the analyzer.
@@ -44,15 +46,33 @@ type OpenAIOptions struct {
 	FastModel    string
 	CapableModel string
 	Interests    config.Interests
+
+	// FastEffort and CapableEffort are optional: empty leaves the choice to the
+	// provider. Unlike the model names there is a sane thing to do without
+	// them, so they are not required.
+	FastEffort    config.ReasoningEffort
+	CapableEffort config.ReasoningEffort
 }
 
-// reasoningModel matches the o-series — o1, o3, o4-mini and their kin.
+// reasoningModel matches the families that refuse a temperature: the o-series —
+// o1, o3, o4-mini and their kin — and the GPT-5 line.
 //
-// They matter here for one practical reason: they reject the temperature
-// parameter outright, so sending it fails the call rather than being ignored.
-// A run configured with o4-mini would otherwise die on its first article with
-// an error about an unsupported parameter.
-var reasoningModel = regexp.MustCompile(`^o\d`)
+// They matter here for one practical reason. They do not ignore the parameter,
+// they reject the request:
+//
+//	Unsupported parameter: 'temperature' is not supported with this model.
+//
+// The o-series was covered from the start. GPT-5 was not, and the omission was
+// invisible in two ways at once: the pipeline treats a failed summary as a
+// warning and keeps the article, so a run would have produced scores for
+// everything and summaries for nothing, without failing. A dry run of one
+// article showed the parameter going out to gpt-5.6-luna and was what caught it.
+//
+// Matching on the name is a guess about a naming convention, which is why it
+// guessed wrong once already. It stays because the alternative — a list of every
+// model known to accept a temperature — goes stale in the same direction but
+// silently, by refusing a parameter that would have worked.
+var reasoningModel = regexp.MustCompile(`^(o\d|gpt-5)`)
 
 // temperature returns the sampling temperature to send, and whether to send one
 // at all.
@@ -66,6 +86,22 @@ func temperature(model string) (float64, bool) {
 		return 0, false
 	}
 	return 0, true
+}
+
+// tune applies the two settings that depend on which model is answering, so
+// that the assessment and the summary cannot drift apart on how they are asked.
+//
+// The two are mutually exclusive by design, not by coincidence: a model that
+// takes a temperature has no reasoning effort, and a model that reasons refuses
+// the temperature. Deciding both in one place is what keeps that true.
+func tune(params *openai.ChatCompletionNewParams, model string, effort config.ReasoningEffort) {
+	if value, send := temperature(model); send {
+		params.Temperature = openai.Float(value)
+		return
+	}
+	if effort != "" {
+		params.ReasoningEffort = shared.ReasoningEffort(effort)
+	}
 }
 
 // unsupportedByStrict are schema keywords OpenAI's strict mode refuses.
@@ -111,10 +147,12 @@ func NewOpenAI(opts OpenAIOptions) (*OpenAI, error) {
 	}
 
 	return &OpenAI{
-		client:       openai.NewClient(option.WithAPIKey(opts.APIKey)),
-		fastModel:    opts.FastModel,
-		capableModel: opts.CapableModel,
-		interests:    opts.Interests,
+		client:        openai.NewClient(option.WithAPIKey(opts.APIKey)),
+		fastModel:     opts.FastModel,
+		capableModel:  opts.CapableModel,
+		fastEffort:    opts.FastEffort,
+		capableEffort: opts.CapableEffort,
+		interests:     opts.Interests,
 	}, nil
 }
 
@@ -131,7 +169,7 @@ func (o *OpenAI) Assess(ctx context.Context, a domain.Article, declared []string
 		Score      int      `json:"score"`
 		Reason     string   `json:"reason"`
 	}
-	if err := o.ask(ctx, o.fastModel, system, articlePrompt(a),
+	if err := o.ask(ctx, o.fastModel, o.fastEffort, system, articlePrompt(a),
 		"assessment", forStrictMode(assessmentSchema(o.interests, declared)), &result); err != nil {
 		return Assessment{}, err
 	}
@@ -165,9 +203,7 @@ func (o *OpenAI) Summarize(ctx context.Context, a domain.Article, _ Assessment) 
 			openai.UserMessage(articlePrompt(a)),
 		},
 	}
-	if value, send := temperature(o.capableModel); send {
-		params.Temperature = openai.Float(value)
-	}
+	tune(&params, o.capableModel, o.capableEffort)
 
 	completion, err := o.client.Chat.Completions.New(ctx, params)
 	if err != nil {
@@ -189,8 +225,8 @@ func (o *OpenAI) Summarize(ctx context.Context, a domain.Article, _ Assessment) 
 // The schema is sent with strict validation, which is what makes the reply
 // safe to unmarshal without checking every field: the categories can only be
 // the reader's own interests, and the score can only be an integer in range.
-func (o *OpenAI) ask(ctx context.Context, model, system, prompt, schemaName string,
-	schema map[string]any, out any) error {
+func (o *OpenAI) ask(ctx context.Context, model string, effort config.ReasoningEffort,
+	system, prompt, schemaName string, schema map[string]any, out any) error {
 
 	params := openai.ChatCompletionNewParams{
 		Model: model,
@@ -208,9 +244,7 @@ func (o *OpenAI) ask(ctx context.Context, model, system, prompt, schemaName stri
 			},
 		},
 	}
-	if value, send := temperature(model); send {
-		params.Temperature = openai.Float(value)
-	}
+	tune(&params, model, effort)
 
 	completion, err := o.client.Chat.Completions.New(ctx, params)
 	if err != nil {

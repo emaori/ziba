@@ -91,10 +91,12 @@ func newAnalyzer(cfg config.Config, interests config.Interests) (pipeline.Analyz
 	switch cfg.Provider {
 	case config.ProviderOpenAI:
 		return pipeline.NewOpenAI(pipeline.OpenAIOptions{
-			APIKey:       key,
-			FastModel:    cfg.FastModel,
-			CapableModel: cfg.CapableModel,
-			Interests:    interests,
+			APIKey:        key,
+			FastModel:     cfg.FastModel,
+			CapableModel:  cfg.CapableModel,
+			FastEffort:    cfg.FastEffort,
+			CapableEffort: cfg.CapableEffort,
+			Interests:     interests,
 		})
 	default:
 		return pipeline.NewClaude(pipeline.ClaudeOptions{

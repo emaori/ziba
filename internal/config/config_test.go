@@ -53,3 +53,20 @@ func TestAPIKeyFollowsTheProvider(t *testing.T) {
 		t.Errorf("got %q from %s, want the Anthropic key", key, name)
 	}
 }
+
+// A misspelled effort must not reach the API, and must not be quietly dropped
+// either: dropped, it leaves the run on the provider's default, which is the
+// expensive one and the reason the variable exists.
+func TestParseEffort(t *testing.T) {
+	for _, raw := range []string{"low", "LOW", " medium ", "none", "max"} {
+		if _, err := ParseEffort("ZIBA_FAST_EFFORT", raw); err != nil {
+			t.Errorf("ParseEffort(%q) was refused: %v", raw, err)
+		}
+	}
+	if got, err := ParseEffort("ZIBA_FAST_EFFORT", ""); err != nil || got != "" {
+		t.Errorf(`ParseEffort("") = %q, %v; want "" and no error: empty means the provider decides`, got, err)
+	}
+	if _, err := ParseEffort("ZIBA_FAST_EFFORT", "lowest"); err == nil {
+		t.Error("ParseEffort accepted \"lowest\"; a typo must fail at startup, not per call")
+	}
+}
