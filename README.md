@@ -42,14 +42,27 @@ docker compose up -d
 ```
 
 That is all. The schema is created and migrated on startup, the scheduler
-collects on a timer, and the interface is on <http://127.0.0.1:8080>.
+collects on a timer, and the interface is on port 8080 — on this machine at
+<http://localhost:8080>, and from your phone or laptop at the host's own address.
 
-### Things worth knowing before you expose it
+### Things worth knowing
 
 **There is no login.** Ziba is single-user by design and has no accounts, no
-password and no session. Anyone who can reach the port is the reader. It binds
-to loopback for that reason; put a reverse proxy, a VPN, or a network you trust
-in front of it before setting `ZIBA_BIND=0.0.0.0`.
+password and no session. Whoever reaches the port is the reader, and can mark
+articles read as well as read them.
+
+By default the port is published on every interface, so the instance works from
+the other devices on your network without configuring anything. On a home
+network behind a router that is usually what you want, but two things are worth
+knowing before you leave it that way. A published Docker port is **not** covered
+by `ufw` — Docker writes its own firewall rules and they are consulted before
+the chain `ufw` manages, so enabling a host firewall does not close this. And if
+your router forwards the port, the instance is on the internet.
+
+Set `ZIBA_BIND=127.0.0.1` in `.env` to allow only the machine it runs on, and
+reach it from elsewhere through a reverse proxy that terminates TLS and asks for
+a password, or through a VPN. With Tailscale, putting the machine's own `100.x`
+address in `ZIBA_BIND` is the middle ground: your devices, nothing else.
 
 **It costs money to run.** Every collected article is assessed by the fast
 model, and everything above the threshold is summarised by the capable one. On

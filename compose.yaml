@@ -57,6 +57,9 @@ services:
       # the whole workflow, no rebuild involved.
       - ./config:/app/config:ro
     ports:
+      # ZIBA_PORT is the host side only. The container always listens on 8080 —
+      # EXPOSE, the healthcheck below and this mapping all say so, and the
+      # program has no setting for it. Passing it in would be harmless.
       - "127.0.0.1:${ZIBA_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ > /dev/null || exit 1"]
