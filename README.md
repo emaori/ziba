@@ -8,7 +8,82 @@ This repository holds the implementation. **Product requirements live in the
 sibling `ziba-docs` repository** (`functional/`); this README documents how the
 code works, not what the product should do.
 
+## Hosting your own instance
+
+You need Docker and nothing else — no Go toolchain, no clone of this repository.
+Everything is configured through environment variables, except your interests
+and your sources, which are hand-edited YAML files mounted into the container.
+
+Take the four files in [`deploy/`](deploy/) — `compose.yaml`, `.env.example`,
+and the two starters in `config/` — and put them in a directory of their own:
+
+```sh
+mkdir ziba && cd ziba
+curl -L https://github.com/emaori/ziba/archive/refs/heads/main.tar.gz \
+  | tar -xz --strip-components=2 ziba-main/deploy
+cp .env.example .env
+```
+
+Then edit two things.
+
+**`.env`** — a database password, your AI provider and its key, and the two
+model names. There are no default model names on purpose: a name written into a
+program is a claim about what exists, and a stale one fails at the first article
+instead of at startup. Take the current ones from your provider's model list.
+Every variable is documented in the file.
+
+**`config/interests.yaml`** — what you want to read. This is the file that makes
+Ziba yours; the starter is somebody else's taste. **`config/sources.yaml`** —
+where to read it from. The starter has three public feeds so a fresh instance
+has something to collect.
+
+```sh
+docker compose up -d
+```
+
+That is all. The schema is created and migrated on startup, the scheduler
+collects on a timer, and the interface is on <http://127.0.0.1:8080>.
+
+### Things worth knowing before you expose it
+
+**There is no login.** Ziba is single-user by design and has no accounts, no
+password and no session. Anyone who can reach the port is the reader. It binds
+to loopback for that reason; put a reverse proxy, a VPN, or a network you trust
+in front of it before setting `ZIBA_BIND=0.0.0.0`.
+
+**It costs money to run.** Every collected article is assessed by the fast
+model, and everything above the threshold is summarised by the capable one. On
+one real archive of 485 articles that came to about $1.50 with OpenAI, or
+roughly $4–5 a month at fifty articles a day. Two settings move that figure more
+than anything else: the `threshold` in `interests.yaml`, which decides how much
+reaches the expensive model, and `ZIBA_FAST_EFFORT` / `ZIBA_CAPABLE_EFFORT`,
+because reasoning tokens are billed as output and output costs several times
+input. The Statistics page reports exactly what has been spent, per interest and
+per day.
+
+**It runs without a key.** With no API key configured, collection, retrieval and
+the archive all work and only the analysis is skipped — the server says so and
+starts anyway. `ziba process -offline` uses a keyword matcher instead, which is
+enough to see the shape of the thing before paying for it.
+
+**Credentials are never written into the YAML.** A mailbox source names the
+server and the folder; `ZIBA_IMAP_USER` and `ZIBA_IMAP_PASSWORD` say who you
+are. A source address carrying a password is refused at startup. With Gmail the
+password must be an App Password, pasted without the spaces the interface shows.
+
+### Updating
+
+```sh
+docker compose pull && docker compose up -d
+```
+
+`latest` follows released tags rather than the main branch. Pin a specific one
+with `ZIBA_VERSION=v0.1.0` in `.env` if you would rather choose when to move.
+Migrations run automatically on startup and are safe to re-run.
+
 ## Requirements
+
+To develop Ziba, rather than run it:
 
 - Go 1.26 or newer
 - Docker with Compose (PostgreSQL)
@@ -26,6 +101,10 @@ make check        # fmt + vet + test — run before committing
 Everything the application needs runs in Docker: the application and
 PostgreSQL. Caddy joins the same file when remote access is set up, and the
 commands below do not change.
+
+The `compose.yaml` at the root is the development stack: it builds the image
+from source. `deploy/compose.yaml` is the one other people use, and it pulls a
+published image instead — see [Hosting your own instance](#hosting-your-own-instance).
 
 ```sh
 cp .env.example .env    # then set a real password

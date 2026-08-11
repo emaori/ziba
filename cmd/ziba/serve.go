@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -83,7 +85,15 @@ func runCmd(ctx context.Context, args []string) error {
 // alongside it.
 func serveCmd(ctx context.Context, args []string) error {
 	flags := flag.NewFlagSet("serve", flag.ContinueOnError)
-	addr := flags.String("addr", ":8080", "address to listen on")
+	// The default comes from the environment so a container can be configured
+	// without rewriting its command. A flag still wins, which is what makes the
+	// development workflow — one binary, two terminals, two ports — work.
+	//
+	// ZIBA_PORT existed before this and did nothing: it was read by compose to
+	// publish a host port and never by the program, so setting it moved the
+	// outside of the container and left the inside on 8080. The two agreeing was
+	// a coincidence of both defaulting to the same number.
+	addr := flags.String("addr", listenAddress(), "address to listen on")
 	noSchedule := flags.Bool("no-schedule", false, "serve only, do not collect or build digests on a timer")
 	offline := flags.Bool("offline", false, "schedule with the deterministic analyzer: no model, no network, no cost")
 	if err := flags.Parse(args); err != nil {
@@ -173,4 +183,21 @@ func serveCmd(ctx context.Context, args []string) error {
 		wg.Wait()
 		return err
 	}
+}
+
+// listenAddress is where to serve, taken from the environment.
+//
+// ZIBA_ADDR for the whole address, when something other than every interface is
+// wanted — "127.0.0.1:8080" behind a reverse proxy on the same host. ZIBA_PORT
+// for the common case of only the number differing. Neither set means :8080.
+func listenAddress() string {
+	if addr := strings.TrimSpace(os.Getenv("ZIBA_ADDR")); addr != "" {
+		return addr
+	}
+	if port := strings.TrimSpace(os.Getenv("ZIBA_PORT")); port != "" {
+		// Given as a bare number by everyone who sets it, and harmless to accept
+		// either way.
+		return ":" + strings.TrimPrefix(port, ":")
+	}
+	return ":8080"
 }

@@ -1,0 +1,51 @@
+# The sources Ziba reads. Hand-edited: adding a source is adding three lines.
+#
+# This is the starter shipped in the image: three public feeds, so a fresh
+# instance has something to collect on its first run. Replace it with your own.
+#
+# type:    rss | newsletter
+# enabled: optional, defaults to true — set false to stop reading a source
+#          without losing the articles already collected from it.
+#
+# roundup: rss only. For a feed that publishes issues of a link digest rather
+#          than articles, each entry pointing at a page that lists other
+#          people's writing. Ziba opens the issue and collects what it links to
+#          instead of storing the table of contents.
+#
+# categories: what this source is about, when you already know. Each name must
+#          be one of the interests in interests.yaml. Declaring them means the
+#          AI is told the subject instead of guessing it, and scores how
+#          *interesting* each piece is instead. Such articles are always shown:
+#          the relevance threshold does not apply, because you subscribed on
+#          purpose.
+#
+# collect_from: how much history a source contributes on first contact. A
+#          duration ("7d", "48h"), a date ("2026-01-01"), or "all". Default 7d.
+#          The cutoff is anchored to when the source was first added, not to
+#          today, so pausing collection never widens into lost articles.
+
+sources:
+  - name: "Hacker News — front page"
+    type: rss
+    url: "https://hnrss.org/frontpage"
+
+  - name: "IEEE Spectrum"
+    type: rss
+    url: "https://spectrum.ieee.org/feeds/feed.rss"
+
+  - name: "The Go Blog"
+    type: rss
+    url: "https://go.dev/blog/feed.atom"
+
+# A newsletter mailbox. Ziba reads it over IMAP and treats each message as a
+# source of links. Credentials are never written here — the address names the
+# server and the folder, and ZIBA_IMAP_USER and ZIBA_IMAP_PASSWORD say who you
+# are. A URL carrying a password is refused.
+#
+# In Gmail a label IS an IMAP folder, so "imaps://imap.gmail.com/DotNet" reads a
+# label. Set the filter to skip the inbox, or a labelled message is collected
+# twice by two sources racing to own it.
+#
+#  - name: "Newsletters"
+#    type: newsletter
+#    url: "imaps://imap.gmail.com/INBOX"

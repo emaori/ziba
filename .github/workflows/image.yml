@@ -1,0 +1,70 @@
+# Publish the container image other people run.
+#
+# Pushes to ghcr.io/emaori/ziba. GHCR needs no account beyond the repository's
+# own token, which is why it is used here rather than Docker Hub: one fewer
+# secret to hold and to rotate.
+#
+# Tags:
+#   main       every commit on the default branch — for trying the newest thing
+#   v1.2.3     the release itself, and v1.2, and latest
+#
+# latest follows released tags and not main, because someone self-hosting from
+# latest should get something that was deliberately released.
+name: image
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  # Build on pull requests too, without pushing: a Dockerfile that no longer
+  # builds should fail in the pull request rather than after the merge.
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # arm64 as well as amd64: a personal aggregator on a homeserver is as
+      # likely to be a Raspberry Pi or an Apple silicon machine as it is an
+      # x86 box, and an image that only runs on one of them is not an image
+      # anyone can host.
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Sign in to the registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # The version reported by `ziba version`, so an instance can say
+          # which build it is when something is wrong with it.
+          build-args: |
+            VERSION=${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,96 @@
+# Running Ziba from the published image.
+#
+# This is the file to copy if you are hosting your own instance. It pulls a
+# released image and builds nothing, so Go is not needed on the host — only
+# Docker. The compose.yaml at the root of the repository is the maintainer's
+# development stack: it builds from source and is not what you want here.
+#
+# Everything is configured through environment variables, which compose reads
+# from a .env file beside this one. See .env.example. The two YAML files are the
+# exception and cannot be environment variables: interests and sources are
+# structured, commented documents meant to be edited by hand, and flattening
+# them into a variable would make them unreadable and unversionable. They are
+# mounted instead.
+#
+#   docker compose up -d
+#
+# The schema is migrated on startup, so there is no separate setup step.
+
+services:
+  ziba-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ziba
+      POSTGRES_USER: ${POSTGRES_USER:-ziba}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - ziba-db-data:/var/lib/postgresql/data
+    # Not published on the host at all. Ziba reaches it over the compose
+    # network by name, and nothing else needs to.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  ziba:
+    image: ghcr.io/emaori/ziba:${ZIBA_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      ziba-db:
+        condition: service_healthy
+    environment:
+      # Where the data lives. Built from the two variables above so there is one
+      # password to set rather than two that must agree.
+      ZIBA_DATABASE_URL: postgres://${POSTGRES_USER:-ziba}:${POSTGRES_PASSWORD}@ziba-db:5432/ziba?sslmode=disable
+
+      # Which company answers, and with which models. There are no defaults for
+      # the model names on purpose: a name written into a program is a claim
+      # about what exists, and a stale one fails at the first article instead of
+      # at startup. Check the provider's own model list.
+      ZIBA_AI_PROVIDER: ${ZIBA_AI_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ZIBA_FAST_MODEL: ${ZIBA_FAST_MODEL:-}
+      ZIBA_CAPABLE_MODEL: ${ZIBA_CAPABLE_MODEL:-}
+
+      # How hard each model thinks. This is the setting that decides the bill:
+      # reasoning tokens are billed as output, and output costs several times
+      # input. Neither job here is hard.
+      ZIBA_FAST_EFFORT: ${ZIBA_FAST_EFFORT:-low}
+      ZIBA_CAPABLE_EFFORT: ${ZIBA_CAPABLE_EFFORT:-low}
+
+      # A newsletter mailbox, if one is configured in sources.yaml. The address
+      # and folder live there; only the credentials are here.
+      ZIBA_IMAP_USER: ${ZIBA_IMAP_USER:-}
+      ZIBA_IMAP_PASSWORD: ${ZIBA_IMAP_PASSWORD:-}
+
+      # The schedule.
+      ZIBA_COLLECT_EVERY: ${ZIBA_COLLECT_EVERY:-6h}
+      ZIBA_DIGEST_AT: ${ZIBA_DIGEST_AT:-06:30}
+
+      # The digest is scheduled in local time, so the container has to know
+      # which local. Without this it runs on UTC and arrives at the wrong hour.
+      TZ: ${TZ:-Etc/UTC}
+    volumes:
+      # Your interests and your sources, read-only. Edit and restart; there is
+      # nothing to rebuild. Remove this line to run on the starter config baked
+      # into the image.
+      - ./config:/app/config:ro
+    ports:
+      # Loopback by default, because this has no authentication of its own and
+      # is meant to sit behind something that does — a reverse proxy, a VPN, or
+      # a home network you trust. Set ZIBA_BIND=0.0.0.0 to reach it from another
+      # machine, and understand that anyone who can reach the port is the reader.
+      - "${ZIBA_BIND:-127.0.0.1}:${ZIBA_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  ziba-db-data:

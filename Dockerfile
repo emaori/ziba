@@ -32,9 +32,14 @@ WORKDIR /app
 
 COPY --from=build /out/ziba /usr/local/bin/ziba
 
-# A working default. Compose mounts the real one over it, so the hand-edited
-# files can be changed without rebuilding the image.
-COPY config /app/config
+# A neutral starter, so a container with no volume mounted still boots and
+# collects something. Deliberately not the repository's own config/ directory:
+# that one names the newsletters the maintainer subscribes to and the labels in
+# their mailbox — a poor default for everyone else, and somebody's reading list
+# baked into a public image.
+#
+# Mount your own over /app/config; nothing needs rebuilding.
+COPY deploy/config /app/config
 
 # Nothing here needs to be root.
 USER nobody
