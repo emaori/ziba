@@ -38,7 +38,7 @@ type Interest struct {
 func LoadInterests(path string) (Interests, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return Interests{}, fmt.Errorf("read interests file: %w", err)
+		return Interests{}, missingFile("interests", path, err)
 	}
 
 	var interests Interests

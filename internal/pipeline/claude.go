@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go"
@@ -48,6 +49,10 @@ type ClaudeOptions struct {
 	FastModel    string
 	CapableModel string
 	Interests    config.Interests
+
+	// HTTPClient replaces the default one. The debug journal uses it to record
+	// every exchange; nil means the SDK's own.
+	HTTPClient *http.Client
 }
 
 // NewClaude builds the analyzer.
@@ -62,7 +67,7 @@ func NewClaude(opts ClaudeOptions) (*Claude, error) {
 	}
 
 	return &Claude{
-		client:       anthropic.NewClient(option.WithAPIKey(opts.APIKey)),
+		client:       anthropic.NewClient(clientOptions(opts)...),
 		fastModel:    opts.FastModel,
 		capableModel: opts.CapableModel,
 		interests:    opts.Interests,
@@ -275,4 +280,14 @@ func articlePrompt(a domain.Article) string {
 	}
 	fmt.Fprintf(&b, "URL: %s\n\n%s", a.URL, text)
 	return b.String()
+}
+
+// clientOptions builds the SDK options, adding the journal's client when there
+// is one.
+func clientOptions(opts ClaudeOptions) []option.RequestOption {
+	options := []option.RequestOption{option.WithAPIKey(opts.APIKey)}
+	if opts.HTTPClient != nil {
+		options = append(options, option.WithHTTPClient(opts.HTTPClient))
+	}
+	return options
 }

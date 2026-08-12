@@ -114,8 +114,15 @@ func serveCmd(ctx context.Context, args []string) error {
 	}
 
 	s, err := newSetup(ctx, mode)
-	if err != nil && mode == analyzerReal {
-		slog.Warn("analysis unavailable, scheduling without it", "error", err)
+	if err != nil && mode == analyzerReal && errors.Is(err, errAnalyzerUnavailable) {
+		// Only this. A configuration error will fail again on the second
+		// attempt, so retrying it just prints a wrong explanation before the
+		// right one.
+		// The whole error, not errors.Unwrap of it: the sentinel is attached
+		// with a second %w, and Unwrap returns nil for a multiply-wrapped
+		// error — which logged "error=<nil>" and threw away the only useful
+		// part of the line.
+		slog.Warn("scheduling without analysis", "error", err)
 		s, err = newSetup(ctx, analyzerNone)
 	}
 	if err != nil {

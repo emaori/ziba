@@ -30,10 +30,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # arm64 as well as amd64: a personal aggregator on a homeserver is as
-      # likely to be a Raspberry Pi or an Apple silicon machine as it is an
-      # x86 box, and an image that only runs on one of them is not an image
-      # anyone can host.
+      # arm64 as well as amd64: a self-hosted aggregator is as likely to run on
+      # a Raspberry Pi or an Apple silicon machine as on an x86 box, and an
+      # image that only runs on one of them is not an image anyone can host.
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
 

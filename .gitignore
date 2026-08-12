@@ -6,6 +6,16 @@
 .env
 *.local.yaml
 
+# Your own interests and sources: a reading list, and the folders in a mailbox.
+# The .example siblings are committed and are what a fresh clone starts from —
+# the same arrangement as .env and .env.example above.
+/config/*.yaml
+!/config/*.example.yaml
+
+# The model journal, when it is switched on. It holds the full text of every
+# article sent to a model, so it is never something to commit.
+/log/
+
 # Test and coverage output
 coverage.out
 

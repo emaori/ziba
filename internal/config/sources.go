@@ -76,7 +76,7 @@ type NewsletterEntry struct {
 func LoadSources(path string, interests Interests) ([]domain.Source, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("read sources file: %w", err)
+		return nil, missingFile("sources", path, err)
 	}
 
 	var file SourcesFile

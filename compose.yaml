@@ -1,4 +1,7 @@
-# Local and homeserver deployment.
+# The development stack: builds the image from source.
+#
+# For running a published release instead — which is what someone hosting their
+# own instance wants — see deploy/compose.yaml.
 #
 # Two services: the application and its database. A headless-browser sidecar
 # lived here while scraping did; both were removed together.
@@ -17,9 +20,9 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     ports:
       # Loopback only: the database is never exposed on the network. Note that
-      # "localhost" here is the Docker host — the homeserver, not the machine
-      # running the compose command. Reach it from a development machine with
-      # `make db-tunnel`.
+      # "localhost" here is the Docker host, which is not the machine running
+      # the compose command when the context is remote. Reach it from elsewhere
+      # with `make db-tunnel`.
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - ziba-db-data:/var/lib/postgresql/data
@@ -35,6 +38,8 @@ services:
     build:
       context: .
       args:
+        # `make image` sets this from `git describe`. Building with compose
+        # directly gets "dev", which is honest: nothing computed a version.
         VERSION: ${ZIBA_VERSION:-dev}
     image: ziba-api:local
     container_name: ziba-api
@@ -56,11 +61,21 @@ services:
       # The hand-edited files, mounted read-only: editing them and restarting is
       # the whole workflow, no rebuild involved.
       - ./config:/app/config:ro
+      # The model journal, when ZIBA_MODEL_JOURNAL is on, so it can be read from
+      # here rather than only inside the container.
+      - ./log:/app/log
     ports:
       # ZIBA_PORT is the host side only. The container always listens on 8080 —
       # EXPOSE, the healthcheck below and this mapping all say so, and the
       # program has no setting for it. Passing it in would be harmless.
-      - "127.0.0.1:${ZIBA_PORT:-8080}:8080"
+      #
+      # ZIBA_BIND is which interface it appears on, defaulting to all of them so
+      # a deployed instance is reachable from a phone or another laptop. This
+      # same file runs locally and on whatever machine you deploy to, and those
+      # two want different answers, so the answer belongs in each machine's own
+      # .env. A development laptop should set ZIBA_BIND=127.0.0.1: Ziba has no
+      # login, and a laptop joins networks nobody chose.
+      - "${ZIBA_BIND:-0.0.0.0}:${ZIBA_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ > /dev/null || exit 1"]
       interval: 30s

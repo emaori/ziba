@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"regexp"
 	"slices"
 	"strings"
@@ -52,6 +53,10 @@ type OpenAIOptions struct {
 	// them, so they are not required.
 	FastEffort    config.ReasoningEffort
 	CapableEffort config.ReasoningEffort
+
+	// HTTPClient replaces the default one. The debug journal uses it to record
+	// every exchange; nil means the SDK's own.
+	HTTPClient *http.Client
 }
 
 // reasoningModel matches the families that refuse a temperature: the o-series —
@@ -146,8 +151,13 @@ func NewOpenAI(opts OpenAIOptions) (*OpenAI, error) {
 				"there is no default, because a stale one fails at the first call")
 	}
 
+	options := []option.RequestOption{option.WithAPIKey(opts.APIKey)}
+	if opts.HTTPClient != nil {
+		options = append(options, option.WithHTTPClient(opts.HTTPClient))
+	}
+
 	return &OpenAI{
-		client:        openai.NewClient(option.WithAPIKey(opts.APIKey)),
+		client:        openai.NewClient(options...),
 		fastModel:     opts.FastModel,
 		capableModel:  opts.CapableModel,
 		fastEffort:    opts.FastEffort,

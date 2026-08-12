@@ -24,42 +24,35 @@ import (
 // because "these two trackers are distinct" is itself under test.
 //
 // Everything here is matched tolerantly of quoted-printable, which is how mail
-// arrives. A first attempt was not, and it let three things through: a subscriber
-// uuid split across a soft line break, the sender's domain standing alone in a
-// DKIM header, and the display name, which is not an address at all.
+// arrives. A first attempt was not, and let a subscriber uuid through because a
+// soft line break had split it in half.
+//
+// Nothing here names a particular person. The rules describe shapes — an
+// address, a uuid, a long opaque run, a token after an unsubscribe path — so
+// they work the same for whoever runs the capture against their own mailbox.
 type Scrubber struct {
 	seen map[string]string
 }
 
 func NewScrubber() *Scrubber { return &Scrubber{seen: make(map[string]string)} }
 
-// identifying are the exact strings that must never survive, longest first so
-// that an address is replaced before the domain inside it.
-var identifying = []struct{ from, to string }{
-	{"emanuele@origgi.com", "reader@fixture.test"},
-	{"ziba.ns.emaori@gmail.com", "inbox@fixture.test"},
-	{"origgi.com", "fixture.test"},
-	{"ziba.ns.emaori", "inbox"},
-	{"emanuele", "reader"}, // the display name, and the local part alone
-	{"origgi", "fixture"},
-	{"emaori", "inbox"},
-}
+// There was once a table of exact strings here — one reader's address, their
+// domain, their display name — because the first captures were newsletters
+// forwarded from a personal account, and forwarding puts the forwarder in the
+// From line of every one. That was a property of how the corpus was gathered
+// and not of the corpus itself. Mail arriving where it was sent does not carry
+// the reader's own address, so the table went with the forwarding, and with it
+// the odd situation of a repository publishing the very addresses its scrubber
+// existed to remove.
+//
+// What replaced it is the rule that was always doing most of the work: any
+// address at all is replaced, whoever it belongs to. That is strictly broader
+// than a list of known strings, and it cannot go stale when somebody else runs
+// the capture against their own mailbox.
 
 // softBreak is quoted-printable's line continuation, which may sit between any
 // two characters of anything.
 const softBreak = `(?:=\r?\n)?`
-
-// qpLiteral matches a literal even where soft line breaks have split it.
-func qpLiteral(s string) string {
-	var b strings.Builder
-	for i, r := range s {
-		if i > 0 {
-			b.WriteString(softBreak)
-		}
-		b.WriteString(regexp.QuoteMeta(string(r)))
-	}
-	return b.String()
-}
 
 // qpRepeat matches n of a character class, soft breaks allowed between them.
 func qpRepeat(class string, n int) string {
@@ -69,8 +62,6 @@ func qpRepeat(class string, n int) string {
 const hex = `[0-9a-fA-F]`
 
 var (
-	identifyingPatterns = buildIdentifyingPatterns()
-
 	// A uuid, which is how several publishers key a subscriber.
 	uuidLike = regexp.MustCompile(
 		qpRepeat(hex, 8) + softBreak + `-` + softBreak + qpRepeat(hex, 4) +
@@ -107,20 +98,9 @@ var (
 	anyAddress = regexp.MustCompile(`[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}`)
 )
 
-func buildIdentifyingPatterns() []*regexp.Regexp {
-	patterns := make([]*regexp.Regexp, 0, len(identifying))
-	for _, pair := range identifying {
-		patterns = append(patterns, regexp.MustCompile(`(?i)`+qpLiteral(pair.from)))
-	}
-	return patterns
-}
-
 // Text scrubs one captured document.
 func (s *Scrubber) Text(in string) string {
 	out := in
-	for i, pattern := range identifyingPatterns {
-		out = pattern.ReplaceAllLiteralString(out, identifying[i].to)
-	}
 
 	out = uuidLike.ReplaceAllStringFunc(out, func(match string) string {
 		return s.standIn("uuid", unfold(match))
@@ -205,11 +185,6 @@ func (s *Scrubber) standIn(kind, value string) string {
 // write rather than quietly commit it.
 func Leaks(text string) []string {
 	var found []string
-	for i, pattern := range identifyingPatterns {
-		if pattern.MatchString(text) {
-			found = append(found, identifying[i].from)
-		}
-	}
 	for _, match := range anyAddress.FindAllString(text, -1) {
 		if !strings.HasSuffix(match, "@fixture.test") && !strings.HasSuffix(match, "@example.com") {
 			found = append(found, match)

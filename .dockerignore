@@ -2,6 +2,12 @@
 .env
 *.local.yaml
 
+# One reader's interests and sources. The image is built from the .example
+# siblings, so the real ones have no business in the build context at all —
+# `COPY . .` in the build stage would otherwise carry them in.
+config/*.yaml
+!config/*.example.yaml
+
 .git
 .gitignore
 

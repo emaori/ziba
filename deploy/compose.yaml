@@ -74,15 +74,26 @@ services:
       # The digest is scheduled in local time, so the container has to know
       # which local. Without this it runs on UTC and arrives at the wrong hour.
       TZ: ${TZ:-Etc/UTC}
+
+      # Record every model request and reply to log/modelJournal.txt. Off unless
+      # you are debugging a prompt: it holds the full text of every article
+      # sent, so it grows at the rate of everything collected.
+      ZIBA_MODEL_JOURNAL: ${ZIBA_MODEL_JOURNAL:-false}
     volumes:
-      # Your interests and your sources, read-only. Edit and restart; there is
-      # nothing to rebuild. Remove this line to run on the starter config baked
-      # into the image.
+      # Your interests and your sources, read-only. Required: the image ships
+      # no configuration, so without this the container stops on its first run
+      # and says which file it wanted. That is deliberate — an instance quietly
+      # collecting somebody else's interests looks like it is working.
+      #
+      # Edit and restart; there is nothing to rebuild.
       - ./config:/app/config:ro
+      # The model journal, if you turn it on. Optional: without this line the
+      # file is still written, inside the container where nothing can read it.
+      - ./log:/app/log
     ports:
       # Every interface by default, so the instance is reachable from the other
       # machines on your network — a phone, a laptop — without editing anything
-      # first. That is the common case for a homeserver and the reason for the
+      # first. That is the common case for a self-hosted box and the reason for
       # default.
       #
       # It also means Ziba is reachable by anything that can route to this host,

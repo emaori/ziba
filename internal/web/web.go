@@ -3,7 +3,7 @@
 //
 // Pages are rendered on the server with html/template. There is no build step
 // and no JavaScript toolchain: one binary serves the whole interface, which is
-// the point of a Go monolith on a homeserver.
+// the point of a Go monolith you can run on a small machine.
 package web
 
 import (

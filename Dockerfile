@@ -14,7 +14,14 @@ RUN go mod download
 
 COPY . .
 
-ARG VERSION=docker
+# What `ziba version` will report. It has to be passed in — .dockerignore keeps
+# .git out of the build context, deliberately, so the build cannot work it out
+# for itself. The Makefile and the release workflow both supply it.
+#
+# The fallback says "unknown" rather than naming a build system, because that is
+# what it means: nobody told this build what it was. It was "docker", which read
+# like a version and was not one.
+ARG VERSION=unknown
 # CGO off is what makes the binary static, and static is what lets the runtime
 # image stay this small.
 RUN CGO_ENABLED=0 go build -trimpath \
@@ -32,14 +39,22 @@ WORKDIR /app
 
 COPY --from=build /out/ziba /usr/local/bin/ziba
 
-# A neutral starter, so a container with no volume mounted still boots and
-# collects something. Deliberately not the repository's own config/ directory:
-# that one names the newsletters the maintainer subscribes to and the labels in
-# their mailbox — a poor default for everyone else, and somebody's reading list
-# baked into a public image.
+# The configuration directory, empty.
 #
-# Mount your own over /app/config; nothing needs rebuilding.
-COPY deploy/config /app/config
+# No starter is baked in, deliberately. An image that boots with somebody else's
+# interests looks like it is working while collecting things nobody asked for,
+# and the reader has no reason to look at the log. Empty means a new instance
+# stops on its first run and says exactly what is missing and where to put it.
+#
+# Mount a directory holding interests.yaml and sources.yaml here.
+RUN mkdir -p /app/config && chown nobody /app/config
+
+# Where the model journal is written when ZIBA_MODEL_JOURNAL is on. Created
+# here, and owned by the user the process runs as, because that process cannot
+# create it: /app belongs to root and nobody may not write there. Bind-mount it
+# to read the file from outside.
+RUN mkdir -p /app/log && chown nobody /app/log
+VOLUME ["/app/log"]
 
 # Nothing here needs to be root.
 USER nobody

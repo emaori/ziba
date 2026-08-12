@@ -14,14 +14,17 @@ You need Docker and nothing else — no Go toolchain, no clone of this repositor
 Everything is configured through environment variables, except your interests
 and your sources, which are hand-edited YAML files mounted into the container.
 
-Take the four files in [`deploy/`](deploy/) — `compose.yaml`, `.env.example`,
-and the two starters in `config/` — and put them in a directory of their own:
+You need `deploy/compose.yaml`, `deploy/.env.example`, and the two starter
+configs. In a directory of their own:
 
 ```sh
 mkdir ziba && cd ziba
 curl -L https://github.com/emaori/ziba/archive/refs/heads/main.tar.gz \
-  | tar -xz --strip-components=2 ziba-main/deploy
+  | tar -xz --strip-components=1 ziba-main/deploy ziba-main/config
+mv deploy/.env.example deploy/compose.yaml . && rmdir deploy
 cp .env.example .env
+cp config/interests.example.yaml config/interests.yaml
+cp config/sources.example.yaml   config/sources.yaml
 ```
 
 Then edit two things.
@@ -41,8 +44,9 @@ has something to collect.
 docker compose up -d
 ```
 
-That is all. The schema is created and migrated on startup, the scheduler
-collects on a timer, and the interface is on port 8080 — on this machine at
+Both YAML files are required — the image contains neither, and a container
+without them stops and says so. The schema is created and migrated on startup,
+the scheduler collects on a timer, and the interface is on port 8080 — on this machine at
 <http://localhost:8080>, and from your phone or laptop at the host's own address.
 
 ### Things worth knowing
@@ -84,6 +88,26 @@ server and the folder; `ZIBA_IMAP_USER` and `ZIBA_IMAP_PASSWORD` say who you
 are. A source address carrying a password is refused at startup. With Gmail the
 password must be an App Password, pasted without the spaces the interface shows.
 
+### Debugging what the model was asked
+
+Set `ZIBA_MODEL_JOURNAL=true` and every request to a model, with its reply, is
+appended to `log/modelJournal.txt` — bind-mounted by both compose files, so it
+is readable from the host.
+
+It answers the question the database cannot: not what the model said, but what
+exactly it was asked. A prompt is assembled from your interests file, the
+article, a JSON schema and several rules about declared categories, and when an
+answer is surprising the assembled text is the thing to read.
+
+It is written at the HTTP layer, below both providers, so nothing can be added
+later that escapes it. Headers are never recorded, which is how the API key
+stays out of a file people paste into bug reports. It holds the full text of
+every article sent and is never rotated, so turn it off again.
+
+On Linux the container runs as uid 65534 and a `log/` directory created by root
+on the host will not be writable by it. Startup fails with a message saying so
+rather than quietly carrying on: `chown 65534 log`.
+
 ### Updating
 
 ```sh
@@ -93,6 +117,37 @@ docker compose pull && docker compose up -d
 `latest` follows released tags rather than the main branch. Pin a specific one
 with `ZIBA_VERSION=v0.1.0` in `.env` if you would rather choose when to move.
 Migrations run automatically on startup and are safe to re-run.
+
+## Your configuration
+
+Two YAML files decide what Ziba does, and they work exactly like `.env`:
+
+```
+config/interests.yaml          yours, git-ignored
+config/interests.example.yaml  committed, the starter
+config/sources.yaml            yours, git-ignored
+config/sources.example.yaml    committed, the starter
+```
+
+A fresh clone starts the same way it does for secrets:
+
+```sh
+cp config/interests.example.yaml config/interests.yaml
+cp config/sources.example.yaml   config/sources.yaml
+```
+
+There is no build step and no second copy — the file you edit is the file the
+program reads.
+
+**The image ships no configuration at all.** Nothing is baked in, so a container
+with nothing mounted stops on its first run and says which file it wanted and
+where to put it. That is deliberate: an instance quietly collecting somebody
+else's interests looks like it is working, and nobody reads the log of something
+that appears to work.
+
+The arrangement exists so the repository can be public without publishing a
+reading list: `sources.yaml` names the newsletters somebody subscribes to and
+the folders in their mailbox. Not a secret, but not everyone's business.
 
 ## Requirements
 
@@ -120,8 +175,10 @@ from source. `deploy/compose.yaml` is the one other people use, and it pulls a
 published image instead — see [Hosting your own instance](#hosting-your-own-instance).
 
 ```sh
-cp .env.example .env    # then set a real password
-make dev                # start everything locally and migrate
+cp .env.example .env                                  # then set a real password
+cp config/interests.example.yaml config/interests.yaml
+cp config/sources.example.yaml   config/sources.yaml
+make dev                                              # start everything and migrate
 ```
 
 `make dev` is `up` followed by `migrate`. The rest: `make down` stops the stack
@@ -129,29 +186,27 @@ and keeps the data, `make restart` recreates it after editing `compose.yaml`,
 `make ps` and `make logs` show what is happening, `make db-psql` opens a psql
 shell inside the database container.
 
-### Local engine vs homeserver
+### Deploying to another machine
 
-There are two Docker engines and they are not interchangeable, so every
-Compose command names one explicitly:
-
-| Context | Use | Reaching published ports |
-|---|---|---|
-| `desktop-linux` (default) | development on this machine | directly on `localhost` |
-| `homeserver` | the deployment target, over SSH | needs `make db-tunnel` |
-
-The default is local on purpose: a stray `make down` should never take out the
-real deployment. Target the homeserver by saying so:
+Every Compose command names a Docker context explicitly, and the default is
+this machine. That is a safety choice: a stray `make down` should never take
+out something you are actually running. Deploying elsewhere means saying so:
 
 ```sh
-make up DOCKER_CONTEXT=homeserver
-make db-tunnel            # second terminal: localhost:5432 -> homeserver
+docker context create my-server --docker host=ssh://user@example
+make up DOCKER_CONTEXT=my-server
+```
+
+The database is published on loopback only, which on a remote machine means
+*its* loopback, so reaching it from here needs a tunnel:
+
+```sh
+make db-tunnel SSH_HOST=user@example    # second terminal
 make migrate
 ```
 
-Ports are published on loopback only, which on the homeserver means *its*
-loopback — hence the tunnel. The two setups both use port 5432 locally, so the
-tunnel and the local stack cannot run at the same time; stop one before the
-other. Override with `DB_PORT` or `SSH_HOST` if either changes.
+Both ends use 5432, so the tunnel and a local stack cannot run at once; stop
+one before the other. `DB_PORT` overrides the port.
 
 ## Collecting
 
@@ -226,8 +281,7 @@ make run-once    # do the whole chain now, without waiting for a timer
 ```
 
 `make deploy` targets the **local** Docker engine, like every other Compose
-target here. Deploying to the homeserver is `DOCKER_CONTEXT=homeserver`, and has
-not been done yet.
+target here. Deploying elsewhere is `DOCKER_CONTEXT=<your context>`.
 
 Two things the container needs that are easy to forget: `ca-certificates`,
 without which every HTTPS source fails, and `tzdata` plus a `TZ` setting —

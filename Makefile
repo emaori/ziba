@@ -1,27 +1,40 @@
 BINARY  := ziba
 PKG     := github.com/emaori/ziba
-VERSION ?= $(shell date +%Y%m%d)-dev
+# What `ziba version` reports. Taken from the repository, so a binary can be
+# traced back to what produced it:
+#
+#   v0.1.0              built from exactly that tag
+#   v0.1.0-3-gab12cd    three commits past it
+#   v0.1.0-3-gab12cd-dirty   ...with uncommitted changes, so not reproducible
+#   ab12cd              a repository with no tags yet
+#   dev                 not a git checkout at all, e.g. an extracted tarball
+#
+# A date stamp was here before and answered a question nobody asks. "When was
+# this built" is far less useful than "what is this", and the date was the same
+# for every build on a given day.
+VERSION ?= $(shell git describe --tags --dirty --always 2>/dev/null || echo dev)
 
-# Which Docker engine to talk to. There are two, and they are not
-# interchangeable:
+# Which Docker engine to talk to.
 #
-#   desktop-linux  local Docker Desktop — development. Published ports land on
-#                  this machine, so nothing else is needed to reach them.
-#   homeserver     the deployment target, reached over SSH. Published ports land
-#                  on the homeserver's loopback, so reaching them from here
-#                  needs `make db-tunnel`.
+# The default is this machine, and that is a safety choice rather than a
+# convenience: a stray `make down` should never take out something you are
+# actually running. Deploying somewhere else means saying so, every time.
 #
-# Development defaults to local: a stray `make down` should never take out the
-# real deployment. Target the homeserver explicitly, e.g.
-#   make up DOCKER_CONTEXT=homeserver
-DOCKER_CONTEXT ?= desktop-linux
+#   make up DOCKER_CONTEXT=my-server
+#
+# A remote context is usually SSH — `docker context create my-server
+# --docker host=ssh://user@host`. Published ports then land on *that* machine's
+# loopback, so reaching its database from here needs `make db-tunnel`.
+DOCKER_CONTEXT ?= default
 COMPOSE        := docker --context $(DOCKER_CONTEXT) compose
 
-SSH_HOST ?= homeserver
+# The host `make db-tunnel` forwards from. No default: it belongs to whoever is
+# deploying, and a wrong guess would open a tunnel to the wrong machine.
+SSH_HOST ?=
 DB_PORT  ?= 5432
 
 .PHONY: build run test test-integration fmt vet tidy check clean \
-        capture dryrun dev image deploy up down restart ps logs app-logs db-psql db-tunnel migrate collect process digest run-once serve
+        capture dryrun realrun dev image deploy up down restart ps logs app-logs db-psql db-tunnel migrate collect process digest run-once serve
 
 ## build: compile the binary into bin/
 build:
@@ -99,8 +112,10 @@ clean:
 dev: up migrate
 
 ## image: build the application image
+## VERSION is passed through, or the image would report whatever the Dockerfile
+## falls back to — the whole point of computing it above.
 image:
-	$(COMPOSE) build ziba-api
+	ZIBA_VERSION=$(VERSION) $(COMPOSE) build ziba-api
 
 ## deploy: rebuild the image and bring the stack up (local by default)
 deploy: image up
@@ -139,8 +154,10 @@ db-psql:
 	@echo "    cp .env.example .env" >&2
 	@exit 1
 
-## db-tunnel: forward the homeserver database to localhost (run in its own terminal)
+## db-tunnel: forward a remote database to localhost (run in its own terminal)
+## Needs SSH_HOST, e.g. make db-tunnel SSH_HOST=user@example
 db-tunnel:
+	@test -n "$(SSH_HOST)" || { echo "set SSH_HOST, e.g. make db-tunnel SSH_HOST=user@example" >&2; exit 1; }
 	@echo "forwarding localhost:$(DB_PORT) -> $(SSH_HOST):$(DB_PORT) — Ctrl-C to stop"
 	ssh -N -o ExitOnForwardFailure=yes -L $(DB_PORT):127.0.0.1:$(DB_PORT) $(SSH_HOST)
 
