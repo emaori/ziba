@@ -1,5 +1,6 @@
 BINARY  := ziba
 PKG     := github.com/emaori/ziba
+IMAGE   := ghcr.io/emaori/ziba
 # What `ziba version` reports. Taken from the repository, so a binary can be
 # traced back to what produced it:
 #
@@ -111,11 +112,12 @@ clean:
 ## dev: bring the whole local stack up and migrate — one command to start working
 dev: up migrate
 
-## image: build the application image
-## VERSION is passed through, or the image would report whatever the Dockerfile
-## falls back to — the whole point of computing it above.
+## image: build the application image from the Dockerfile
+## Tagged as the published name, so `make up` runs what was just built instead
+## of pulling. VERSION is passed in because the Dockerfile cannot work it out:
+## .dockerignore keeps .git out of the build context.
 image:
-	ZIBA_VERSION=$(VERSION) $(COMPOSE) build ziba-api
+	docker build --build-arg VERSION=$(VERSION) -t $(IMAGE):latest .
 
 ## deploy: rebuild the image and bring the stack up (local by default)
 deploy: image up

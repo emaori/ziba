@@ -1,8 +1,8 @@
 # What is worth reading. Hand-edited, changes rarely.
 #
-# This is the starter shipped in the image. It is meant to be replaced: these
-# are just some examples.
-# Mount your own over /app/config.
+# This file is an example and is meant to be replaced: these interests are not
+# everyone's. The image ships no configuration at all, so an edited copy of it
+# has to be mounted at /app/config.
 #
 # threshold: the relevance score (0-100) an article must reach to be summarized
 #            and to appear in the daily digest. Below it an article is still

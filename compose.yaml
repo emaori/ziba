@@ -1,4 +1,5 @@
-# Two services: the application and its database.
+# Runs Ziba from its published image: two services, the application and its
+# database. Nothing is built here — see the Dockerfile for that.
 #
 # Secrets come from a .env file next to this one — see .env.example.
 
@@ -24,10 +25,13 @@ services:
       start_period: 10s
 
   # Ziba itself: the web interface and the schedule, in one process.
+  #
+  # The published image, not a build: the image is produced from the Dockerfile
+  # by the release workflow, and compose only runs it. `make image` builds the
+  # same tag locally when working on the code, and compose uses whatever is
+  # there before reaching for the registry.
   ziba-api:
-    build:
-      context: .
-    image: ghcr.io/emaori/ziba-api:latest
+    image: ghcr.io/emaori/ziba:${ZIBA_VERSION:-latest}
     container_name: ziba-api
     restart: unless-stopped
     depends_on:
@@ -39,7 +43,9 @@ services:
       # These override whatever .env holds, because inside the network the
       # other services are reached by name, not on loopback. The values in .env
       # are for running the binary outside Docker during development.
-      ZIBA_DATABASE_URL: postgres://${POSTGRES_USER:-ziba}:${POSTGRES_PASSWORD}@ziba-db:${POSTGRES_PORT:-5432}/ziba?sslmode=disable
+      # 5432, not POSTGRES_PORT: that one is the host side of the mapping
+      # below, and inside the network the database always listens on 5432.
+      ZIBA_DATABASE_URL: postgres://${POSTGRES_USER:-ziba}:${POSTGRES_PASSWORD}@ziba-db:5432/ziba?sslmode=disable
       # The digest is scheduled in local time, so the container has to know
       # which local. Without this it would run on UTC.
       TZ: ${TZ:-Europe/Rome}

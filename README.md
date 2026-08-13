@@ -1,20 +1,22 @@
 # Ziba
 
-Ziba is a self-hosted personal content aggregator: collects articles from configured
-sources, processes them with AI, and presents them as a personalized daily
-magazine.
+Ziba is a self-hosted personal content aggregator. It collects articles from
+configured sources, processes them with AI, and presents them as a personalized
+daily magazine.
 
-Different sources and different interests can be configured: the articles will be collected from sources and will be shown in Ziba Web UI daily digest only if they match the configured interests with a threeshold (score) above a configured value. The articles that are selected and pass the threshold will be then summariezed.
+Sources and interests are both configured by hand. An article is collected from
+its source and appears in the daily digest only if it matches an interest and
+scores above a configured threshold. Articles that pass are then summarized.
 
-So far the supported type of sources are:
-- Feed RSS
-- E-mail Newsletter
+The supported source types are:
+- RSS feeds
+- Email newsletters
 
-In Ziba Web UI the articles will be groupd by inteests and ordered according to the score they got.
+In the web interface, articles are grouped by interest and ordered by score.
 
-Score analysis and summarization are performed using LLM set by the user: a fast model to analyze and score the article and a more capable model to generate the summary.
-
-Currently the supported LLM are the ones from OpenAI and Anthropic.
+Scoring and summarization use models chosen by the operator: a fast one to
+analyze and score each article, and a more capable one to write the summary.
+Models from OpenAI and Anthropic are supported.
 
 Each article goes through two stages. **Assessment** says what the article is
 about and rates it against the interests, in a single call on the fast model.
@@ -30,19 +32,22 @@ Articles below the threshold keep their score and stay browsable in the archive.
 They are simply not summarized and not promoted: the AI curates, it does not
 censor.
 
-An offline analyzer is availbale but not very useful since it just tries to match according to a vocabulary defined in ```interests.jaml``` (the subtopics). This is usually mainly used for debug reason.
+An offline analyzer is also available. It only matches against the vocabulary
+defined in `interests.yaml` (the subtopics), so it is crude — it exists for
+debugging, not for daily use.
 
 
 ## Deploy
 
-Before starting the deploy, three files must be provided: the env file and two configs file, ```interests.yaml``` and ```sources.yaml```.
+Three files must be provided before deploying: the env file, and the two
+configuration files `interests.yaml` and `sources.yaml`.
 
 ### interests.yaml
 
 `config/interests.yaml` describes what is worth reading, and sets the threshold
 an article must reach to be summarized and to appear in the digest.
 
-An example template is available in ```config/interests.example.yaml```.
+An example template is available in `config/interests.example.yaml`.
 
 For instance:
 
@@ -56,22 +61,27 @@ interests:
     note: "Practical applications and how things actually work. Less interested in funding rounds and industry gossip."
 ```
 
-```threshold: 60``` means the the relevance score (0-100) an article must reach to be summarized and to appear in the daily digest is 60. Then the AI interest is defined with its subtopic.
+`threshold: 60` means an article must score 60 or more, on a scale of 0 to 100,
+to be summarized and to appear in the daily digest. Below that it is defined one
+interest, AI, with its subtopics.
 
-In ```config/interests.example.yaml``` is also available the documentation of each sections.
+`config/interests.example.yaml` documents every field.
 
-### sources.jaml
+### sources.yaml
 
 Sources are listed in `config/sources.yaml`, hand-edited. Adding one is adding
 three lines; `enabled: false` stops reading a source without losing the articles
 already collected from it. Removing a source from the file disables it rather
 than deleting it, for the same reason.
 
-So far the only supported type of sources are feed RSS and newsletter (e-mail) but in the near future other type of sources will be added.
+Every source can bound how much back catalogue it brings with it, and a
+newsletter source can read a single mail folder.
 
-Every sources can be configured to read not too much back catalouge and the newsletter can be configured to read only the e-mail of a specific folder. 
-
-A source can also be configured to a specific interest: for instance it can be already known that a newsletter is about a specific interest (eg: AI) so that source can be labeld for that interest and the Ziba analyzer will sikp the classification and it will claculate just the score and the summary. In this case the articles are always shown in Ziba Web UI but are added to the daily digest only if the score is above the threeshold.
+A source can also declare which interest it belongs to. When a newsletter is
+already known to be about AI, for example, labelling it that way makes the
+analyzer skip classification and work out only the score and the summary. Such
+articles are always shown in the web interface, and reach the daily digest only
+if their score clears the threshold.
 
 ```yaml
 - name: "The Go Blog"
@@ -91,19 +101,23 @@ A source can also be configured to a specific interest: for instance it can be a
     max_messages: 50
 ```
 
-In this example there are two sources: a RSS feed (The Go Blog) configured to collect from the last 14 days the first time the sources is used, and a newsltter configured to read the e-mails from a gmail account (configured in the env file, see below). The articles extracted from the newsletter are categorized as AI so the analyzer will not try to classify them among the defiend interests.
+Two sources here: an RSS feed (The Go Blog), which collects the last 14 days
+the first time it is read, and a newsletter read from a Gmail account whose
+credentials are named in the env file. Articles from that newsletter are
+categorized as AI, so the analyzer does not try to classify them.
 
-More details on how configure the sources can be read in the ```config/sources.example.yaml``` file.
+`config/sources.example.yaml` documents every field.
 
 ### .env file
 
-The ```.env``` can be created using ```.env.example``` as template and placed in the same folder of the ```compose.yaml``` file, since it is used for the deploy of the containers.
+Create `.env` from `.env.example` and place it beside `compose.yaml`, which is
+where Docker Compose reads it from.
 
-```.env.example``` contains the documentation for each parameters.
+`.env.example` documents every setting.
 
-## Deploy
+### Running it
 
-When the ```.env``` file and both yaml files are ready, run docker compose to deploy:
+With the `.env` file and both YAML files in place, start the stack:
 
 ```sh
 docker compose up -d
@@ -112,7 +126,7 @@ docker compose up -d
 ### Things worth knowing
 
 **There is no login.** Ziba is single-user by design and has no accounts, no
-password and no session. Whoever reaches the port is the reader, and can mark
+password and no session. Whoever can reach the port is the reader, and can mark
 articles read as well as read them.
 
 Set `ZIBA_BIND=127.0.0.1` in `.env` to allow only the machine it runs on, and
@@ -129,22 +143,22 @@ because reasoning tokens are billed as output and output costs several times
 input. The Statistics page reports exactly what has been spent, per interest and
 per day.
 
-**It runs without a key.** With no API key configured, collection, retrieval and
-the archive all work and only the analysis is skipped. Obviously this mode is 
-pretty dumb — it's meant for debugging only.
+**It runs without a key.** With no API key configured, collection, retrieval
+and the archive all work, and only the analysis is skipped. That mode is crude
+and meant for debugging.
 
 **Credentials are never written into the YAML.** A mailbox source names the
-server and the folder; `ZIBA_IMAP_USER` and `ZIBA_IMAP_PASSWORD` say who you
-are. A source address carrying a password is refused at startup. With Gmail the
+server and the folder; `ZIBA_IMAP_USER` and `ZIBA_IMAP_PASSWORD` name the
+account. A source address carrying a password is refused at startup. With Gmail the
 password must be an App Password, pasted without the spaces the interface shows.
 
 ### Debugging what the model was asked
 
 Set `ZIBA_MODEL_JOURNAL=true` and every request to a model, with its reply, is
-appended to `log/modelJournal.txt` — bind-mounted by both compose files, so it
-is readable from the host.
+appended to `log/modelJournal.txt`, which the compose file bind-mounts so it can
+be read from the host.
 
-Headers are never recorded, so API key is never written in the log.
+Headers are never recorded, so the API key never reaches the file.
 
 On Linux the container runs as uid 65534 and a `log/` directory created by root
 on the host will not be writable by it. Startup fails with a message saying so

@@ -1,6 +1,6 @@
 # The sources Ziba reads. Hand-edited: adding a source is adding three lines.
 #
-# Below some example of sources.
+# Below are some example sources.
 #
 # type:    rss | newsletter
 # enabled: optional, defaults to true — set false to stop reading a source
@@ -9,13 +9,13 @@
 # roundup: rss only. For a feed that publishes issues of a link digest rather
 #          than articles, each entry pointing at a page that lists other
 #          people's writing. Ziba opens the issue and collects what it links to
-#          instead of storing the table of contents. Example of RSS feed that needs
-#          roundup is https://dotnetketchup.com/
+#          instead of storing the table of contents. https://dotnetketchup.com/
+#          publishes a feed of this kind.
 #
-# categories: what this source is about, when it is already known. Each name must
-#          be one of the interests in interests.yaml. Declaring them means the
-#          AI is told the subject instead of guessing it, and scores how
-#          *interesting* each piece is instead. Such articles are always shown:
+# categories: what this source is about, when it is already known. Each name
+#          must be one of the interests in interests.yaml. Declaring them means
+#          the AI is told the subject instead of guessing it, and scores how
+#          *interesting* each piece is. Such articles are always shown:
 #          the relevance threshold does not apply, because subscribing to the
 #          source was already the decision. For instance, when a newsletter is
 #          known to be about AI, there is no need to classify it.
