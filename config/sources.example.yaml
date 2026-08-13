@@ -122,13 +122,18 @@ sources:
     collect_from: 14d
     url: "https://go.dev/blog/feed.atom"
 
-  - name: "AI newsletters"
-    type: newsletter
-    url: "imaps://imap.gmail.com:993/"
-    categories: ["AI"]
-    newsletter:
-      folder: "AI"
-      username_env: ZIBA_IMAP_USER
-      password_env: ZIBA_IMAP_PASSWORD
-      days: 1
-      max_messages: 50
+# A newsletter mailbox, commented out because it needs credentials: the named
+# variables are checked when this file is read, and an empty one stops the run
+# — including when the source is disabled. Uncomment it once ZIBA_IMAP_USER and
+# ZIBA_IMAP_PASSWORD are set.
+#
+#  - name: "AI newsletters"
+#    type: newsletter
+#    url: "imaps://imap.gmail.com"
+#    categories: ["AI"]
+#    newsletter:
+#      folder: "AI"
+#      username_env: ZIBA_IMAP_USER
+#      password_env: ZIBA_IMAP_PASSWORD
+#      days: 1
+#      max_messages: 50
