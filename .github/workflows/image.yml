@@ -4,66 +4,165 @@
 # own token, which is why it is used here rather than Docker Hub: one fewer
 # secret to hold and to rotate.
 #
-# Tags:
-#   main       every commit on the default branch — for trying the newest thing
-#   v1.2.3     the release itself, and v1.2, and latest
+# Tags only. A push of v1.2.3 publishes 1.2.3, 1.2, 1 and latest, and nothing
+# else publishes anything — no image is built from a branch or a pull request.
+# The cost of that is worth knowing: a Dockerfile that stops building is found
+# when a release is cut rather than when the change was merged.
 #
-# latest follows released tags and not main, because someone self-hosting from
-# latest should get something that was deliberately released.
-name: image
+# A tag publishes only when the commit it points at is on main; see the check in
+# the job below.
+#
+# Every action is pinned to a commit rather than to a moving major version. A
+# tag can be repointed by whoever owns the action, and this workflow holds a
+# token that writes to the registry. The version beside each digest is a comment
+# and only a comment — the digest is what runs.
+name: Docker build
 
 on:
   push:
-    branches: [main]
-    tags: ["v*"]
-  # Build on pull requests too, without pushing: a Dockerfile that no longer
-  # builds should fail in the pull request rather than after the merge.
-  pull_request:
+    tags:
+      # Only semver-like tags (with or without the leading "v")
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+# Never two publishes of the same ref at once. Not cancel-in-progress: a half
+# finished push to a registry is worse than a slow one.
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
   packages: write
+  # For cosign's keyless signing: the runner proves who it is to Sigstore with a
+  # short-lived token, so there is no signing key to store, rotate or lose.
+  id-token: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The whole history, because the check below has to walk it. Checkout
+          # takes only the tagged commit by default, which is enough to build
+          # and not enough to know where that commit came from.
+          fetch-depth: 0
+
+      # A tag is a label on a commit, not something that belongs to a branch, so
+      # "v1.0.0 was cut from main" is an intention and not a fact the trigger can
+      # express. Nothing stops a tag being pushed from a side branch, and the
+      # release it produced would look identical to a real one afterwards.
+      #
+      # This fails rather than skips. A run that ends green having published
+      # nothing looks exactly like a run that published something.
+      - name: Refuse a tag that is not on main
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "$GITHUB_REF_NAME is on main"
+          else
+            echo "::error::$GITHUB_REF_NAME points at a commit that is not on main;" \
+                 "nothing will be published"
+            exit 1
+          fi
 
       # arm64 as well as amd64: a self-hosted aggregator is as likely to run on
       # a Raspberry Pi or an Apple silicon machine as on an x86 box, and an
       # image that only runs on one of them is not an image anyone can host.
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
       - name: Sign in to the registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # latest is not listed here: the metadata action adds it by itself for a
+      # semver tag that is not a prerelease, which is exactly when it is wanted.
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+            type=semver,pattern={{major}}
 
-      - uses: docker/build-push-action@v6
+      - id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # The version reported by `ziba version`, so an instance can say
-          # which build it is when something is wrong with it.
+          # The version reported by `ziba version`, so an instance can say which
+          # build it is when something is wrong with it. Always a tag name now,
+          # since nothing else triggers this.
           build-args: |
-            VERSION=${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+            VERSION=${{ github.ref_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Signed by digest, not by tag. A tag can later be repointed, and a
+      # signature attached to a name that moved says nothing about what is
+      # there now.
+      #
+      # Once, not once per tag. cosign stores a signature against the digest —
+      # as <repo>:sha256-<digest>.sig — so signing 1.2.3, 1.2, 1 and latest in
+      # turn writes the same object four times.
+      - name: Sign the published image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "ghcr.io/${{ github.repository }}@$DIGEST"
+
+  # The files somebody needs in order to run the image, attached to the release
+  # that produced it.
+  #
+  # Deploying should not require cloning a repository of Go source. Three small
+  # files do it, and shipping them with the release keeps them in step with the
+  # image by construction: the pair is built from one commit and published in
+  # one run.
+  #
+  # A tarball rather than loose files, because the two configuration examples
+  # have to end up in a config/ directory beside the compose file — that is
+  # where the mount looks — and reassembling that by hand is the obvious thing
+  # to get wrong.
+  bundle:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Both formats, from one directory. A .zip because File Explorer has
+      # opened those since forever and only Windows 11 23H2 learned to open a
+      # .tar.gz — on Windows 10 a double-click still gets nowhere. A .tar.gz
+      # because that is what anyone on Linux or macOS expects to find.
+      - name: Assemble the bundle
+        run: |
+          mkdir -p ziba/config
+          cp compose.yaml .env.example ziba/
+          cp config/interests.example.yaml config/sources.example.yaml ziba/config/
+          tar -czf ziba-deploy.tar.gz ziba
+          zip -qr ziba-deploy.zip ziba
+
+      # gh is on the runner already, so no third-party action is involved. A tag
+      # push does not create a release by itself, hence the create before the
+      # upload; --clobber makes a re-run of this job replace the assets rather
+      # than fail on them.
+      - name: Attach it to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" \
+            ziba-deploy.tar.gz ziba-deploy.zip compose.yaml --clobber

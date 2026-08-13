@@ -1,5 +1,10 @@
 # Ziba
 
+[![Docker build](https://github.com/emaori/ziba/actions/workflows/image.yml/badge.svg)](https://github.com/emaori/ziba/actions/workflows/image.yml)
+[![Latest release](https://img.shields.io/github/v/release/emaori/ziba?sort=semver)](https://github.com/emaori/ziba/releases)
+[![License: MIT](https://img.shields.io/github/license/emaori/ziba)](LICENSE)
+[![ghcr.io](https://img.shields.io/badge/ghcr.io-ziba-blue?logo=docker)](https://github.com/emaori/ziba/pkgs/container/ziba)
+
 Ziba is a self-hosted personal content aggregator. It collects articles from
 configured sources, processes them with AI, and presents them as a personalized
 daily magazine.
@@ -20,13 +25,8 @@ Models from OpenAI and Anthropic are supported.
 
 Each article goes through two stages. **Assessment** says what the article is
 about and rates it against the interests, in a single call on the fast model.
-**Summarization** writes a summary aimed at this reader, on the capable model,
-and only for articles above the threshold.
-
-Both halves of that split exist for cost. Input tokens are almost the entire
-bill, and the article text dominates them — so assessment sends it once rather
-than once per question, and the expensive model never sees an article that was
-not worth reading.
+**Summarization** writes a summary aimed at those interests, on the capable
+model, and only for articles above the threshold.
 
 Articles below the threshold keep their score and stay browsable in the archive.
 They are simply not summarized and not promoted: the AI curates, it does not
@@ -39,8 +39,32 @@ debugging, not for daily use.
 
 ## Deploy
 
-Three files must be provided before deploying: the env file, and the two
-configuration files `interests.yaml` and `sources.yaml`.
+Deploying does not need this repository. Every release carries a bundle with
+everything required:
+
+Linux and macOS:
+
+```sh
+curl -L https://github.com/emaori/ziba/releases/latest/download/ziba-deploy.tar.gz | tar -xz
+cd ziba
+```
+
+Windows, in PowerShell:
+
+```powershell
+curl.exe -L -O https://github.com/emaori/ziba/releases/latest/download/ziba-deploy.zip
+Expand-Archive ziba-deploy.zip -DestinationPath .
+cd ziba
+```
+
+It holds `compose.yaml` and three examples — `.env.example`,
+`config/interests.example.yaml` and `config/sources.example.yaml` — already
+arranged the way Compose expects. The image it pulls is
+[`ghcr.io/emaori/ziba`](https://github.com/emaori/ziba/pkgs/container/ziba).
+
+Copy each example to its real name and edit it: `.env`,
+`config/interests.yaml`, `config/sources.yaml`. The three sections below say
+what goes in them.
 
 ### interests.yaml
 
@@ -62,8 +86,8 @@ interests:
 ```
 
 `threshold: 60` means an article must score 60 or more, on a scale of 0 to 100,
-to be summarized and to appear in the daily digest. Below that it is defined one
-interest, AI, with its subtopics.
+to be summarized and to appear in the daily digest. Below it, one interest is
+defined: AI, with its subtopics.
 
 `config/interests.example.yaml` documents every field.
 
@@ -91,7 +115,7 @@ if their score clears the threshold.
 
 - name: "AI newsletters"
   type: newsletter
-  url: "imaps://imap.gmail.com:993/"
+  url: "imaps://imap.gmail.com"
   categories: ["AI"]
   newsletter:
     folder: "AI"
@@ -110,8 +134,10 @@ categorized as AI, so the analyzer does not try to classify them.
 
 ### .env file
 
-Create `.env` from `.env.example` and place it beside `compose.yaml`, which is
-where Docker Compose reads it from.
+`.env` sits beside `compose.yaml`, which is where Docker Compose reads it from.
+
+On Windows, copy it from a terminal rather than renaming it in File Explorer,
+which refuses a name that is only an extension.
 
 `.env.example` documents every setting.
 
@@ -134,7 +160,7 @@ reach it from elsewhere through a reverse proxy that terminates TLS and asks for
 a password, or through a VPN.
 
 **It costs money to run.** Every collected article is assessed by the fast
-model, and everything above the threshold is summarised by the capable one. On
+model, and everything above the threshold is summarized by the capable one. On
 one real archive of 485 articles that came to about $1.50 with OpenAI, or
 roughly $4–5 a month at fifty articles a day. Two settings move that figure more
 than anything else: the `threshold` in `interests.yaml`, which decides how much
@@ -164,3 +190,6 @@ On Linux the container runs as uid 65534 and a `log/` directory created by root
 on the host will not be writable by it. Startup fails with a message saying so
 rather than quietly carrying on: `chown 65534 log`.
 
+## License
+
+MIT. See [LICENSE](LICENSE).
