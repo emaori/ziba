@@ -1,0 +1,39 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Rome",
+  "schedule": ["before 6am on sunday"],
+  "labels": ["dependencies"],
+  "ignoreUnstable": true,
+  "packageRules": [
+    {
+      "description": "Ziba's own image, which compose names: there is nothing here to update",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/emaori/ziba"],
+      "enabled": false
+    },
+    {
+      "description": "Alpine: released versions only, never edge or a release candidate",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["alpine"],
+      "allowedVersions": "/^\\d+\\.\\d+\\.\\d+$/"
+    },
+    {
+      "description": "Go toolchain: released versions only, never an rc or beta tag",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["golang"],
+      "allowedVersions": "/^\\d+\\.\\d+\\.\\d+/"
+    },
+    {
+      "description": "Go modules in one pull request: they are updated together anyway",
+      "matchManagers": ["gomod"],
+      "groupName": "go modules"
+    },
+    {
+      "description": "Keep actions pinned to a digest, with the version as a comment",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true,
+      "groupName": "github actions"
+    }
+  ]
+}
