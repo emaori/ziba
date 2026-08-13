@@ -1,8 +1,8 @@
 # What is worth reading. Hand-edited, changes rarely.
 #
 # This is the starter shipped in the image. It is meant to be replaced: these
-# are somebody else's interests, and Ziba is only useful once they are yours.
-# Mount your own over /app/config and restart.
+# are just some examples.
+# Mount your own over /app/config.
 #
 # threshold: the relevance score (0-100) an article must reach to be summarized
 #            and to appear in the daily digest. Below it an article is still

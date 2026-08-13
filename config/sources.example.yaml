@@ -1,7 +1,6 @@
 # The sources Ziba reads. Hand-edited: adding a source is adding three lines.
 #
-# This is the starter shipped in the image: three public feeds, so a fresh
-# instance has something to collect on its first run. Replace it with your own.
+# Below some example of sources.
 #
 # type:    rss | newsletter
 # enabled: optional, defaults to true — set false to stop reading a source
@@ -10,19 +9,104 @@
 # roundup: rss only. For a feed that publishes issues of a link digest rather
 #          than articles, each entry pointing at a page that lists other
 #          people's writing. Ziba opens the issue and collects what it links to
-#          instead of storing the table of contents.
+#          instead of storing the table of contents. Example of RSS feed that needs
+#          roundup is https://dotnetketchup.com/
 #
-# categories: what this source is about, when you already know. Each name must
+# categories: what this source is about, when it is already known. Each name must
 #          be one of the interests in interests.yaml. Declaring them means the
 #          AI is told the subject instead of guessing it, and scores how
 #          *interesting* each piece is instead. Such articles are always shown:
-#          the relevance threshold does not apply, because you subscribed on
-#          purpose.
+#          the relevance threshold does not apply, because subscribing to the
+#          source was already the decision. For instance, when a newsletter is
+#          known to be about AI, there is no need to classify it.
 #
-# collect_from: how much history a source contributes on first contact. A
-#          duration ("7d", "48h"), a date ("2026-01-01"), or "all". Default 7d.
-#          The cutoff is anchored to when the source was first added, not to
-#          today, so pausing collection never widens into lost articles.
+# collect_from: how much back catalogue a source brings with it the first time
+#          it is read. A feed hands over everything it currently holds — often
+#          hundreds of entries — and this bounds how much of that is kept.
+#
+#          A duration ("7d", "48h"), a date ("2026-01-01"), or "all" for
+#          whatever the source offers. Default is 7d.
+#
+#          It becomes one fixed date, worked out once from the day the source
+#          was added, and it never moves afterwards. "7d" on a source added on
+#          1 August means "published on or after 25 July" — in September too.
+#
+#          That is not the same as "the last 7 days", and the difference only
+#          shows when collection stops for a while. A rolling window would
+#          treat everything published during a two-week outage as too old and
+#          discard it on the next run, so the outage would quietly become lost
+#          articles. A fixed date collects all of it whenever the next run
+#          happens. What is lost is only what the source itself dropped: a feed
+#          holds a few dozen entries and older ones fall off the end.
+#
+#          So the window widens over time when measured from today, on purpose.
+#          This is not a recency filter and not a retention policy — it bounds
+#          what arrives on first contact and never removes what is stored.
+#          Articles are not re-collected because their address is unique, not
+#          because of anything here.
+#
+#          Changing a source's URL makes it a new source, which starts its own
+#          window. Renaming it, disabling it, or editing its categories does
+#          not.
+
+# newsletter: required for type newsletter, and meaningless for anything else.
+#          A newsletter source is a mailbox rather than a feed: Ziba signs in
+#          over IMAP, reads recent messages, and treats each one as a list of
+#          links. The value is in the articles a newsletter points at, not in
+#          the email itself.
+#
+#          The url names the server, and the scheme must be imaps://
+#          (encrypted, the normal choice) or imap:// (unencrypted). It must
+#          never contain a password; an address that carries one is refused
+#          when the file is read.
+#
+#   folder:
+#          which mailbox folder to read. Defaults to INBOX. A folder inside
+#          another is written with a slash, as in "Lists/Weekly".
+#
+#          In Gmail a label is a folder, so a label called DotNet is read by
+#          writing folder: DotNet — no export or forwarding required.
+#
+#          One source reads one folder, so several labels means several
+#          sources, each naming the same server. Ziba appends the folder to the
+#          address internally, which is what keeps those sources distinct.
+#
+#          A caution specific to Gmail: a labelled message also stays in the
+#          inbox, so a source for INBOX and a source for the label will both
+#          collect it. Whichever finishes first owns the article, and only the
+#          owner's declared categories apply — so the classification would
+#          depend on which one won. The fix is a Gmail filter that skips the
+#          inbox for anything labelled, or simply not configuring INBOX.
+#
+#   username_env / password_env:
+#          both required. These hold the NAMES of environment variables, not
+#          the credentials themselves — for example ZIBA_IMAP_USER, not the
+#          address it contains. Nothing secret is ever written in this file,
+#          which is what makes a source list safe to share or commit. A named
+#          variable that turns out to be empty stops the run at startup, naming
+#          the variable, rather than failing later as a login error.
+#
+#          Gmail and most other providers require an app password here rather
+#          than the account password. Gmail displays it in groups of four
+#          letters; the spaces are for reading and are not part of it.
+#
+#   days:  how many days of mail each run reads. Defaults to 1.
+#
+#          Every run re-reads the whole window and discards what is already
+#          known, so overlap is harmless and normal. What is not harmless is a
+#          window shorter than the gap between runs: mail arriving in that gap
+#          would never be looked at. The window should therefore comfortably
+#          exceed ZIBA_COLLECT_EVERY — with collection every 6 hours, a day is
+#          ample; for a machine that is only switched on now and then, more.
+#
+#          Read and unread are deliberately ignored. That flag belongs to
+#          whoever owns the mailbox, and depending on it meant a newsletter
+#          opened by hand was never collected.
+#
+#   max_messages:
+#          how many emails one run reads at most. Defaults to 50. The newest
+#          are taken first, so a mailbox with a backlog yields today's reading
+#          rather than the oldest thing in it.
 
 sources:
   - name: "Hacker News — front page"
@@ -35,17 +119,16 @@ sources:
 
   - name: "The Go Blog"
     type: rss
+    collect_from: 14d
     url: "https://go.dev/blog/feed.atom"
 
-# A newsletter mailbox. Ziba reads it over IMAP and treats each message as a
-# source of links. Credentials are never written here — the address names the
-# server and the folder, and ZIBA_IMAP_USER and ZIBA_IMAP_PASSWORD say who you
-# are. A URL carrying a password is refused.
-#
-# In Gmail a label IS an IMAP folder, so "imaps://imap.gmail.com/DotNet" reads a
-# label. Set the filter to skip the inbox, or a labelled message is collected
-# twice by two sources racing to own it.
-#
-#  - name: "Newsletters"
-#    type: newsletter
-#    url: "imaps://imap.gmail.com/INBOX"
+  - name: "AI newsletters"
+    type: newsletter
+    url: "imaps://imap.gmail.com:993/"
+    categories: ["AI"]
+    newsletter:
+      folder: "AI"
+      username_env: ZIBA_IMAP_USER
+      password_env: ZIBA_IMAP_PASSWORD
+      days: 1
+      max_messages: 50

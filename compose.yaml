@@ -1,13 +1,6 @@
-# The development stack: builds the image from source.
+# Two services: the application and its database.
 #
-# For running a published release instead — which is what someone hosting their
-# own instance wants — see deploy/compose.yaml.
-#
-# Two services: the application and its database. A headless-browser sidecar
-# lived here while scraping did; both were removed together.
-#
-# Secrets come from a .env file next to this one — see .env.example. That file
-# is git-ignored.
+# Secrets come from a .env file next to this one — see .env.example.
 
 services:
   ziba-db:
@@ -19,10 +12,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-ziba}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     ports:
-      # Loopback only: the database is never exposed on the network. Note that
-      # "localhost" here is the Docker host, which is not the machine running
-      # the compose command when the context is remote. Reach it from elsewhere
-      # with `make db-tunnel`.
+      # Loopback only: the database is never exposed on the network.
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - ziba-db-data:/var/lib/postgresql/data
@@ -37,11 +27,7 @@ services:
   ziba-api:
     build:
       context: .
-      args:
-        # `make image` sets this from `git describe`. Building with compose
-        # directly gets "dev", which is honest: nothing computed a version.
-        VERSION: ${ZIBA_VERSION:-dev}
-    image: ziba-api:local
+    image: ghcr.io/emaori/ziba-api:latest
     container_name: ziba-api
     restart: unless-stopped
     depends_on:
@@ -53,13 +39,12 @@ services:
       # These override whatever .env holds, because inside the network the
       # other services are reached by name, not on loopback. The values in .env
       # are for running the binary outside Docker during development.
-      ZIBA_DATABASE_URL: postgres://${POSTGRES_USER:-ziba}:${POSTGRES_PASSWORD}@ziba-db:5432/ziba?sslmode=disable
+      ZIBA_DATABASE_URL: postgres://${POSTGRES_USER:-ziba}:${POSTGRES_PASSWORD}@ziba-db:${POSTGRES_PORT:-5432}/ziba?sslmode=disable
       # The digest is scheduled in local time, so the container has to know
       # which local. Without this it would run on UTC.
       TZ: ${TZ:-Europe/Rome}
     volumes:
-      # The hand-edited files, mounted read-only: editing them and restarting is
-      # the whole workflow, no rebuild involved.
+      # The hand-edited files, mounted read-only
       - ./config:/app/config:ro
       # The model journal, when ZIBA_MODEL_JOURNAL is on, so it can be read from
       # here rather than only inside the container.
@@ -70,11 +55,7 @@ services:
       # program has no setting for it. Passing it in would be harmless.
       #
       # ZIBA_BIND is which interface it appears on, defaulting to all of them so
-      # a deployed instance is reachable from a phone or another laptop. This
-      # same file runs locally and on whatever machine you deploy to, and those
-      # two want different answers, so the answer belongs in each machine's own
-      # .env. A development laptop should set ZIBA_BIND=127.0.0.1: Ziba has no
-      # login, and a laptop joins networks nobody chose.
+      # a deployed instance is reachable from any devices on the network.
       - "${ZIBA_BIND:-0.0.0.0}:${ZIBA_PORT:-8080}:8080"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ > /dev/null || exit 1"]
