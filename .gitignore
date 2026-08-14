@@ -8,7 +8,7 @@
 
 # Your own interests and sources: a reading list, and the folders in a mailbox.
 # The .example siblings are committed and are what a fresh clone starts from —
-# the same arrangement as .env and .env.example above.
+# the same arrangement as the .env above.
 /config/*.yaml
 !/config/*.example.yaml
 

@@ -57,14 +57,14 @@ Expand-Archive ziba-deploy.zip -DestinationPath .
 cd ziba
 ```
 
-It holds `compose.yaml` and three examples — `.env.example`,
-`config/interests.example.yaml` and `config/sources.example.yaml` — already
-arranged the way Compose expects. The image it pulls is
+It holds `compose.yaml` and two examples, `config/interests.example.yaml` and
+`config/sources.example.yaml`, already arranged the way Compose expects. The
+image it pulls is
 [`ghcr.io/emaori/ziba`](https://github.com/emaori/ziba/pkgs/container/ziba).
 
-Copy each example to its real name and edit it: `.env`,
-`config/interests.yaml`, `config/sources.yaml`. The three sections below say
-what goes in them.
+Two things to do. Copy each example to its real name and edit it —
+`config/interests.yaml` and `config/sources.yaml`. Then fill in `compose.yaml`,
+which carries every other setting with a note on what it is for.
 
 ### interests.yaml
 
@@ -127,23 +127,42 @@ if their score clears the threshold.
 
 Two sources here: an RSS feed (The Go Blog), which collects the last 14 days
 the first time it is read, and a newsletter read from a Gmail account whose
-credentials are named in the env file. Articles from that newsletter are
+credentials are named in the env variables. Articles from that newsletter are
 categorized as AI, so the analyzer does not try to classify them.
 
 `config/sources.example.yaml` documents every field.
 
-### .env file
+### Settings
 
-`.env` sits beside `compose.yaml`, which is where Docker Compose reads it from.
+Everything else is in `compose.yaml`, each setting beside a note on what it
+does. Optional ones are commented out with their defaults written down; the
+ones already uncommented are these:
 
-On Windows, copy it from a terminal rather than renaming it in File Explorer,
-which refuses a name that is only an extension.
+| Setting | What it decides | What to put |
+|---|---|---|
+| `POSTGRES_PASSWORD` | the database password | **change it** — anything |
+| `ZIBA_DATABASE_URL` | how Ziba reaches the database | the same password, after `ziba:` — it ships blank |
+| `ZIBA_AI_PROVIDER` | which company answers | `openai` or `anthropic` |
+| `OPENAI_API_KEY` | pays for it | **your key** — or `ANTHROPIC_API_KEY`, uncommented, if you chose anthropic |
+| `ZIBA_FAST_MODEL` | scores every article | **required**, e.g. `gpt-5.6-luna` |
+| `ZIBA_CAPABLE_MODEL` | writes the summaries | **required**, e.g. `gpt-5.6-terra` |
+| `ZIBA_FAST_EFFORT` | how hard the fast model thinks | `low` — raising it costs more than the article does |
+| `ZIBA_CAPABLE_EFFORT` | the same, for summaries | `low` |
+| `TZ` | when the daily digest is built | your zone, e.g. `Europe/Rome`; otherwise UTC |
+| `ZIBA_COLLECT_EVERY` | how often sources are read | `6h`; `0` stops the schedule |
+| `ZIBA_DIGEST_AT` | when the day's selection is built | `"06:30"`, in `TZ` above |
 
-`.env.example` documents every setting.
+Four need a value before anything works properly: the database password in both
+places it appears, the API key, and the two model names. Everything else has a
+value that already makes sense.
+
+There are no model defaults on purpose — a name written into a program is a
+claim about what exists, and a stale one fails at the first article instead of
+at startup. Take the current names from your provider.
 
 ### Running it
 
-With the `.env` file and both YAML files in place, start the stack:
+With both config files in place and `compose.yaml` filled in, start the stack:
 
 ```sh
 docker compose up -d
@@ -154,10 +173,6 @@ docker compose up -d
 **There is no login.** Ziba is single-user by design and has no accounts, no
 password and no session. Whoever can reach the port is the reader, and can mark
 articles read as well as read them.
-
-Set `ZIBA_BIND=127.0.0.1` in `.env` to allow only the machine it runs on, and
-reach it from elsewhere through a reverse proxy that terminates TLS and asks for
-a password, or through a VPN.
 
 **It costs money to run.** Every collected article is assessed by the fast
 model, and everything above the threshold is summarized by the capable one. On

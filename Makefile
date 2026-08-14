@@ -149,11 +149,17 @@ logs:
 db-psql:
 	$(COMPOSE) exec ziba-db psql -U $${POSTGRES_USER:-ziba} -d ziba
 
-# Compose refuses to start without the variables in .env, and its own error
-# does not say where they come from. Fail here instead, with the fix.
+# The local development settings: the database address for running the binary
+# outside Docker, and the API key. Deploying needs none of this — compose.yaml
+# carries every setting itself — so there is no example file to copy, and this
+# says what to write instead.
 .env:
-	@echo "no .env found — copy it and set a password:" >&2
-	@echo "    cp .env.example .env" >&2
+	@echo "no .env found. For local development create one with at least:" >&2
+	@echo "    POSTGRES_PASSWORD=change-me" >&2
+	@echo "    ZIBA_DATABASE_URL=postgres://ziba:change-me@127.0.0.1:5432/ziba?sslmode=disable" >&2
+	@echo "    OPENAI_API_KEY=..." >&2
+	@echo "    ZIBA_FAST_MODEL=... ZIBA_CAPABLE_MODEL=..." >&2
+	@echo "  See compose.yaml, which documents every setting." >&2
 	@exit 1
 
 ## db-tunnel: forward a remote database to localhost (run in its own terminal)

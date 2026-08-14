@@ -1,8 +1,9 @@
 # Runs Ziba from its published image: two services, the application and its
 # database. Nothing is built here — see the Dockerfile for that.
 #
-# Secrets come from a .env file next to this one — see .env.example.
-
+# Every setting lives in this file, documented where it is used. Fill in the
+# values below and there is nothing else to create.
+#
 services:
   ziba-db:
     image: postgres:17-alpine
@@ -10,60 +11,125 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: ziba
-      POSTGRES_USER: ${POSTGRES_USER:-ziba}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_USER: ziba
+      
+      # Change this.
+      POSTGRES_PASSWORD: change-me
     ports:
-      # Loopback only: the database is never exposed on the network.
-      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+      # Loopback only: the database is never reachable from the network.
+      # Three parts, not two: host address, host port, container port. With two
+      # the first is read as a port number and compose refuses the file.
+      - "127.0.0.1:5432:5432"
     volumes:
       - ziba-db-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
 
   # Ziba itself: the web interface and the schedule, in one process.
-  #
-  # The published image, not a build: the image is produced from the Dockerfile
-  # by the release workflow, and compose only runs it. `make image` builds the
-  # same tag locally when working on the code, and compose uses whatever is
-  # there before reaching for the registry.
   ziba-api:
-    image: ghcr.io/emaori/ziba:${ZIBA_VERSION:-latest}
+    image: ghcr.io/emaori/ziba:latest
     container_name: ziba-api
     restart: unless-stopped
     depends_on:
       ziba-db:
         condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      # These override whatever .env holds, because inside the network the
-      # other services are reached by name, not on loopback. The values in .env
-      # are for running the binary outside Docker during development.
-      # 5432, not POSTGRES_PORT: that one is the host side of the mapping
-      # below, and inside the network the database always listens on 5432.
-      ZIBA_DATABASE_URL: postgres://${POSTGRES_USER:-ziba}:${POSTGRES_PASSWORD}@ziba-db:5432/ziba?sslmode=disable
-      # The digest is scheduled in local time, so the container has to know
-      # which local. Without this it would run on UTC.
-      TZ: ${TZ:-Europe/Rome}
-    volumes:
-      # The hand-edited files, mounted read-only
-      - ./config:/app/config:ro
-      # The model journal, when ZIBA_MODEL_JOURNAL is on, so it can be read from
-      # here rather than only inside the container.
-      - ./log:/app/log
-    ports:
-      # ZIBA_PORT is the host side only. The container always listens on 8080 —
-      # EXPOSE, the image's healthcheck and this mapping all say so, and the
-      # program has no setting for it. Passing it in would be harmless.
-      #
-      # ZIBA_BIND is which interface it appears on, defaulting to all of them so
-      # a deployed instance is reachable from any devices on the network.
-      - "${ZIBA_BIND:-0.0.0.0}:${ZIBA_PORT:-8080}:8080"
 
+    environment:
+      # --- The database -------------------------------------------------------
+      # The same user and password as the database above — this is the only
+      # place the two have to agree. The password is left blank deliberately.
+      # ----- FILL THE PASSWORD -----
+      ZIBA_DATABASE_URL: postgres://ziba:@ziba-db:5432/ziba?sslmode=disable
+
+      # --- The AI provider ----------------------------------------------------
+      # Which company answers: openai or anthropic. Set the matching key below.
+      #
+      # Without a key Ziba still collects, retrieves and serves the archive; only
+      # the analysis is skipped, and it says so at startup.
+      ZIBA_AI_PROVIDER: openai
+
+      # The key. Replace ${OPENAI_API_KEY:-} with it, or leave the line as it is
+      # and put OPENAI_API_KEY in a .env file beside this one.
+      OPENAI_API_KEY:
+      # ANTHROPIC_API_KEY:
+
+      # Which models. REQUIRED, whichever provider is chosen. Assessment —
+      # deciding the interests and the score — runs on the fast one for every
+      # article; summarization runs on the capable one, and only for articles
+      # above the threshold set in interests.yaml.
+      #
+      # There are no defaults on purpose: a model name written into a program is
+      # a claim about what exists, and a stale one fails at the first article
+      # rather than at startup. Take the current names from the provider's own
+      # documentation. These were correct when written:
+      #
+      #   openai:     gpt-5.6-luna      / gpt-5.6-terra
+      #   anthropic:  claude-haiku-4-5  / claude-sonnet-5
+      ZIBA_FAST_MODEL:
+      ZIBA_CAPABLE_MODEL:
+
+      # How hard each model thinks before answering: none, minimal, low, medium,
+      # high, xhigh, max.
+      #
+      # Set here although both are optional, because the provider's own default
+      # is the expensive one. Reasoning tokens are charged as output, output
+      # costs several times input, and a default of medium can cost more in
+      # thinking than the article costs to send. Neither job is hard: one picks
+      # categories from a fixed list and rounds a score to a multiple of five,
+      # the other writes four sentences.
+      #
+      # Ignored by models that have no reasoning setting, which is not an error.
+      ZIBA_FAST_EFFORT: low
+      ZIBA_CAPABLE_EFFORT: low
+
+      # The digest is scheduled in local time, so the container has to know
+      # which local. Without this it runs on UTC and arrives at the wrong hour.
+      TZ: UTC
+
+      # --- A newsletter mailbox (optional) ------------------------------------
+      # Needed only when config/sources.yaml has a newsletter source. That file
+      # names the server and the folder; only the credentials belong here, and a
+      # source address carrying a password is refused at startup.
+      #
+      # Gmail wants an App Password rather than the account password, pasted
+      # without the spaces the interface displays.
+      # ZIBA_IMAP_USER:
+      # ZIBA_IMAP_PASSWORD:
+
+      # --- The schedule --------------------------------------------
+      # How often to collect, and when to build the day's selection. Collection
+      # runs on an interval because feeds move through the day; the selection is
+      # built once, early, so it is waiting in the morning. The defaults are 6h
+      # and 06:30, and ZIBA_COLLECT_EVERY=0 stops both.
+      ZIBA_COLLECT_EVERY: 6h
+      ZIBA_DIGEST_AT: "06:30"
+
+      # --- Debugging (optional) -----------------------------------------------
+      # Record every request made to a model, and its reply, in
+      # log/modelJournal.txt — the mount below is what makes it readable from
+      # outside. Off by default and worth switching off again: it holds the full
+      # text of every article sent and nothing rotates it. Headers are never
+      # recorded, so the API key is not in it.
+      #
+      # Where it goes is deliberately not settable: the mount below is /app/log,
+      # and moving one without the other writes the file where nothing reads it.
+      # ZIBA_MODEL_JOURNAL: "true"
+
+    volumes:
+      # Your interests and your sources, read-only. Required: the image ships no
+      # configuration, so without these the container stops on its first run and
+      # says which file it wanted.
+      - ./config:/app/config:ro
+      # Where the model journal appears when it is switched on.
+      - ./log:/app/log
+
+    ports:
+      # Defaults to 8080. The container
+      # always listens on 8080 — EXPOSE, the image's healthcheck and this
+      # mapping all say so, and the program has no setting for it.
+      #
+      # Set 127.0.0.1 to allow only this machine and reach it from elsewhere through
+      # a reverse proxy or a VPN. Note that a published Docker port is not
+      # covered by ufw.
+      - "0.0.0.0:8080:8080"
 
 volumes:
   ziba-db-data:
