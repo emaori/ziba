@@ -6,7 +6,7 @@
 #
 services:
   ziba-db:
-    image: postgres:18-alpine
+    image: postgres:17-alpine
     container_name: ziba-db
     restart: unless-stopped
     environment:
@@ -22,6 +22,12 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - ziba-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ziba -d ziba"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # Ziba itself: the web interface and the schedule, in one process.
   ziba-api:
@@ -46,8 +52,7 @@ services:
       # the analysis is skipped, and it says so at startup.
       ZIBA_AI_PROVIDER: openai
 
-      # The key. Replace ${OPENAI_API_KEY:-} with it, or leave the line as it is
-      # and put OPENAI_API_KEY in a .env file beside this one.
+      # The key for AI
       OPENAI_API_KEY:
       # ANTHROPIC_API_KEY:
 

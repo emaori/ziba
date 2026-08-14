@@ -62,7 +62,7 @@ func OpenJournal(dir string) (*Journal, error) {
 		// only on the machine it matters on.
 		return nil, fmt.Errorf("model journal: open %s: %w\n"+
 			"if this is a bind-mounted directory, the container runs as uid 65534: "+
-			"chown 65534 the directory on the host, or unset ZIBA_MODEL_JOURNAL", path, err)
+			"chown 65534:65534 the directory on the host, or unset ZIBA_MODEL_JOURNAL", path, err)
 	}
 	return &Journal{file: file}, nil
 }

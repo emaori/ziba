@@ -168,6 +168,18 @@ With both config files in place and `compose.yaml` filled in, start the stack:
 docker compose up -d
 ```
 
+Nothing is collected at startup. The schedule counts from the moment the
+container starts, so with the default `ZIBA_COLLECT_EVERY=6h` the first
+collection is six hours away and the pages are empty until then. To fill them
+now:
+
+```sh
+docker compose exec ziba-api ziba run
+```
+
+That does the whole chain once — collect, retrieve, analyze, select — and then
+the schedule carries on as usual.
+
 ### Things worth knowing
 
 **There is no login.** Ziba is single-user by design and has no accounts, no
@@ -201,9 +213,17 @@ be read from the host.
 
 Headers are never recorded, so the API key never reaches the file.
 
-On Linux the container runs as uid 65534 and a `log/` directory created by root
-on the host will not be writable by it. Startup fails with a message saying so
-rather than quietly carrying on: `chown 65534 log`.
+The container runs as `nobody`, uid 65534, so the `log/` directory on the host
+has to belong to it. Docker creates that directory as root on the first `up`,
+and root's is not writable by `nobody`:
+
+```sh
+chown 65534:65534 log
+```
+
+Without it, startup fails with a message saying exactly this rather than
+quietly carrying on. It only matters while the journal is switched on — nothing
+writes there otherwise.
 
 ## License
 
