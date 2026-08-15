@@ -205,6 +205,13 @@ server and the folder; `ZIBA_IMAP_USER` and `ZIBA_IMAP_PASSWORD` name the
 account. A source address carrying a password is refused at startup. With Gmail the
 password must be an App Password, pasted without the spaces the interface shows.
 
+**Web collection only connects to public addresses.** RSS feeds, roundup pages,
+article pages and every redirect are refused if their hostname resolves to a
+loopback, private, link-local or otherwise non-public address. This prevents an
+external feed or newsletter from using Ziba to reach services on the machine or
+home network. IMAP servers are explicitly configured by the operator and are
+not subject to this restriction.
+
 ### Debugging what the model was asked
 
 Set `ZIBA_MODEL_JOURNAL=true` and every request to a model, with its reply, is
