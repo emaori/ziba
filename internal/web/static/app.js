@@ -37,6 +37,7 @@
 
     fetch(form.action, {
       method: 'POST',
+      body: new FormData(form),
       // Tells the handler to answer with a bare 204 rather than the redirect a
       // browser form needs.
       headers: { 'X-Ziba-Async': '1' },

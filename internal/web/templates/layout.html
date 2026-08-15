@@ -68,6 +68,7 @@
      so the page it sits on is not reachable from in here. */}}
 {{define "archiveButton"}}
 <form class="inline" method="post" action="/article/{{.ID}}/{{if .Archived}}unarchive{{else}}archive{{end}}">
+  <input type="hidden" name="csrf_token" value="{{csrfToken}}">
   {{if .Archived}}
     <button class="button secondary" type="submit"
             title="Put this back in the reading list"

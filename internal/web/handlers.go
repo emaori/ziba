@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"crypto/subtle"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -172,7 +173,21 @@ func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	archived := r.PathValue("action") == "archive"
+	action := r.PathValue("action")
+	if action != "archive" && action != "unarchive" {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	if subtle.ConstantTimeCompare([]byte(r.PostForm.Get("csrf_token")), []byte(s.csrfToken)) != 1 {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+
+	archived := action == "archive"
 	if err := s.store.SetArchived(r.Context(), id, archived); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.NotFound(w, r)
