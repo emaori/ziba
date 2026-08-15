@@ -51,16 +51,8 @@ type Source struct {
 	// It cannot be detected reliably from the feed itself, so it is configured.
 	Roundup bool
 
-	// Categories, when set, are the interests this source's articles belong to,
-	// declared rather than inferred. A .NET newsletter publishes .NET articles,
-	// and asking a model to work that out each time spends tokens rediscovering
-	// what the reader already knew — and sometimes gets it wrong, which then
-	// hides the article.
-	//
-	// Declaring them changes three things: the categories are assigned, the
-	// score rates how interesting the piece is rather than whether it is on
-	// topic, and the relevance threshold no longer applies. The reader
-	// subscribed to this source, so its articles are shown.
+	// Categories, when set, are assigned rather than inferred. Their articles
+	// bypass the relevance threshold and use the score only for ordering.
 	Categories []string
 
 	// Newsletter carries the settings only a mailbox needs, and is nil
@@ -70,13 +62,7 @@ type Source struct {
 	Newsletter *NewsletterOptions
 }
 
-// DefaultCollectGrace is how much history a source contributes on first contact
-// when nothing else is configured.
-//
-// A week is enough that a source has something to show immediately, and short
-// enough that a feed carrying years of backlog does not arrive all at once —
-// one configured feed offers two hundred and seventy-seven entries reaching
-// back five years, of which a week keeps two.
+// DefaultCollectGrace limits a new source's initial backlog.
 const DefaultCollectGrace = 7 * 24 * time.Hour
 
 // CollectFrom says how far back a source may reach.
@@ -137,17 +123,8 @@ type NewsletterOptions struct {
 	UsernameEnv string
 	PasswordEnv string
 
-	// LookBackDays is how many days of mail each run reads.
-	//
-	// A mailbox is read the way a feed is: take a recent window every time and
-	// let deduplication discard what is already known. Ziba deliberately does
-	// not use the read/unread flag for this. That flag belongs to the reader's
-	// mail client, so relying on it meant Ziba missed any newsletter its owner
-	// happened to open first, and re-read the rest for as long as they stayed
-	// unread.
-	//
-	// The window must comfortably exceed the collection interval, or mail that
-	// arrives during an outage is never seen.
+	// LookBackDays defines the recent window read on every run. It must exceed
+	// the collection interval; deduplication handles messages seen more than once.
 	LookBackDays int
 
 	// MaxMessages caps how many emails one run reads.

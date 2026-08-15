@@ -17,17 +17,8 @@ import (
 	"github.com/emaori/ziba/internal/domain"
 )
 
-// OpenAI implements Analyzer against the OpenAI API.
-//
-// It is a second provider rather than a replacement. The pipeline talks to an
-// Analyzer, so which company answers is a configuration choice — and the point
-// of having two is that the running cost of this project is entirely a function
-// of who is asked, so being able to compare on real articles is worth more than
-// an estimate.
-//
-// The prompts and the response schema are deliberately the same as the Claude
-// provider's. If they differed, a comparison between the two would be measuring
-// the prompts rather than the models.
+// OpenAI implements Analyzer against the OpenAI API, using the same prompts and
+// response schema as the Claude provider.
 type OpenAI struct {
 	client        openai.Client
 	fastModel     string
@@ -37,11 +28,8 @@ type OpenAI struct {
 	interests     config.Interests
 }
 
-// OpenAIOptions configures the analyzer.
-//
-// Both model names are required, as they are for every provider: see
-// ClaudeOptions for why there are no defaults anywhere. An unknown name is then
-// the API's error to report rather than this repository's to guess at.
+// OpenAIOptions configures the analyzer. Both model names are required; there
+// are no defaults that can become stale.
 type OpenAIOptions struct {
 	APIKey       string
 	FastModel    string
@@ -59,33 +47,11 @@ type OpenAIOptions struct {
 	HTTPClient *http.Client
 }
 
-// reasoningModel matches the families that refuse a temperature: the o-series —
-// o1, o3, o4-mini and their kin — and the GPT-5 line.
-//
-// They matter here for one practical reason. They do not ignore the parameter,
-// they reject the request:
-//
-//	Unsupported parameter: 'temperature' is not supported with this model.
-//
-// The o-series was covered from the start. GPT-5 was not, and the omission was
-// invisible in two ways at once: the pipeline treats a failed summary as a
-// warning and keeps the article, so a run would have produced scores for
-// everything and summaries for nothing, without failing. A dry run of one
-// article showed the parameter going out to gpt-5.6-luna and was what caught it.
-//
-// Matching on the name is a guess about a naming convention, which is why it
-// guessed wrong once already. It stays because the alternative — a list of every
-// model known to accept a temperature — goes stale in the same direction but
-// silently, by refusing a parameter that would have worked.
+// reasoningModel matches model families that reject the temperature parameter.
 var reasoningModel = regexp.MustCompile(`^(o\d|gpt-5)`)
 
-// temperature returns the sampling temperature to send, and whether to send one
-// at all.
-//
-// Zero, for everything that accepts it. Scoring is a judgement that should not
-// change between two runs over the same article, and the small variation a
-// higher temperature buys is worth nothing when the number's only job is to
-// order a page.
+// temperature returns zero for deterministic scoring, unless the model rejects
+// the parameter entirely.
 func temperature(model string) (float64, bool) {
 	if reasoningModel.MatchString(model) {
 		return 0, false
@@ -93,12 +59,8 @@ func temperature(model string) (float64, bool) {
 	return 0, true
 }
 
-// tune applies the two settings that depend on which model is answering, so
-// that the assessment and the summary cannot drift apart on how they are asked.
-//
-// The two are mutually exclusive by design, not by coincidence: a model that
-// takes a temperature has no reasoning effort, and a model that reasons refuses
-// the temperature. Deciding both in one place is what keeps that true.
+// tune applies either temperature or reasoning effort, which are mutually
+// exclusive for the supported model families.
 func tune(params *openai.ChatCompletionNewParams, model string, effort config.ReasoningEffort) {
 	if value, send := temperature(model); send {
 		params.Temperature = openai.Float(value)
@@ -109,18 +71,8 @@ func tune(params *openai.ChatCompletionNewParams, model string, effort config.Re
 	}
 }
 
-// unsupportedByStrict are schema keywords OpenAI's strict mode refuses.
-//
-// The shared schema uses all four to say what a good answer looks like — at
-// most three categories, a score between 0 and 100. Sent as they are, the call
-// is rejected outright. They are dropped for this provider rather than removed
-// from the schema, because Anthropic honours them and they are worth keeping
-// there.
-//
-// What survives is what matters most: additionalProperties is false, every
-// field is required, and the categories are an enum of the reader's own
-// interests, so the model still cannot invent one. The score's range is left to
-// the clamp in Assess, which is why that clamp exists.
+// unsupportedByStrict are schema keywords OpenAI strict mode rejects. They stay
+// in the shared schema because Anthropic supports them.
 var unsupportedByStrict = []string{"minItems", "maxItems", "minimum", "maximum"}
 
 // forStrictMode copies a schema without the keywords strict mode refuses.
