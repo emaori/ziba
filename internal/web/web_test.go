@@ -85,6 +85,14 @@ func (f *fakeStore) TokensByDay(_ context.Context, _ int) ([]store.TokenTally, e
 	}, nil
 }
 
+func (f *fakeStore) Backlogs(context.Context) ([]store.Backlog, error) {
+	return []store.Backlog{
+		{Stage: "Roundup expansion", Pending: 1},
+		{Stage: "Full-text retrieval", Pending: 3, Oldest: time.Now().Add(-2 * time.Hour)},
+		{Stage: "Analysis", Pending: 4, Failed: 1, Oldest: time.Now().Add(-3 * 24 * time.Hour)},
+	}, nil
+}
+
 func (f *fakeStore) TalliesBySource(context.Context) ([]store.Tally, error) {
 	return []store.Tally{{
 		Source: "IEEE Spectrum", Links: 30, Stored: 24, Duplicate: 4, Skipped: 2,
@@ -173,7 +181,7 @@ func TestEachPageRendersItsOwnContent(t *testing.T) {
 		path   string
 		expect string // markup unique to that page
 	}{
-		{"home is the day's selection", "/", `class="card"`},
+		{"home is the latest selection", "/", `class="card"`},
 		{"article reader", "/article/42", `class="reader"`},
 		{"interest", "/interest/Robotics", `class="card"`},
 		{"day", "/day", `class="daypick"`},
@@ -252,7 +260,7 @@ func TestMissingArticleIs404(t *testing.T) {
 	}
 }
 
-// An empty digest is a normal state — the day's collection may not have cleared
+// An empty digest is a normal state — recent collection may not have cleared
 // the threshold — so it must render, not fail.
 func TestEmptyDigestRenders(t *testing.T) {
 	handler := newTestServer(t, &fakeStore{})
@@ -261,7 +269,7 @@ func TestEmptyDigestRenders(t *testing.T) {
 	if code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", code)
 	}
-	if !strings.Contains(body, "ziba digest") {
+	if !strings.Contains(body, "ziba run") {
 		t.Error("empty digest page does not explain how to generate one")
 	}
 }
@@ -785,9 +793,12 @@ func TestStatsPage(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"443",                  // articles stored
-		"140",                  // hidden for matching no interest
-		"IEEE Spectrum",        // the by-source row
+		"443",           // articles stored
+		"140",           // hidden for matching no interest
+		"IEEE Spectrum", // the by-source row
+		"Processing queues",
+		"Full-text retrieval",
+		"Analysis",
 		"/day?date=2026-08-08", // the by-day row links to that day
 	} {
 		if !strings.Contains(body, want) {

@@ -1,8 +1,8 @@
 {{define "content"}}
   {{if .Digest.Articles}}
     <h1 class="page-title">
-      Today
-      <span class="subtitle">{{shortDate .Digest.Date}} · {{len .Digest.Articles}} articles, most relevant first</span>
+      Last 24 hours
+      <span class="subtitle">{{len .Digest.Articles}} articles, most relevant first</span>
     </h1>
     {{range .Digest.Articles}}{{template "card" .}}{{end}}
     <p class="note">
@@ -12,8 +12,8 @@
   {{else}}
     <h1 class="page-title">Nothing selected yet</h1>
     <p class="note">
-      No digest has been generated. Collect and process some articles, then run
-      <code>ziba digest</code> to build the selection for today.
+      No digest has been generated. Run <code>ziba run</code> to collect articles
+      and build the latest selection.
     </p>
     <p class="note">
       The tabs above browse by subject, and <a href="/archive">everything</a>

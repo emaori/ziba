@@ -5,7 +5,7 @@
 # has to be mounted at /app/config.
 #
 # threshold: the relevance score (0-100) an article must reach to be summarized
-#            and to appear in the daily digest. Below it an article is still
+#            and to appear in the latest digest. Below it an article is still
 #            collected and browsable in the archive — the AI curates, it does
 #            not censor. Raising this makes the digest shorter and cheaper.
 #

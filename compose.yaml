@@ -85,8 +85,8 @@ services:
       ZIBA_FAST_EFFORT: low
       ZIBA_CAPABLE_EFFORT: low
 
-      # The digest is scheduled in local time, so the container has to know
-      # which local. Without this it runs on UTC and arrives at the wrong hour.
+      # The schedule uses local time, so the container has to know which local.
+      # Without this it uses UTC and the morning run happens at the wrong hour.
       TZ: UTC
 
       # --- A newsletter mailbox (optional) ------------------------------------
@@ -100,12 +100,11 @@ services:
       # ZIBA_IMAP_PASSWORD:
 
       # --- The schedule --------------------------------------------
-      # How often to collect, and when to build the day's selection. Collection
-      # runs on an interval because feeds move through the day; the selection is
-      # built once, early, so it is waiting in the morning. The defaults are 6h
-      # and 06:30, and ZIBA_COLLECT_EVERY=0 stops both.
+      # Every run collects, processes and refreshes the last-24-hours digest.
+      # The interval is anchored at 04:00, so restarts do not move it.
+      # ZIBA_COLLECT_EVERY=0 disables the schedule.
       ZIBA_COLLECT_EVERY: 6h
-      ZIBA_DIGEST_AT: "06:30"
+      ZIBA_COLLECT_AT: "04:00"
 
       # --- Debugging (optional) -----------------------------------------------
       # Record every request made to a model, and its reply, in

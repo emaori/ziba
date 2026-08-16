@@ -101,6 +101,42 @@ func TestTimeOfDayNextAcrossDaylightSaving(t *testing.T) {
 	}
 }
 
+func TestTimeOfDayAnchoredInterval(t *testing.T) {
+	at := TimeOfDay{Hour: 4}
+	every := 6 * time.Hour
+
+	tests := []struct {
+		now          time.Time
+		wantPrevious time.Time
+		wantNext     time.Time
+	}{
+		{
+			time.Date(2026, 8, 5, 3, 0, 0, 0, time.UTC),
+			time.Date(2026, 8, 4, 22, 0, 0, 0, time.UTC),
+			time.Date(2026, 8, 5, 4, 0, 0, 0, time.UTC),
+		},
+		{
+			time.Date(2026, 8, 5, 13, 0, 0, 0, time.UTC),
+			time.Date(2026, 8, 5, 10, 0, 0, 0, time.UTC),
+			time.Date(2026, 8, 5, 16, 0, 0, 0, time.UTC),
+		},
+		{
+			time.Date(2026, 8, 5, 22, 0, 0, 0, time.UTC),
+			time.Date(2026, 8, 5, 22, 0, 0, 0, time.UTC),
+			time.Date(2026, 8, 6, 4, 0, 0, 0, time.UTC),
+		},
+	}
+
+	for _, tt := range tests {
+		if got := at.PreviousEvery(tt.now, every); !got.Equal(tt.wantPrevious) {
+			t.Errorf("PreviousEvery(%v) = %v, want %v", tt.now, got, tt.wantPrevious)
+		}
+		if got := at.NextEvery(tt.now, every); !got.Equal(tt.wantNext) {
+			t.Errorf("NextEvery(%v) = %v, want %v", tt.now, got, tt.wantNext)
+		}
+	}
+}
+
 func TestLoadScheduleDefaults(t *testing.T) {
 	t.Setenv("ZIBA_DATABASE_URL", "postgres://localhost/ziba")
 
@@ -111,8 +147,8 @@ func TestLoadScheduleDefaults(t *testing.T) {
 	if cfg.CollectEvery != DefaultCollectEvery {
 		t.Errorf("CollectEvery = %v, want %v", cfg.CollectEvery, DefaultCollectEvery)
 	}
-	if got := cfg.DigestAt.String(); got != DefaultDigestAt {
-		t.Errorf("DigestAt = %v, want %v", got, DefaultDigestAt)
+	if got := cfg.CollectAt.String(); got != DefaultCollectAt {
+		t.Errorf("CollectAt = %v, want %v", got, DefaultCollectAt)
 	}
 }
 
@@ -126,8 +162,8 @@ func TestLoadScheduleRejectsBadValues(t *testing.T) {
 		// A schedule tighter than a minute would hammer every source and is
 		// certainly a typo — "30" meaning seconds rather than minutes.
 		{"interval too short", "ZIBA_COLLECT_EVERY", "30s"},
-		{"bad time", "ZIBA_DIGEST_AT", "half past six"},
-		{"impossible hour", "ZIBA_DIGEST_AT", "25:00"},
+		{"bad time", "ZIBA_COLLECT_AT", "half past six"},
+		{"impossible hour", "ZIBA_COLLECT_AT", "25:00"},
 	}
 
 	for _, tt := range tests {
@@ -139,6 +175,19 @@ func TestLoadScheduleRejectsBadValues(t *testing.T) {
 				t.Errorf("Load accepted %s=%q, want an error", tt.key, tt.value)
 			}
 		})
+	}
+}
+
+func TestLoadLegacyDigestAtAsScheduleAnchor(t *testing.T) {
+	t.Setenv("ZIBA_DATABASE_URL", "postgres://localhost/ziba")
+	t.Setenv("ZIBA_DIGEST_AT", "05:30")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load returned error: %v", err)
+	}
+	if got := cfg.CollectAt.String(); got != "05:30" {
+		t.Errorf("CollectAt = %v, want legacy value 05:30", got)
 	}
 }
 

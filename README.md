@@ -7,10 +7,10 @@
 
 Ziba is a self-hosted personal content aggregator. It collects articles from
 configured sources, processes them with AI, and presents them as a personalized
-daily magazine.
+magazine.
 
 Sources and interests are both configured by hand. An article is collected from
-its source and appears in the daily digest only if it matches an interest and
+its source and appears in the last-24-hours digest only if it matches an interest and
 scores above a configured threshold. Articles that pass are then summarized.
 
 The supported source types are:
@@ -86,7 +86,7 @@ interests:
 ```
 
 `threshold: 60` means an article must score 60 or more, on a scale of 0 to 100,
-to be summarized and to appear in the daily digest. Below it, one interest is
+to be summarized and to appear in the last-24-hours digest. Below it, one interest is
 defined: AI, with its subtopics.
 
 `config/interests.example.yaml` documents every field.
@@ -104,7 +104,7 @@ newsletter source can read a single mail folder.
 A source can also declare which interest it belongs to. When a newsletter is
 already known to be about AI, for example, labelling it that way makes the
 analyzer skip classification and work out only the score and the summary. Such
-articles are always shown in the web interface, and reach the daily digest only
+articles are always shown in the web interface, and reach the latest digest only
 if their score clears the threshold.
 
 ```yaml
@@ -148,9 +148,16 @@ ones already uncommented are these:
 | `ZIBA_CAPABLE_MODEL` | writes the summaries | **required**, e.g. `gpt-5.6-terra` |
 | `ZIBA_FAST_EFFORT` | how hard the fast model thinks | `low` — raising it costs more than the article does |
 | `ZIBA_CAPABLE_EFFORT` | the same, for summaries | `low` |
-| `TZ` | when the daily digest is built | your zone, e.g. `Europe/Rome`; otherwise UTC |
-| `ZIBA_COLLECT_EVERY` | how often sources are read | `6h`; `0` stops the schedule |
-| `ZIBA_DIGEST_AT` | when the day's selection is built | `"06:30"`, in `TZ` above |
+| `TZ` | which local clock the schedule follows | your zone, e.g. `Europe/Rome`; otherwise UTC |
+| `ZIBA_COLLECT_EVERY` | how often Ziba runs | `6h`; `0` stops the schedule |
+| `ZIBA_COLLECT_AT` | when the daily cycle starts | `"04:00"`, in `TZ` above |
+
+These two settings define one schedule. `ZIBA_COLLECT_AT` sets the first run of
+each day. `ZIBA_COLLECT_EVERY` sets the interval between runs. For example,
+`ZIBA_COLLECT_AT=04:00` and `ZIBA_COLLECT_EVERY=6h` run Ziba at 04:00, 10:00,
+16:00, and 22:00. Each run collects articles, processes them, and refreshes the
+last-24-hours digest. Restarting Ziba does not change these times. Set
+`ZIBA_COLLECT_EVERY=0` to disable all scheduled runs.
 
 Four need a value before anything works properly: the database password in both
 places it appears, the API key, and the two model names. Everything else has a
@@ -168,17 +175,21 @@ With both config files in place and `compose.yaml` filled in, start the stack:
 docker compose up -d
 ```
 
-Nothing is collected at startup. The schedule counts from the moment the
-container starts, so with the default `ZIBA_COLLECT_EVERY=6h` the first
-collection is six hours away and the pages are empty until then. To fill them
-now:
+The schedule is tied to the clock. With the defaults, Ziba runs at 04:00, 10:00,
+16:00, and 22:00. Restarting Ziba does not move those times.
+
+Each run collects and processes articles. It then rebuilds the home page from
+the last 24 hours. A 04:00 run gives the digest time to be ready for the morning.
+
+If Ziba missed the latest run, it runs once at startup. It does not replay every
+missed run. To run it now:
 
 ```sh
 docker compose exec ziba-api ziba run
 ```
 
-That does the whole chain once — collect, retrieve, analyze, select — and then
-the schedule carries on as usual.
+That collects, retrieves, analyzes, and refreshes the digest. The normal schedule
+then continues.
 
 ### Things worth knowing
 
@@ -195,6 +206,10 @@ reaches the expensive model, and `ZIBA_FAST_EFFORT` / `ZIBA_CAPABLE_EFFORT`,
 because reasoning tokens are billed as output and output costs several times
 input. The Statistics page reports exactly what has been spent, per interest and
 per day.
+
+The same page shows whether retrieval or analysis is falling behind. Temporary
+processing failures retry automatically; repeatedly failing items are reported
+there instead of blocking newer work.
 
 **It runs without a key.** With no API key configured, collection, retrieval
 and the archive all work, and only the analysis is skipped. That mode is crude

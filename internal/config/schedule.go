@@ -7,19 +7,17 @@ import (
 	"time"
 )
 
-// Default schedule. Collection runs several times a day because feeds move
-// through it — a front page collected once is a front page mostly missed. The
-// selection is built once, early, so it is waiting when the reader arrives.
+// Default schedule. The anchor keeps the morning run predictable across
+// restarts; each run also refreshes the digest.
 const (
 	DefaultCollectEvery = 6 * time.Hour
-	DefaultDigestAt     = "06:30"
+	DefaultCollectAt    = "04:00"
 )
 
 // TimeOfDay is a wall-clock time, without a date.
 //
-// The daily selection is a wall-clock idea: "ready by half past six" means half
-// past six whatever the calendar is doing. Storing it as hour and minute rather
-// than as an instant is what makes it survive the clocks changing.
+// The schedule anchor is a wall-clock idea. Storing it as hour and minute makes
+// the morning run stay put when clocks change.
 type TimeOfDay struct {
 	Hour   int
 	Minute int
@@ -58,4 +56,36 @@ func (t TimeOfDay) Next(now time.Time) time.Time {
 		candidate = candidate.AddDate(0, 0, 1)
 	}
 	return candidate
+}
+
+// NextEvery returns the next occurrence of an interval anchored at this local
+// time each day.
+func (t TimeOfDay) NextEvery(now time.Time, every time.Duration) time.Time {
+	if every <= 0 {
+		return time.Time{}
+	}
+	anchor := t.On(now)
+	for candidate, nextDay := anchor, anchor.AddDate(0, 0, 1); candidate.Before(nextDay); candidate = candidate.Add(every) {
+		if candidate.After(now) {
+			return candidate
+		}
+	}
+	return anchor.AddDate(0, 0, 1)
+}
+
+// PreviousEvery returns the latest anchored occurrence at or before now.
+func (t TimeOfDay) PreviousEvery(now time.Time, every time.Duration) time.Time {
+	if every <= 0 {
+		return time.Time{}
+	}
+	day := now
+	if now.Before(t.On(now)) {
+		day = now.AddDate(0, 0, -1)
+	}
+	anchor, nextDay := t.On(day), t.On(day).AddDate(0, 0, 1)
+	previous := anchor
+	for candidate := anchor.Add(every); candidate.Before(nextDay) && !candidate.After(now); candidate = candidate.Add(every) {
+		previous = candidate
+	}
+	return previous
 }

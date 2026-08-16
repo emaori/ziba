@@ -237,6 +237,89 @@ func TestArticleStats(t *testing.T) {
 	}
 }
 
+func TestAnalysisFailuresAreDeferredThenBecomeTerminal(t *testing.T) {
+	db := testStore(t)
+	ctx := context.Background()
+	source := seedSource(t, db, "feed", nil)
+
+	id, _, err := db.SaveArticle(ctx, domain.Article{
+		SourceID: source, URL: "https://example.com/broken", Title: "Broken",
+		CollectedAt: time.Now(), FullText: "text",
+	})
+	if err != nil {
+		t.Fatalf("SaveArticle: %v", err)
+	}
+
+	runStarted := time.Now()
+	if err := db.RecordAnalysisFailure(ctx, id, "temporary failure", 4); err != nil {
+		t.Fatalf("first failure: %v", err)
+	}
+	if eligible, err := db.UnanalyzedArticlesBefore(ctx, 10, runStarted); err != nil {
+		t.Fatalf("UnanalyzedArticlesBefore: %v", err)
+	} else if len(eligible) != 0 {
+		t.Errorf("failed article was retried in the same run: %v", eligible)
+	}
+	if eligible, err := db.UnanalyzedArticles(ctx, 10); err != nil {
+		t.Fatalf("UnanalyzedArticles: %v", err)
+	} else if len(eligible) != 1 {
+		t.Errorf("article is not eligible on the next run: %v", eligible)
+	}
+
+	for attempt := 2; attempt <= 4; attempt++ {
+		if err := db.RecordAnalysisFailure(ctx, id, "still broken", 4); err != nil {
+			t.Fatalf("failure %d: %v", attempt, err)
+		}
+	}
+
+	var failures int
+	var failedAt *time.Time
+	if err := db.pool.QueryRow(ctx,
+		`SELECT failure_count, failed_at FROM articles WHERE id = $1`, id).
+		Scan(&failures, &failedAt); err != nil {
+		t.Fatalf("read retry state: %v", err)
+	}
+	if failures != 4 || failedAt == nil {
+		t.Errorf("failures = %d, failed_at = %v; want 4 and a terminal timestamp", failures, failedAt)
+	}
+
+	backlogs, err := db.Backlogs(ctx)
+	if err != nil {
+		t.Fatalf("Backlogs: %v", err)
+	}
+	if got := backlogs[2]; got.Stage != "Analysis" || got.Pending != 0 || got.Failed != 1 {
+		t.Errorf("analysis backlog = %+v, want one terminal failure and nothing pending", got)
+	}
+}
+
+func TestRoundupFailuresBecomeTerminal(t *testing.T) {
+	db := testStore(t)
+	ctx := context.Background()
+	source := seedSource(t, db, "feed", nil)
+	ids := seedRawItems(t, db, []domain.RawItem{{
+		SourceID: source, Kind: domain.ItemKindRoundup,
+		URL: "https://example.com/roundup", CollectedAt: time.Now(),
+	}})
+
+	for attempt := 1; attempt <= 4; attempt++ {
+		if err := db.RecordRawItemFailure(ctx, ids[0], "unavailable", 4); err != nil {
+			t.Fatalf("failure %d: %v", attempt, err)
+		}
+	}
+
+	if eligible, err := db.UnexpandedRoundups(ctx, 10); err != nil {
+		t.Fatalf("UnexpandedRoundups: %v", err)
+	} else if len(eligible) != 0 {
+		t.Errorf("terminal roundup is still eligible: %v", eligible)
+	}
+	backlogs, err := db.Backlogs(ctx)
+	if err != nil {
+		t.Fatalf("Backlogs: %v", err)
+	}
+	if got := backlogs[0]; got.Failed != 1 || got.Pending != 0 {
+		t.Errorf("roundup backlog = %+v, want one terminal failure", got)
+	}
+}
+
 func mustID(t *testing.T, db *Store, url string) int64 {
 	t.Helper()
 	var id int64

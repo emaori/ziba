@@ -1,4 +1,4 @@
-// Package web serves the reading interface: the daily digest, browsing by
+// Package web serves the reading interface: the latest digest, browsing by
 // category, the archive, and the article reader.
 //
 // Pages are rendered on the server with html/template. There is no build step
@@ -39,6 +39,7 @@ var templateFuncs = template.FuncMap{
 	// whole point of the table.
 	"thousands": thousands,
 	"isoDate":   func(t time.Time) string { return t.Format(time.DateOnly) },
+	"age":       age,
 
 	// pathEscape, not the built-in urlquery, for anything that lands in a URL
 	// *path*. urlquery writes a space as "+", which a query string decodes back
@@ -51,6 +52,26 @@ var templateFuncs = template.FuncMap{
 	// halves are escaped the way each needs — and so a link cannot be built
 	// with only one of them remembered.
 	"dayLink": dayLink,
+}
+
+func age(t time.Time) string {
+	if t.IsZero() {
+		return "—"
+	}
+	d := time.Since(t)
+	if d < 0 {
+		d = 0
+	}
+	switch {
+	case d < time.Minute:
+		return "less than a minute"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 48*time.Hour:
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	default:
+		return fmt.Sprintf("%dd", int(d.Hours()/24))
+	}
 }
 
 // dayLink addresses one day, keeping the interest filter if there is one.

@@ -66,8 +66,8 @@ type Config struct {
 	// CollectEvery is how often the unattended schedule collects and analyzes.
 	CollectEvery time.Duration
 
-	// DigestAt is when it builds the day's selection.
-	DigestAt TimeOfDay
+	// CollectAt anchors the unattended schedule to a local wall-clock time.
+	CollectAt TimeOfDay
 }
 
 // Load reads the configuration from the environment.
@@ -122,11 +122,16 @@ func Load() (Config, error) {
 		cfg.CollectEvery = every
 	}
 
-	digestAt, err := ParseTimeOfDay(envOr("ZIBA_DIGEST_AT", DefaultDigestAt))
-	if err != nil {
-		return Config{}, fmt.Errorf("ZIBA_DIGEST_AT: %w", err)
+	anchor := os.Getenv("ZIBA_COLLECT_AT")
+	if anchor == "" {
+		// Keep existing installations working while ZIBA_DIGEST_AT is retired.
+		anchor = envOr("ZIBA_DIGEST_AT", DefaultCollectAt)
 	}
-	cfg.DigestAt = digestAt
+	collectAt, err := ParseTimeOfDay(anchor)
+	if err != nil {
+		return Config{}, fmt.Errorf("ZIBA_COLLECT_AT: %w", err)
+	}
+	cfg.CollectAt = collectAt
 
 	return cfg, nil
 }

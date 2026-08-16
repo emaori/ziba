@@ -105,7 +105,7 @@ commands:
   migrate   apply pending database migrations
   collect   read every enabled source and store what is new
   process   run the AI pipeline over articles not yet analyzed
-  digest    build the selection for a day
+  digest    build a 24-hour selection
   run       do the whole chain once: collect, retrieve, analyze, select
   serve     run the web interface, and the schedule alongside it
 `)

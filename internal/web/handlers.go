@@ -40,6 +40,7 @@ type Store interface {
 	Tokens(ctx context.Context) (store.TokenTally, error)
 	TokensByInterest(ctx context.Context, interests []string) ([]store.TokenTally, error)
 	TokensByDay(ctx context.Context, limit int) ([]store.TokenTally, error)
+	Backlogs(ctx context.Context) ([]store.Backlog, error)
 }
 
 // page is the data every template receives. The interests appear in the tab bar
@@ -63,6 +64,7 @@ type page struct {
 	Tokens           store.TokenTally
 	TokensByInterest []store.TokenTally
 	TokensByDay      []store.TokenTally
+	Backlogs         []store.Backlog
 	Offset           int
 	PageSize         int
 	Threshold        domain.RelevanceScore
@@ -133,7 +135,7 @@ func (s *Server) handleDigest(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	s.render(w, r, "digest.html", &page{Title: "Today", Digest: digest})
+	s.render(w, r, "digest.html", &page{Title: "Last 24 hours", Digest: digest})
 }
 
 func (s *Server) handleArticle(w http.ResponseWriter, r *http.Request) {
@@ -281,6 +283,11 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
+	backlogs, err := s.store.Backlogs(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
 
 	// Rows that finished before outcomes were recorded. Worth naming rather
 	// than folding into another column, so the totals stay honest.
@@ -293,6 +300,7 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		Title: "Statistics", BySource: bySource, ByDay: byDay,
 		Library: library, Unknown: unknown,
 		Tokens: tokens, TokensByInterest: tokensByInterest, TokensByDay: tokensByDay,
+		Backlogs: backlogs,
 	})
 }
 

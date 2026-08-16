@@ -148,7 +148,7 @@ func TestDeclaredSourcesIgnoreTheThreshold(t *testing.T) {
 		t.Error("an inferred article scoring 80 is missing from the tab")
 	}
 
-	// And the same rule in the day's selection.
+	// And the same rule in the latest selection.
 	selected, err := db.GenerateDigest(ctx, today, 60, interests)
 	if err != nil {
 		t.Fatalf("GenerateDigest: %v", err)
@@ -162,7 +162,36 @@ func TestDeclaredSourcesIgnoreTheThreshold(t *testing.T) {
 		t.Fatalf("LatestDigest: %v", err)
 	}
 	if !containsURL(digest.Articles, "https://example.com/weak-declared") {
-		t.Error("a declared source scoring 40 is missing from the day's selection")
+		t.Error("a declared source scoring 40 is missing from the latest selection")
+	}
+}
+
+func TestDigestUsesTheLastTwentyFourHours(t *testing.T) {
+	db := testStore(t)
+	ctx := context.Background()
+	end := time.Date(2026, 8, 16, 5, 0, 0, 0, time.UTC)
+	source := seedSource(t, db, "feed", nil)
+
+	inside := seedArticle(t, db, source, "https://example.com/inside", 80,
+		[]string{".NET"}, end.Add(-23*time.Hour))
+	seedArticle(t, db, source, "https://example.com/outside", 90,
+		[]string{".NET"}, end.Add(-25*time.Hour))
+	seedArticle(t, db, source, "https://example.com/future", 95,
+		[]string{".NET"}, end.Add(time.Minute))
+
+	selected, err := db.GenerateDigest(ctx, end, 60, []string{".NET"})
+	if err != nil {
+		t.Fatalf("GenerateDigest: %v", err)
+	}
+	if selected != 1 {
+		t.Fatalf("selected %d articles, want 1 from the last 24 hours", selected)
+	}
+	digest, err := db.LatestDigest(ctx)
+	if err != nil {
+		t.Fatalf("LatestDigest: %v", err)
+	}
+	if len(digest.Articles) != 1 || digest.Articles[0].ID != inside {
+		t.Errorf("digest articles = %+v, want only article %d", digest.Articles, inside)
 	}
 }
 
