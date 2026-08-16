@@ -1,6 +1,6 @@
 // Package job holds the work Ziba does on a schedule: collecting from every
 // source, turning what was collected into articles, analyzing them, and
-// building the day's selection.
+// refreshing the digest.
 //
 // It exists so that the commands and the scheduler run exactly the same code.
 // A nightly run that differs from what you get by typing the command is a bug
@@ -339,7 +339,15 @@ func (r *Runner) ScheduledCollection(ctx context.Context, batch int) error {
 	}
 	r.log.Info("collection finished",
 		"sources", collected.Sources, "new", collected.New, "failed", collected.Failed)
-	return r.Drain(ctx, batch)
+	if err := r.Drain(ctx, batch); err != nil {
+		return err
+	}
+	selected, err := r.Digest(ctx, time.Now())
+	if err != nil {
+		return fmt.Errorf("build digest: %w", err)
+	}
+	r.log.Info("digest refreshed", "articles", selected, "window", 24*time.Hour)
+	return nil
 }
 
 // Drain processes every currently eligible item, keeping batch as the chunk
@@ -387,9 +395,9 @@ func (r *Runner) Drain(ctx context.Context, batch int) error {
 	return nil
 }
 
-// Digest builds and stores the selection for a day.
-func (r *Runner) Digest(ctx context.Context, date time.Time) (int, error) {
-	return r.store.GenerateDigest(ctx, date, r.threshold, r.interests)
+// Digest builds and stores the selection for the 24 hours ending at end.
+func (r *Runner) Digest(ctx context.Context, end time.Time) (int, error) {
+	return r.store.GenerateDigest(ctx, end, r.threshold, r.interests)
 }
 
 // interestNames flattens the configured interests to the plain list the queries

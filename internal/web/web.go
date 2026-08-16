@@ -1,4 +1,4 @@
-// Package web serves the reading interface: the daily digest, browsing by
+// Package web serves the reading interface: the latest digest, browsing by
 // category, the archive, and the article reader.
 //
 // Pages are rendered on the server with html/template. There is no build step

@@ -18,7 +18,7 @@ const DefaultInterestsPath = "config/interests.yaml"
 // rarely, which is why it is a file and not a screen.
 type Interests struct {
 	// Threshold is the relevance score an article must reach to be summarized
-	// and to appear in the daily digest. Below it the article is still stored
+	// and to appear in the latest digest. Below it the article is still stored
 	// and browsable: the AI curates, it does not censor.
 	Threshold int `yaml:"threshold"`
 

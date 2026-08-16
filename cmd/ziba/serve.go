@@ -17,21 +17,21 @@ import (
 // scheduleBatchSize bounds how much one unattended pass handles per stage.
 const scheduleBatchSize = 100
 
-// digestCmd builds the selection for a day.
+// digestCmd builds a 24-hour selection.
 func digestCmd(ctx context.Context, args []string) error {
 	flags := flag.NewFlagSet("digest", flag.ContinueOnError)
-	day := flags.String("date", "", "the day to build, as YYYY-MM-DD (default today)")
+	day := flags.String("date", "", "build the 24 hours ending on this date (default now)")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
 
 	date := time.Now()
 	if *day != "" {
-		parsed, err := time.Parse(time.DateOnly, *day)
+		parsed, err := time.ParseInLocation(time.DateOnly, *day, time.Local)
 		if err != nil {
 			return fmt.Errorf("invalid -date: %w", err)
 		}
-		date = parsed
+		date = parsed.AddDate(0, 0, 1).Add(-time.Nanosecond)
 	}
 
 	s, err := newSetup(ctx, analyzerNone)
@@ -47,7 +47,7 @@ func digestCmd(ctx context.Context, args []string) error {
 
 	// Not "at or above the threshold": a source that declares its categories is
 	// always selected, whatever it scored.
-	fmt.Printf("digest for %s: %d articles (threshold %d, not applied to sources that declare their categories)\n",
+	fmt.Printf("24-hour digest ending %s: %d articles (threshold %d, not applied to sources that declare their categories)\n",
 		date.Format(time.DateOnly), selected, s.runner.Threshold())
 	if selected == 0 {
 		fmt.Println("nothing cleared the threshold — lower it in the interests file, or collect more")
@@ -143,8 +143,8 @@ func serveCmd(ctx context.Context, args []string) error {
 	var wg sync.WaitGroup
 	if !*noSchedule {
 		scheduler := job.NewScheduler(s.runner, job.Schedule{
-			Every:    s.cfg.CollectEvery,
-			DigestAt: s.cfg.DigestAt,
+			Every: s.cfg.CollectEvery,
+			At:    s.cfg.CollectAt,
 		}, scheduleBatchSize, slog.Default())
 
 		wg.Add(1)

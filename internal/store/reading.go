@@ -28,8 +28,8 @@ func scanArticle(row pgx.CollectableRow) (domain.Article, error) {
 	return a, err
 }
 
-// GenerateDigest builds the selection for one day and stores it, replacing any
-// previous selection for that date. It returns how many articles were selected.
+// GenerateDigest builds the selection for the 24 hours ending at date and
+// stores it, replacing the latest selection for that date.
 //
 // The ranking is computed in SQL rather than in Go: the database is already
 // sorting the rows, so numbering them there avoids reading the whole set into
@@ -53,7 +53,7 @@ func (s *Store) GenerateDigest(ctx context.Context, date time.Time,
 		return 0, fmt.Errorf("upsert digest: %w", err)
 	}
 
-	// Regenerating a day replaces its selection rather than adding to it.
+	// Refreshing a date replaces its selection rather than adding to it.
 	if _, err := tx.Exec(ctx, `DELETE FROM digest_articles WHERE digest_id = $1`, digestID); err != nil {
 		return 0, fmt.Errorf("clear previous selection: %w", err)
 	}
@@ -64,13 +64,14 @@ func (s *Store) GenerateDigest(ctx context.Context, date time.Time,
 		FROM articles a JOIN sources s ON s.id = a.source_id
 		WHERE a.processed_at IS NOT NULL
 		  AND a.archived_at IS NULL
-		  AND a.collected_at::date = $3::date
+		  AND a.collected_at > $3 - interval '24 hours'
+		  AND a.collected_at <= $3
 		  -- A source that declares its categories was subscribed to on purpose,
 		  -- so the threshold does not apply to it: its score orders the day
 		  -- rather than deciding whether it belongs in it.
 		  AND (a.score >= $2 OR cardinality(s.categories) > 0)
 		  -- An article matching none of the reader's interests is not shown
-		  -- anywhere, so it does not belong in the day's selection either.
+		  -- anywhere, so it does not belong in the latest selection either.
 		  AND a.categories && $4::text[]`,
 		digestID, int16(threshold), date, interests)
 	if err != nil {
@@ -83,17 +84,13 @@ func (s *Store) GenerateDigest(ctx context.Context, date time.Time,
 	return int(tag.RowsAffected()), nil
 }
 
-// HasDigest reports whether a selection has already been built for a day.
-//
-// The scheduler asks this on startup: a process that was down at the appointed
-// time should still build the day's selection, but one that merely restarted
-// afterwards must not rebuild a selection the reader may already be reading.
-func (s *Store) HasDigest(ctx context.Context, date time.Time) (bool, error) {
+// HasDigestSince reports whether a digest was refreshed after an anchored run.
+func (s *Store) HasDigestSince(ctx context.Context, since time.Time) (bool, error) {
 	var exists bool
 	err := s.pool.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM digests WHERE date = $1::date)`, date).Scan(&exists)
+		`SELECT EXISTS (SELECT 1 FROM digests WHERE generated_at >= $1)`, since).Scan(&exists)
 	if err != nil {
-		return false, fmt.Errorf("check digest for %s: %w", date.Format(time.DateOnly), err)
+		return false, fmt.Errorf("check digest since %s: %w", since.Format(time.RFC3339), err)
 	}
 	return exists, nil
 }
@@ -209,7 +206,7 @@ func (s *Store) ArticlesByInterest(ctx context.Context, interest string,
 		WHERE $1 = ANY (a.categories)
 		  AND a.processed_at IS NOT NULL
 		  AND a.archived_at IS NULL
-		  -- As in the day's selection: a declared source is always shown, and
+		  -- As in the latest selection: a declared source is always shown, and
 		  -- its score only orders it.
 		  AND (a.score >= $2 OR cardinality(s.categories) > 0)
 		ORDER BY a.score DESC, a.published_at DESC NULLS LAST, a.id DESC

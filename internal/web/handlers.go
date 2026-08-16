@@ -135,7 +135,7 @@ func (s *Server) handleDigest(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	s.render(w, r, "digest.html", &page{Title: "Today", Digest: digest})
+	s.render(w, r, "digest.html", &page{Title: "Last 24 hours", Digest: digest})
 }
 
 func (s *Server) handleArticle(w http.ResponseWriter, r *http.Request) {

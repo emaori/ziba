@@ -181,7 +181,7 @@ func TestEachPageRendersItsOwnContent(t *testing.T) {
 		path   string
 		expect string // markup unique to that page
 	}{
-		{"home is the day's selection", "/", `class="card"`},
+		{"home is the latest selection", "/", `class="card"`},
 		{"article reader", "/article/42", `class="reader"`},
 		{"interest", "/interest/Robotics", `class="card"`},
 		{"day", "/day", `class="daypick"`},
@@ -260,7 +260,7 @@ func TestMissingArticleIs404(t *testing.T) {
 	}
 }
 
-// An empty digest is a normal state — the day's collection may not have cleared
+// An empty digest is a normal state — recent collection may not have cleared
 // the threshold — so it must render, not fail.
 func TestEmptyDigestRenders(t *testing.T) {
 	handler := newTestServer(t, &fakeStore{})
@@ -269,7 +269,7 @@ func TestEmptyDigestRenders(t *testing.T) {
 	if code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", code)
 	}
-	if !strings.Contains(body, "ziba digest") {
+	if !strings.Contains(body, "ziba run") {
 		t.Error("empty digest page does not explain how to generate one")
 	}
 }
