@@ -1,0 +1,12 @@
+{{define "content"}}
+<section class="settings-page">
+  <h1 class="page-title">Settings</h1>
+  {{template "settingsNav" .}}
+  <div class="section-heading"><div><h2>Sources</h2><p class="note">Choose where Ziba collects articles.</p></div><a class="button" href="/settings/source/new">Add source</a></div>
+  <div class="source-list">
+  {{range .Settings.Sources}}
+    <article class="setting-row"><div><strong>{{.Name}}</strong><span>{{.Type}} · {{if .Enabled}}enabled{{else}}disabled{{end}}</span><small>{{.URL}}</small></div><a class="button secondary" href="/settings/source/{{.ID}}">Edit</a></article>
+  {{else}}<p>No sources configured.</p>{{end}}
+  </div>
+</section>
+{{end}}

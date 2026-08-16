@@ -412,6 +412,9 @@ code {
 
 /* Setup and settings ------------------------------------------------------ */
 .settings-page { margin-bottom: 3rem; }
+.setup-page { max-width: 46rem; margin-left: auto; margin-right: auto; }
+.setup-masthead { justify-content: center; }
+.step { margin: 1.5rem 0 -1rem; color: var(--accent); font: 700 0.78rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.08em; }
 .settings-form, .settings-section { font-family: system-ui, sans-serif; }
 .settings-form fieldset, .settings-section {
   margin: 1.25rem 0;
@@ -441,6 +444,13 @@ code {
 .interest-row button { justify-self: start; }
 .newsletter-fields { margin-top: 1.2rem; padding-top: 0.8rem; border-top: 1px solid var(--rule); }
 .section-heading, .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.settings-nav { display: flex; gap: 0.5rem; margin: 0 0 2rem; border-bottom: 1px solid var(--rule); font-family: system-ui, sans-serif; }
+.settings-nav a { padding: 0.65rem 0.9rem; color: var(--ink-soft); text-decoration: none; border-bottom: 3px solid transparent; }
+.settings-nav a.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+.form-actions, .wizard-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; margin-top: 1rem; }
+.source-card { position: relative; }
+.source-list { padding: 0.2rem 1rem; background: var(--card); border: 1px solid var(--rule); border-radius: 3px; font-family: system-ui, sans-serif; }
+[hidden] { display: none !important; }
 .setting-row { padding: 0.8rem 0; border-top: 1px solid var(--rule); }
 .setting-row span, .setting-row small { display: block; color: var(--ink-soft); }
 @media (max-width: 40rem) { .interest-row { grid-template-columns: 1fr; } .interest-row .wide { grid-column: auto; } }

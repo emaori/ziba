@@ -21,6 +21,34 @@ type Configuration struct {
 	Sources    []domain.Source
 }
 
+// SaveSetupInterests persists the first wizard step without enabling Ziba.
+func (s *Store) SaveSetupInterests(ctx context.Context, interests config.Interests) error {
+	if err := config.ValidateInterests(interests); err != nil {
+		return err
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin setup interests: %w", err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `DELETE FROM interests`); err != nil {
+		return fmt.Errorf("clear setup interests: %w", err)
+	}
+	for position, interest := range interests.Topics {
+		if _, err := tx.Exec(ctx, `INSERT INTO interests (topic, priority, subtopics, note, position) VALUES ($1,$2,$3,$4,$5)`,
+			interest.Topic, interest.Priority, interest.Subtopics, interest.Note, position); err != nil {
+			return fmt.Errorf("save setup interest %q: %w", interest.Topic, err)
+		}
+	}
+	if _, err := tx.Exec(ctx, `UPDATE app_settings SET threshold=$1, updated_at=now() WHERE singleton`, interests.Threshold); err != nil {
+		return fmt.Errorf("save setup threshold: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit setup interests: %w", err)
+	}
+	return nil
+}
+
 // Configuration returns one consistent snapshot from PostgreSQL.
 func (s *Store) Configuration(ctx context.Context) (Configuration, error) {
 	var out Configuration
@@ -204,9 +232,12 @@ func ValidateSourceInput(in SourceInput, interests config.Interests, existing *d
 	if err != nil {
 		return domain.Source{}, err
 	}
-	cf, err := config.ParseCollectFrom(in.CollectFrom)
-	if err != nil {
-		return domain.Source{}, fmt.Errorf("collect from: %w", err)
+	var cf domain.CollectFrom
+	if typ == domain.SourceTypeRSS {
+		cf, err = config.ParseCollectFrom(in.CollectFrom)
+		if err != nil {
+			return domain.Source{}, fmt.Errorf("collect from: %w", err)
+		}
 	}
 	for _, category := range in.Categories {
 		if !known[category] {
@@ -214,7 +245,7 @@ func ValidateSourceInput(in SourceInput, interests config.Interests, existing *d
 		}
 	}
 	if in.Roundup && typ != domain.SourceTypeRSS {
-		return domain.Source{}, fmt.Errorf("only RSS sources can be roundups")
+		in.Roundup = false
 	}
 	src := domain.Source{ID: in.ID, Name: strings.TrimSpace(in.Name), Type: typ, URL: address, Enabled: in.Enabled, Roundup: in.Roundup, Categories: in.Categories, CollectFrom: cf}
 	if typ == domain.SourceTypeNewsletter {

@@ -46,12 +46,13 @@ func (s *Server) setupGate(next http.Handler) http.Handler {
 			s.fail(w, r, err)
 			return
 		}
-		if !cfg.Configured && r.URL.Path != "/setup" {
-			http.Redirect(w, r, "/setup", http.StatusSeeOther)
+		setupPath := strings.HasPrefix(r.URL.Path, "/setup")
+		if !cfg.Configured && !setupPath {
+			http.Redirect(w, r, "/setup/interests", http.StatusSeeOther)
 			return
 		}
-		if cfg.Configured && r.URL.Path == "/setup" {
-			http.Redirect(w, r, "/settings", http.StatusSeeOther)
+		if cfg.Configured && setupPath {
+			http.Redirect(w, r, "/settings/interests", http.StatusSeeOther)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -59,14 +60,27 @@ func (s *Server) setupGate(next http.Handler) http.Handler {
 }
 
 func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/setup/interests", http.StatusSeeOther)
+}
+
+func (s *Server) handleSetupInterests(w http.ResponseWriter, r *http.Request) {
 	cs, ok := s.configStore()
 	if !ok {
 		http.NotFound(w, r)
 		return
 	}
-	data := &page{Title: "Welcome", Source: store.SourceInput{Enabled: true, Type: "rss", Days: 1}}
-	data.Settings.Interests.Threshold = 60
-	data.Settings.Interests.Topics = []config.Interest{{Priority: 1}}
+	cfg, err := cs.Configuration(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	if cfg.Interests.Threshold == 0 {
+		cfg.Interests.Threshold = 60
+	}
+	if len(cfg.Interests.Topics) == 0 {
+		cfg.Interests.Topics = []config.Interest{{Priority: 1}}
+	}
+	data := &page{Title: "Welcome", SetupMode: true, Settings: cfg}
 	if r.Method == http.MethodPost {
 		if !s.validCSRF(r) {
 			http.Error(w, "invalid CSRF token", http.StatusForbidden)
@@ -74,30 +88,83 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 		}
 		interests, err := parseInterests(r)
 		if err == nil {
-			data.Source = parseSourceInput(r, 0)
-			var src domain.Source
-			src, err = store.ValidateSourceInput(data.Source, interests, nil)
-			if err == nil {
-				err = cs.SaveConfiguration(r.Context(), interests, []domain.Source{src})
-			}
+			err = cs.SaveSetupInterests(r.Context(), interests)
 		}
 		if err == nil {
-			http.Redirect(w, r, "/", http.StatusSeeOther)
+			http.Redirect(w, r, "/setup/sources", http.StatusSeeOther)
 			return
 		}
 		data.Error = err.Error()
 		data.Settings.Interests = interests
 	}
-	s.render(w, r, "setup.html", data)
+	s.render(w, r, "setup_interests.html", data)
+}
+
+func (s *Server) handleSetupSources(w http.ResponseWriter, r *http.Request) {
+	cs, ok := s.configStore()
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	cfg, err := cs.Configuration(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	if len(cfg.Interests.Topics) == 0 {
+		http.Redirect(w, r, "/setup/interests", http.StatusSeeOther)
+		return
+	}
+	inputs := []store.SourceInput{{Type: "rss", Enabled: true, Days: 1}}
+	data := &page{Title: "Sources", SetupMode: true, Settings: cfg, WizardSources: inputs}
+	if r.Method == http.MethodPost {
+		if !s.validCSRF(r) {
+			http.Error(w, "invalid CSRF token", http.StatusForbidden)
+			return
+		}
+		inputs = parseWizardSources(r)
+		data.WizardSources = inputs
+		if len(inputs) == 0 {
+			data.Error = "add at least one source"
+		} else {
+			sources := make([]domain.Source, 0, len(inputs))
+			for i, input := range inputs {
+				src, inputErr := store.ValidateSourceInput(input, cfg.Interests, nil)
+				if inputErr != nil {
+					data.Error = fmt.Sprintf("source %d: %v", i+1, inputErr)
+					break
+				}
+				sources = append(sources, src)
+			}
+			if data.Error == "" {
+				if err := cs.SaveConfiguration(r.Context(), cfg.Interests, sources); err != nil {
+					data.Error = err.Error()
+				} else {
+					http.Redirect(w, r, "/", http.StatusSeeOther)
+					return
+				}
+			}
+		}
+	}
+	s.render(w, r, "setup_sources.html", data)
 }
 
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/settings" {
+		http.Redirect(w, r, "/settings/interests", http.StatusSeeOther)
+		return
+	}
 	cfg, err := s.currentConfiguration(r)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	s.render(w, r, "settings.html", &page{Title: "Settings", Settings: cfg})
+	section := strings.TrimPrefix(r.URL.Path, "/settings/")
+	template := "settings_interests.html"
+	if section == "sources" {
+		template = "settings_sources.html"
+	}
+	s.render(w, r, template, &page{Title: "Settings", Settings: cfg, SettingsSection: section})
 }
 
 func (s *Server) handleSettingsInterests(w http.ResponseWriter, r *http.Request) {
@@ -121,10 +188,10 @@ func (s *Server) handleSettingsInterests(w http.ResponseWriter, r *http.Request)
 	}
 	if err != nil {
 		cfg.Interests = interests
-		s.render(w, r, "settings.html", &page{Title: "Settings", Settings: cfg, Error: err.Error()})
+		s.render(w, r, "settings_interests.html", &page{Title: "Settings", Settings: cfg, SettingsSection: "interests", Error: err.Error()})
 		return
 	}
-	http.Redirect(w, r, "/settings", http.StatusSeeOther)
+	http.Redirect(w, r, "/settings/interests", http.StatusSeeOther)
 }
 
 func (s *Server) handleSource(w http.ResponseWriter, r *http.Request) {
@@ -172,13 +239,13 @@ func (s *Server) handleSource(w http.ResponseWriter, r *http.Request) {
 			saveErr = cs.SaveConfiguration(r.Context(), cfg.Interests, cfg.Sources)
 		}
 		if saveErr == nil {
-			http.Redirect(w, r, "/settings", http.StatusSeeOther)
+			http.Redirect(w, r, "/settings/sources", http.StatusSeeOther)
 			return
 		}
-		s.render(w, r, "source.html", &page{Title: "Source", Settings: cfg, Source: input, EditingSource: existing != nil, Error: saveErr.Error()})
+		s.render(w, r, "source.html", &page{Title: "Source", Settings: cfg, SettingsSection: "sources", Source: input, EditingSource: existing != nil, Error: saveErr.Error()})
 		return
 	}
-	s.render(w, r, "source.html", &page{Title: "Source", Settings: cfg, Source: input, EditingSource: existing != nil})
+	s.render(w, r, "source.html", &page{Title: "Source", Settings: cfg, SettingsSection: "sources", Source: input, EditingSource: existing != nil})
 }
 
 func parseInterests(r *http.Request) (config.Interests, error) {
@@ -229,6 +296,31 @@ func parseSourceInput(r *http.Request, id int64) store.SourceInput {
 		Enabled: r.Form.Get("enabled") == "on", Roundup: r.Form.Get("roundup") == "on",
 		CollectFrom: r.Form.Get("collect_from"), Categories: splitComma(r.Form.Get("categories")),
 		Folder: r.Form.Get("folder"), Username: r.Form.Get("username"), Password: r.Form.Get("password"), Days: days, MaxMessages: maxMessages}
+}
+
+func parseWizardSources(r *http.Request) []store.SourceInput {
+	_ = r.ParseForm()
+	var out []store.SourceInput
+	for i := 0; ; i++ {
+		prefix := fmt.Sprintf("source_%d_", i)
+		if _, exists := r.Form[prefix+"name"]; !exists {
+			break
+		}
+		name := strings.TrimSpace(r.Form.Get(prefix + "name"))
+		if name == "" && strings.TrimSpace(r.Form.Get(prefix+"url")) == "" {
+			continue
+		}
+		days, _ := strconv.Atoi(r.Form.Get(prefix + "days"))
+		maxMessages, _ := strconv.Atoi(r.Form.Get(prefix + "max_messages"))
+		out = append(out, store.SourceInput{
+			Name: name, Type: r.Form.Get(prefix + "type"), URL: r.Form.Get(prefix + "url"),
+			Enabled: r.Form.Get(prefix+"enabled") == "on", Roundup: r.Form.Get(prefix+"roundup") == "on",
+			CollectFrom: r.Form.Get(prefix + "collect_from"), Categories: splitComma(r.Form.Get(prefix + "categories")),
+			Folder: r.Form.Get(prefix + "folder"), Username: r.Form.Get(prefix + "username"), Password: r.Form.Get(prefix + "password"),
+			Days: days, MaxMessages: maxMessages,
+		})
+	}
+	return out
 }
 
 func sourceInput(src domain.Source) store.SourceInput {

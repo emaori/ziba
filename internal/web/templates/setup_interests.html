@@ -1,0 +1,20 @@
+{{define "content"}}
+<section class="settings-page setup-page">
+  <p class="step">Step 1 of 2</p>
+  <h1 class="page-title">What do you want to read?</h1>
+  <p class="note">Your interests become Ziba's tabs and guide article scoring.</p>
+  {{if .Error}}<p class="form-error">{{.Error}}</p>{{end}}
+  <form method="post" action="/setup/interests" class="settings-form">
+    <input type="hidden" name="csrf_token" value="{{csrfToken}}">
+    <fieldset>
+      <legend>Interests</legend>
+      <label>Relevance threshold <input type="number" name="threshold" min="0" max="100" value="{{.Settings.Interests.Threshold}}" required></label>
+      <p class="help">Articles at or above this score appear in the digest. Start with 60.</p>
+      <p class="help">Priority 1 is highest. Enter subtopics as a comma-separated list. Notes explain what matters to you.</p>
+      {{template "interestRows" .Settings.Interests.Topics}}
+      <button class="button secondary" type="button" data-add-interest>Add another interest</button>
+    </fieldset>
+    <div class="wizard-actions"><span></span><button class="button" type="submit">Next: sources</button></div>
+  </form>
+</section>
+{{end}}

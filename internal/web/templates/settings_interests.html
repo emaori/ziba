@@ -1,0 +1,18 @@
+{{define "content"}}
+<section class="settings-page">
+  <h1 class="page-title">Settings</h1>
+  {{template "settingsNav" .}}
+  <h2>Interests</h2>
+  <p class="note">Changes guide new articles only. Existing articles are not re-analyzed.</p>
+  {{if .Error}}<p class="form-error">{{.Error}}</p>{{end}}
+  <form method="post" action="/settings/interests" class="settings-form">
+    <input type="hidden" name="csrf_token" value="{{csrfToken}}">
+    <fieldset><legend>Reading preferences</legend>
+      <label>Relevance threshold <input type="number" name="threshold" min="0" max="100" value="{{.Settings.Interests.Threshold}}" required></label>
+      <p class="help">Priority 1 is highest. Enter subtopics as a comma-separated list.</p>
+      {{template "interestRows" .Settings.Interests.Topics}}
+      <div class="form-actions"><button class="button secondary" type="button" data-add-interest>Add interest</button><button class="button" type="submit">Save interests</button></div>
+    </fieldset>
+  </form>
+</section>
+{{end}}
