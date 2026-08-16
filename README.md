@@ -32,8 +32,8 @@ Articles below the threshold keep their score and stay browsable in the archive.
 They are simply not summarized and not promoted: the AI curates, it does not
 censor.
 
-An offline analyzer is also available. It only matches against the vocabulary
-defined in `interests.yaml` (the subtopics), so it is crude — it exists for
+An offline analyzer is also available. It only matches against the configured
+interest vocabulary, so it is crude — it exists for
 debugging, not for daily use.
 
 
@@ -57,80 +57,24 @@ Expand-Archive ziba-deploy.zip -DestinationPath .
 cd ziba
 ```
 
-It holds `compose.yaml` and two examples, `config/interests.example.yaml` and
-`config/sources.example.yaml`, already arranged the way Compose expects. The
-image it pulls is
+It holds `compose.yaml`, already arranged the way Compose expects. The image it pulls is
 [`ghcr.io/emaori/ziba`](https://github.com/emaori/ziba/pkgs/container/ziba).
 
-Two things to do. Copy each example to its real name and edit it —
-`config/interests.yaml` and `config/sources.yaml`. Then fill in `compose.yaml`,
-which carries every other setting with a note on what it is for.
+Fill in `compose.yaml`, then start Ziba. On the first launch, open Ziba in a
+browser. The setup wizard asks for your interests and first source. Collection
+does not start until setup is complete.
 
-### interests.yaml
+After setup, use **Settings** in the web interface to add or edit sources and
+interests. Changes apply without restarting Ziba. Interest changes affect new
+articles only. Existing articles are not re-analyzed.
 
-`config/interests.yaml` describes what is worth reading, and sets the threshold
-an article must reach to be summarized and to appear in the digest.
+Newsletter credentials can be entered or changed in Settings. Stored usernames
+and passwords are never displayed again.
 
-An example template is available in `config/interests.example.yaml`.
-
-For instance:
-
-```yaml
-threshold: 60
-
-interests:
-  - topic: "AI"
-    priority: 1
-    subtopics: ["LLMs", "AI agents", "machine learning", "ML infrastructure"]
-    note: "Practical applications and how things actually work. Less interested in funding rounds and industry gossip."
-```
-
-`threshold: 60` means an article must score 60 or more, on a scale of 0 to 100,
-to be summarized and to appear in the last-24-hours digest. Below it, one interest is
-defined: AI, with its subtopics.
-
-`config/interests.example.yaml` documents every field.
-
-### sources.yaml
-
-Sources are listed in `config/sources.yaml`, hand-edited. Adding one is adding
-three lines; `enabled: false` stops reading a source without losing the articles
-already collected from it. Removing a source from the file disables it rather
-than deleting it, for the same reason.
-
-Every source can bound how much back catalogue it brings with it, and a
-newsletter source can read a single mail folder.
-
-A source can also declare which interest it belongs to. When a newsletter is
-already known to be about AI, for example, labelling it that way makes the
-analyzer skip classification and work out only the score and the summary. Such
-articles are always shown in the web interface, and reach the latest digest only
-if their score clears the threshold.
-
-```yaml
-- name: "The Go Blog"
-  type: rss
-  collect_from: 14d
-  url: "https://go.dev/blog/feed.atom"
-
-- name: "AI newsletters"
-  type: newsletter
-  url: "imaps://imap.gmail.com"
-  categories: ["AI"]
-  newsletter:
-    folder: "AI"
-    username_env: ZIBA_IMAP_USER
-    password_env: ZIBA_IMAP_PASSWORD
-    days: 1
-    max_messages: 50
-```
-
-Two sources here: an RSS feed (The Go Blog), which collects the last 14 days
-the first time it is read, and a newsletter read from a Gmail account whose
-credentials are named in the env variables. Articles from that newsletter are
-categorized as AI, so the analyzer does not try to classify them.
-
-`config/sources.example.yaml` documents every field.
+Upgrades from an older version are automatic. If the database is not configured
+yet and the old YAML files are present, Ziba imports them once. Existing source
+IDs and articles are preserved. After the import, the YAML files are no longer
+read.
 
 ### Settings
 
@@ -169,7 +113,7 @@ at startup. Take the current names from your provider.
 
 ### Running it
 
-With both config files in place and `compose.yaml` filled in, start the stack:
+With `compose.yaml` filled in, start the stack:
 
 ```sh
 docker compose up -d
@@ -201,7 +145,7 @@ articles read as well as read them.
 model, and everything above the threshold is summarized by the capable one. On
 one real archive of 485 articles that came to about $1.50 with OpenAI, or
 roughly $4–5 a month at fifty articles a day. Two settings move that figure more
-than anything else: the `threshold` in `interests.yaml`, which decides how much
+than anything else: the threshold in Settings, which decides how much
 reaches the expensive model, and `ZIBA_FAST_EFFORT` / `ZIBA_CAPABLE_EFFORT`,
 because reasoning tokens are billed as output and output costs several times
 input. The Statistics page reports exactly what has been spent, per interest and
@@ -215,10 +159,9 @@ there instead of blocking newer work.
 and the archive all work, and only the analysis is skipped. That mode is crude
 and meant for debugging.
 
-**Credentials are never written into the YAML.** A mailbox source names the
-server and the folder; `ZIBA_IMAP_USER` and `ZIBA_IMAP_PASSWORD` name the
-account. A source address carrying a password is refused at startup. With Gmail the
-password must be an App Password, pasted without the spaces the interface shows.
+**Newsletter credentials are write-only in Settings.** Ziba never displays a
+stored username or password. Leave those fields blank while editing to keep the
+stored values. With Gmail, use an App Password and paste it without spaces.
 
 **Web collection only connects to public addresses.** RSS feeds, roundup pages,
 article pages and every redirect are refused if their hostname resolves to a

@@ -70,7 +70,7 @@ func runCmd(ctx context.Context, args []string) error {
 		mode = analyzerOffline
 	}
 
-	s, err := newSetup(ctx, mode)
+	s, err := newServeSetup(ctx, mode)
 	if err != nil {
 		return err
 	}
@@ -103,12 +103,12 @@ func serveCmd(ctx context.Context, args []string) error {
 		}
 	}
 
-	s, err := newSetup(ctx, mode)
+	s, err := newServeSetup(ctx, mode)
 	if err != nil && mode == analyzerReal && errors.Is(err, errAnalyzerUnavailable) {
 		// Only analyzer construction may fall back; other configuration errors
 		// remain fatal. Log the full multiply-wrapped error.
 		slog.Warn("scheduling without analysis", "error", err)
-		s, err = newSetup(ctx, analyzerNone)
+		s, err = newServeSetup(ctx, analyzerNone)
 	}
 	if err != nil {
 		return err
@@ -142,7 +142,18 @@ func serveCmd(ctx context.Context, args []string) error {
 
 	var wg sync.WaitGroup
 	if !*noSchedule {
-		scheduler := job.NewScheduler(s.runner, job.Schedule{
+		runMode := mode
+		scheduler := job.NewSchedulerFunc(func(runCtx context.Context, batch int) error {
+			runner, runErr := s.currentRunner(runCtx, runMode)
+			if runErr != nil && runMode == analyzerReal && errors.Is(runErr, errAnalyzerUnavailable) {
+				slog.Warn("scheduled analysis unavailable", "error", runErr)
+				runner, runErr = s.currentRunner(runCtx, analyzerNone)
+			}
+			if runErr != nil {
+				return runErr
+			}
+			return runner.ScheduledCollection(runCtx, batch)
+		}, s.store.HasDigestSince, job.Schedule{
 			Every: s.cfg.CollectEvery,
 			At:    s.cfg.CollectAt,
 		}, scheduleBatchSize, slog.Default())

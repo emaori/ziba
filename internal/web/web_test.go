@@ -30,6 +30,22 @@ type fakeStore struct {
 	archivedCalls []bool
 }
 
+type configurableFakeStore struct {
+	*fakeStore
+	configuration store.Configuration
+	saved         store.Configuration
+}
+
+func (f *configurableFakeStore) Configuration(context.Context) (store.Configuration, error) {
+	return f.configuration, nil
+}
+
+func (f *configurableFakeStore) SaveConfiguration(_ context.Context, interests config.Interests, sources []domain.Source) error {
+	f.saved = store.Configuration{Configured: true, Interests: interests, Sources: sources}
+	f.configuration = f.saved
+	return nil
+}
+
 func (f *fakeStore) LatestDigest(context.Context) (domain.Digest, error) {
 	return f.digest, nil
 }
@@ -271,6 +287,64 @@ func TestEmptyDigestRenders(t *testing.T) {
 	}
 	if !strings.Contains(body, "ziba run") {
 		t.Error("empty digest page does not explain how to generate one")
+	}
+}
+
+func TestFirstRunIsGatedBySetupWizard(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}}
+	server, err := newServer(db, config.Interests{}, "setup-token")
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	handler := server.Handler()
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/setup" {
+		t.Fatalf("home response = %d %q, want setup redirect", rec.Code, rec.Header().Get("Location"))
+	}
+
+	form := url.Values{
+		"csrf_token": {"setup-token"}, "threshold": {"60"},
+		"interest_topic": {"AI"}, "interest_priority": {"1"},
+		"interest_subtopics": {"agents, models"}, "interest_note": {"Practical work"},
+		"name": {"Example"}, "type": {"rss"}, "url": {"https://example.com/feed"},
+		"enabled": {"on"}, "collect_from": {"7d"},
+	}
+	req = httptest.NewRequest(http.MethodPost, "/setup", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/" {
+		t.Fatalf("setup response = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
+	}
+	if !db.saved.Configured || len(db.saved.Sources) != 1 || db.saved.Interests.Topics[0].Topic != "AI" {
+		t.Errorf("saved configuration = %+v", db.saved)
+	}
+}
+
+func TestNewsletterCredentialsAreNotRendered(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{
+		Configured: true,
+		Interests:  config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+		Sources: []domain.Source{{ID: 1, Name: "Mail", Type: domain.SourceTypeNewsletter,
+			URL: "imaps://mail.example/INBOX", Enabled: true,
+			Newsletter: &domain.NewsletterOptions{Folder: "INBOX", Username: "private-user", Password: "private-password", LookBackDays: 1}}},
+	}}
+	server, err := newServer(db, db.configuration.Interests, "token")
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/settings/source/1", nil)
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, body)
+	}
+	if strings.Contains(body, "private-user") || strings.Contains(body, "private-password") {
+		t.Fatal("stored newsletter credentials were rendered")
 	}
 }
 

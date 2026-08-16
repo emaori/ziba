@@ -1,0 +1,25 @@
+{{define "content"}}
+<section class="settings-page">
+  <h1 class="page-title">Welcome to Ziba</h1>
+  <p class="note">Tell Ziba what you want to read and where to find it. Collection starts only after this page is saved.</p>
+  {{if .Error}}<p class="form-error">{{.Error}}</p>{{end}}
+  <form method="post" action="/setup" class="settings-form">
+    <input type="hidden" name="csrf_token" value="{{csrfToken}}">
+    <fieldset>
+      <legend>Your interests</legend>
+      <p class="help">Interests become the tabs in Ziba and guide article scoring. Add one row for each subject.</p>
+      <p class="help">Priority 1 is the highest. Subtopics and notes explain what you care about within each subject.</p>
+      <label>Relevance threshold <input type="number" name="threshold" min="0" max="100" value="{{.Settings.Interests.Threshold}}" required></label>
+      <p class="help">Articles at or above this score appear in the digest. A good starting value is 60.</p>
+      {{template "interestRows" .Settings.Interests.Topics}}
+      <button class="button secondary" type="button" data-add-interest>Add another interest</button>
+    </fieldset>
+    <fieldset>
+      <legend>Your first source</legend>
+      <p class="help">You can add more sources later from Settings.</p>
+      {{template "sourceFields" .}}
+    </fieldset>
+    <button class="button" type="submit">Finish setup</button>
+  </form>
+</section>
+{{end}}

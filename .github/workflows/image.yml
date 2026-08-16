@@ -125,15 +125,12 @@ jobs:
   # The files somebody needs in order to run the image, attached to the release
   # that produced it.
   #
-  # Deploying should not require cloning a repository of Go source. Three small
-  # files do it, and shipping them with the release keeps them in step with the
-  # image by construction: the pair is built from one commit and published in
-  # one run.
+  # Deploying should not require cloning a repository of Go source. The Compose
+  # file is enough: sources and interests are configured in the web UI. Shipping
+  # it with the release keeps it in step with the image by construction.
   #
-  # A tarball rather than loose files, because the two configuration examples
-  # have to end up in a config/ directory beside the compose file — that is
-  # where the mount looks — and reassembling that by hand is the obvious thing
-  # to get wrong.
+  # A tarball and a zip provide the native format people expect on Unix and
+  # Windows while preserving the one deployment directory.
   bundle:
     needs: publish
     runs-on: ubuntu-latest
@@ -148,9 +145,8 @@ jobs:
       # because that is what anyone on Linux or macOS expects to find.
       - name: Assemble the bundle
         run: |
-          mkdir -p ziba/config
+          mkdir -p ziba
           cp compose.yaml ziba/
-          cp config/interests.example.yaml config/sources.example.yaml ziba/config/
           tar -czf ziba-deploy.tar.gz ziba
           zip -qr ziba-deploy.zip ziba
 

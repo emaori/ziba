@@ -1,5 +1,5 @@
-// Package config loads runtime configuration. Secrets come from the
-// environment; everything else will come from hand-edited YAML files.
+// Package config loads infrastructure settings and the legacy YAML format used
+// only for one-time upgrades. User configuration otherwise lives in PostgreSQL.
 package config
 
 import (
@@ -13,8 +13,7 @@ import (
 	"time"
 )
 
-// DefaultSourcesPath is where the hand-edited source list lives unless
-// ZIBA_SOURCES_FILE says otherwise.
+// DefaultSourcesPath is the legacy source list imported on first upgraded run.
 const DefaultSourcesPath = "config/sources.yaml"
 
 // Config is the configuration the whole program needs to start.
@@ -23,10 +22,10 @@ type Config struct {
 	// postgres://user:password@host:5432/ziba?sslmode=disable
 	DatabaseURL string
 
-	// SourcesPath points at the YAML list of configured sources.
+	// SourcesPath points at the legacy YAML source list for one-time import.
 	SourcesPath string
 
-	// InterestsPath points at the YAML description of what is worth reading.
+	// InterestsPath points at the legacy YAML interests for one-time import.
 	InterestsPath string
 
 	// Provider names which company answers the AI pipeline. Either is a

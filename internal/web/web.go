@@ -201,6 +201,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /article/{id}", s.handleArticle)
 	mux.HandleFunc("GET /archive", s.handleArchiveAll)
 	mux.HandleFunc("GET /stats", s.handleStats)
+	mux.HandleFunc("GET /setup", s.handleSetup)
+	mux.HandleFunc("POST /setup", s.handleSetup)
+	mux.HandleFunc("GET /settings", s.handleSettings)
+	mux.HandleFunc("POST /settings/interests", s.handleSettingsInterests)
+	mux.HandleFunc("GET /settings/source/new", s.handleSource)
+	mux.HandleFunc("GET /settings/source/{id}", s.handleSource)
+	mux.HandleFunc("POST /settings/source/{id}", s.handleSource)
 
 	// Marking read changes state, so it is a post and never a link: a crawler
 	// or a prefetching browser must not be able to empty the reading list.
@@ -208,7 +215,7 @@ func (s *Server) Handler() http.Handler {
 
 	mux.Handle("GET /static/", http.FileServerFS(assets))
 
-	return mux
+	return s.setupGate(mux)
 }
 
 // thousands groups a number with thin spaces, so seven figures can be read

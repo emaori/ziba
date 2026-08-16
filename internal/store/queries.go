@@ -14,9 +14,8 @@ import (
 // SyncSources makes the sources table match the configured list and returns the
 // sources with their database IDs filled in.
 //
-// The YAML file is the source of truth: a source removed from it is disabled
-// rather than deleted, because its articles are still worth keeping and the
-// foreign key would refuse the delete anyway.
+// PostgreSQL is the source of truth. This keeps IDs and collection metadata
+// stable while filling the runner's snapshot with database IDs.
 func (s *Store) SyncSources(ctx context.Context, configured []domain.Source) ([]domain.Source, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {

@@ -59,7 +59,7 @@ services:
       # Which models. REQUIRED, whichever provider is chosen. Assessment —
       # deciding the interests and the score — runs on the fast one for every
       # article; summarization runs on the capable one, and only for articles
-      # above the threshold set in interests.yaml.
+      # above the threshold set in the web Settings page.
       #
       # There are no defaults on purpose: a model name written into a program is
       # a claim about what exists, and a stale one fails at the first article
@@ -88,16 +88,6 @@ services:
       # The schedule uses local time, so the container has to know which local.
       # Without this it uses UTC and the morning run happens at the wrong hour.
       TZ: UTC
-
-      # --- A newsletter mailbox (optional) ------------------------------------
-      # Needed only when config/sources.yaml has a newsletter source. That file
-      # names the server and the folder; only the credentials belong here, and a
-      # source address carrying a password is refused at startup.
-      #
-      # Gmail wants an App Password rather than the account password, pasted
-      # without the spaces the interface displays.
-      # ZIBA_IMAP_USER:
-      # ZIBA_IMAP_PASSWORD:
 
       # --- The schedule --------------------------------------------
       # Every run collects, processes and refreshes the last-24-hours digest.

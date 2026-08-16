@@ -54,7 +54,8 @@ func (s *Store) Pool() *pgxpool.Pool { return s.pool }
 func (s *Store) TruncateAll(ctx context.Context) error {
 	// One statement, so the foreign keys never see an inconsistent moment.
 	_, err := s.pool.Exec(ctx,
-		`TRUNCATE digest_articles, digests, articles, raw_items, sources RESTART IDENTITY CASCADE`)
+		`TRUNCATE digest_articles, digests, articles, raw_items, sources, interests RESTART IDENTITY CASCADE;
+		 UPDATE app_settings SET configured=FALSE, threshold=60, updated_at=now() WHERE singleton`)
 	if err != nil {
 		return fmt.Errorf("truncate: %w", err)
 	}

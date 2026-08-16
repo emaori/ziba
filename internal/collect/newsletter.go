@@ -153,8 +153,13 @@ func (c *Newsletter) connect(src domain.Source, opts *domain.NewsletterOptions) 
 		return nil, fmt.Errorf("connect to %s: %w", host, err)
 	}
 
-	username := os.Getenv(opts.UsernameEnv)
-	password := os.Getenv(opts.PasswordEnv)
+	username, password := opts.Username, opts.Password
+	if username == "" {
+		username = os.Getenv(opts.UsernameEnv)
+	}
+	if password == "" {
+		password = os.Getenv(opts.PasswordEnv)
+	}
 	if err := client.Login(username, password).Wait(); err != nil {
 		client.Close()
 		// Naming the variable, not the value: this error ends up in logs.

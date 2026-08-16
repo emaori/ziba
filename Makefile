@@ -119,6 +119,9 @@ dev: up migrate
 image:
 	docker build --build-arg VERSION=$(VERSION) -t $(IMAGE):latest .
 
+image-dev:
+	docker build --build-arg VERSION=$(VERSION) -t $(IMAGE):latest-dev .
+
 ## deploy: rebuild the image and bring the stack up (local by default)
 deploy: image up
 

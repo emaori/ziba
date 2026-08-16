@@ -14,6 +14,7 @@
       <a href="/day">By day</a>
       <a href="/archive">Everything</a>
       <a href="/stats">Stats</a>
+      <a href="/settings">Settings</a>
     </nav>
   </header>
 
@@ -37,6 +38,54 @@
   <script src="/static/app.js" defer></script>
 </body>
 </html>
+{{end}}
+
+{{define "interestRows"}}
+<div data-interest-list>
+{{range .}}
+  <div class="interest-row">
+    <label>Interest name <input name="interest_topic" value="{{.Topic}}" placeholder="Computer Science" required></label>
+    <label>Priority <input type="number" name="interest_priority" min="1" value="{{.Priority}}" required></label>
+    <label>Subtopics <input name="interest_subtopics" value="{{join .Subtopics ", "}}" placeholder="Distributed systems, compilers"></label>
+    <label class="wide">Notes <textarea name="interest_note" rows="2" placeholder="What makes this subject useful or interesting to you">{{.Note}}</textarea></label>
+    <button class="button secondary" type="button" data-remove-interest>Remove</button>
+  </div>
+{{end}}
+</div>
+<template data-interest-template><div class="interest-row">
+  <label>Interest name <input name="interest_topic" placeholder="New interest" required></label>
+  <label>Priority <input type="number" name="interest_priority" min="1" value="1" required></label>
+  <label>Subtopics <input name="interest_subtopics" placeholder="Comma-separated"></label>
+  <label class="wide">Notes <textarea name="interest_note" rows="2"></textarea></label>
+  <button class="button secondary" type="button" data-remove-interest>Remove</button>
+</div></template>
+{{end}}
+
+{{define "sourceFields"}}
+<label>Name <input name="name" value="{{.Source.Name}}" placeholder="Hacker News" required></label>
+<p class="help">A friendly name shown in Statistics and article metadata.</p>
+<label>Type <select name="type"><option value="rss" {{if eq .Source.Type "rss"}}selected{{end}}>RSS feed</option><option value="newsletter" {{if eq .Source.Type "newsletter"}}selected{{end}}>Newsletter mailbox</option></select></label>
+<p class="help">RSS reads a feed address. Newsletter reads messages from one mailbox folder.</p>
+<label>Address <input type="url" name="url" value="{{.Source.URL}}" placeholder="https://example.com/feed.xml or imaps://imap.example.com" required></label>
+<p class="help">Use an HTTP address for RSS or an IMAP/IMAPS server address for newsletters. Do not put credentials in the address.</p>
+<label class="check"><input type="checkbox" name="enabled" {{if .Source.Enabled}}checked{{end}}> Collect this source</label>
+<label>Collect history <input name="collect_from" value="{{.Source.CollectFrom}}" placeholder="7d"></label>
+<p class="help">How far back to read on first contact: for example 7d, 48h, a date, or all.</p>
+<label>Declared interests <input name="categories" value="{{join .Source.Categories ", "}}" placeholder="Computer Science, .NET"></label>
+<p class="help">Optional comma-separated interest names. Use this when the source always covers those subjects.</p>
+<label class="check"><input type="checkbox" name="roundup" {{if .Source.Roundup}}checked{{end}}> RSS entries are link roundups</label>
+<div class="newsletter-fields">
+  <h3>Newsletter mailbox</h3>
+  <p class="help">Fill these fields only for a newsletter source.</p>
+  <label>Folder <input name="folder" value="{{.Source.Folder}}" placeholder="INBOX"></label>
+  <label>Username <input name="username" autocomplete="off" placeholder="{{if .EditingSource}}Leave blank to keep the stored username{{else}}Mailbox username{{end}}"></label>
+  <label>Password <input type="password" name="password" autocomplete="new-password" placeholder="{{if .EditingSource}}Leave blank to keep the stored password{{else}}Mailbox password{{end}}"></label>
+  <p class="help">Stored credentials are never displayed again. Enter a new value only when you want to change it.</p>
+  <label>Look-back days <input type="number" name="days" min="0" value="{{.Source.Days}}"></label>
+  <p class="help">How many recent days of mail to inspect on every run. Previously collected messages are ignored automatically.</p>
+  <label>Maximum messages per run <input type="number" name="max_messages" min="0" value="{{.Source.MaxMessages}}"></label>
+  <p class="help">A safety limit for one collection. Use 0 for the default of 50.</p>
+</div>
 {{end}}
 
 {{/* The article card from the functional wireframe: category, source and date,

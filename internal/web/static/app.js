@@ -94,4 +94,22 @@
       card.classList.toggle('read', read);
     }
   }
+
+  // Interest rows can be added and removed without a frontend framework. The
+  // server still validates every submitted value.
+  document.addEventListener('click', function (event) {
+    if (event.target.matches('[data-add-interest]')) {
+      var template = document.querySelector('[data-interest-template]');
+      var list = document.querySelector('[data-interest-list]');
+      if (template && list) {
+        list.appendChild(template.content.cloneNode(true));
+      }
+    }
+    if (event.target.matches('[data-remove-interest]')) {
+      var rows = document.querySelectorAll('.interest-row');
+      if (rows.length > 1) {
+        event.target.closest('.interest-row').remove();
+      }
+    }
+  });
 })();

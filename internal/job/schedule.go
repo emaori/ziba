@@ -19,15 +19,26 @@ type Schedule struct {
 
 // Scheduler runs a Runner unattended.
 type Scheduler struct {
-	runner   *Runner
-	schedule Schedule
-	batch    int
-	log      *slog.Logger
+	work      func(context.Context, int) error
+	hasDigest func(context.Context, time.Time) (bool, error)
+	schedule  Schedule
+	batch     int
+	log       *slog.Logger
 }
 
 // NewScheduler builds the scheduler.
 func NewScheduler(runner *Runner, schedule Schedule, batch int, log *slog.Logger) *Scheduler {
-	return &Scheduler{runner: runner, schedule: schedule, batch: batch, log: log}
+	return NewSchedulerFunc(func(ctx context.Context, batch int) error {
+		return runner.ScheduledCollection(ctx, batch)
+	}, runner.store.HasDigestSince, schedule, batch, log)
+}
+
+// NewSchedulerFunc builds a scheduler whose runner is resolved for each run.
+// This lets web-managed configuration take effect without restarting Ziba.
+func NewSchedulerFunc(work func(context.Context, int) error,
+	hasDigest func(context.Context, time.Time) (bool, error),
+	schedule Schedule, batch int, log *slog.Logger) *Scheduler {
+	return &Scheduler{work: work, hasDigest: hasDigest, schedule: schedule, batch: batch, log: log}
 }
 
 // Run works until ctx is cancelled.
@@ -59,9 +70,7 @@ func (s *Scheduler) Run(ctx context.Context) {
 			return
 
 		case <-timer.C:
-			s.run(ctx, "collection and digest", func(ctx context.Context) error {
-				return s.runner.ScheduledCollection(ctx, s.batch)
-			})
+			s.run(ctx, "collection and digest", func(ctx context.Context) error { return s.work(ctx, s.batch) })
 			next = s.schedule.At.NextEvery(time.Now(), s.schedule.Every)
 			timer.Reset(time.Until(next))
 		}
@@ -72,7 +81,7 @@ func (s *Scheduler) Run(ctx context.Context) {
 // process was down.
 func (s *Scheduler) catchUp(ctx context.Context) {
 	scheduled := s.schedule.At.PreviousEvery(time.Now(), s.schedule.Every)
-	built, err := s.runner.store.HasDigestSince(ctx, scheduled)
+	built, err := s.hasDigest(ctx, scheduled)
 	if err != nil {
 		s.log.Error("could not check latest digest", "error", err)
 		return
@@ -83,9 +92,7 @@ func (s *Scheduler) catchUp(ctx context.Context) {
 
 	s.log.Info("scheduled run was missed, running it now",
 		"scheduled_for", scheduled.Format(time.RFC3339))
-	s.run(ctx, "collection and digest (catch-up)", func(ctx context.Context) error {
-		return s.runner.ScheduledCollection(ctx, s.batch)
-	})
+	s.run(ctx, "collection and digest (catch-up)", func(ctx context.Context) error { return s.work(ctx, s.batch) })
 }
 
 // run performs one scheduled task, logging rather than propagating failure:

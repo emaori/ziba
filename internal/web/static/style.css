@@ -409,3 +409,38 @@ code {
 /* Close each day with a rule, rather than ruling every row. */
 .figures-table .day-source + .day-total td,
 .figures-table tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
+
+/* Setup and settings ------------------------------------------------------ */
+.settings-page { margin-bottom: 3rem; }
+.settings-form, .settings-section { font-family: system-ui, sans-serif; }
+.settings-form fieldset, .settings-section {
+  margin: 1.25rem 0;
+  padding: 1rem;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+.settings-form legend { font-weight: 700; padding: 0 0.4rem; }
+.settings-form label { display: block; margin: 0.8rem 0 0.25rem; font-weight: 600; }
+.settings-form input:not([type="checkbox"]), .settings-form select, .settings-form textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.2rem;
+  padding: 0.55rem;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font: inherit;
+}
+.settings-form label.check { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; }
+.help { margin: 0.25rem 0 0.8rem; color: var(--ink-soft); font: 0.85rem/1.45 system-ui, sans-serif; }
+.form-error { padding: 0.8rem 1rem; border-left: 3px solid #b33; background: var(--card); color: #b33; font-family: system-ui, sans-serif; }
+.interest-row { display: grid; grid-template-columns: 2fr 0.7fr 2fr; gap: 0 0.8rem; padding: 0 0 1rem; margin: 0 0 1rem; border-bottom: 1px solid var(--rule); }
+.interest-row .wide { grid-column: 1 / -1; }
+.interest-row button { justify-self: start; }
+.newsletter-fields { margin-top: 1.2rem; padding-top: 0.8rem; border-top: 1px solid var(--rule); }
+.section-heading, .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.setting-row { padding: 0.8rem 0; border-top: 1px solid var(--rule); }
+.setting-row span, .setting-row small { display: block; color: var(--ink-soft); }
+@media (max-width: 40rem) { .interest-row { grid-template-columns: 1fr; } .interest-row .wide { grid-column: auto; } }
