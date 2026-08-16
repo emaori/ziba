@@ -63,17 +63,7 @@ func (s *Scheduler) Run(ctx context.Context) {
 
 		case <-collectTicker.C:
 			s.run(ctx, "collection", func(ctx context.Context) error {
-				if _, err := s.runner.Collect(ctx); err != nil {
-					return err
-				}
-				if _, _, err := s.runner.Hydrate(ctx, s.batch); err != nil {
-					return err
-				}
-				if s.runner.pipeline == nil {
-					return nil
-				}
-				_, _, _, err := s.runner.Analyze(ctx, s.batch)
-				return err
+				return s.runner.ScheduledCollection(ctx, s.batch)
 			})
 
 		case <-digestTimer.C:

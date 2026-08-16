@@ -85,6 +85,14 @@ func (f *fakeStore) TokensByDay(_ context.Context, _ int) ([]store.TokenTally, e
 	}, nil
 }
 
+func (f *fakeStore) Backlogs(context.Context) ([]store.Backlog, error) {
+	return []store.Backlog{
+		{Stage: "Roundup expansion", Pending: 1},
+		{Stage: "Full-text retrieval", Pending: 3, Oldest: time.Now().Add(-2 * time.Hour)},
+		{Stage: "Analysis", Pending: 4, Failed: 1, Oldest: time.Now().Add(-3 * 24 * time.Hour)},
+	}, nil
+}
+
 func (f *fakeStore) TalliesBySource(context.Context) ([]store.Tally, error) {
 	return []store.Tally{{
 		Source: "IEEE Spectrum", Links: 30, Stored: 24, Duplicate: 4, Skipped: 2,
@@ -785,9 +793,12 @@ func TestStatsPage(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		"443",                  // articles stored
-		"140",                  // hidden for matching no interest
-		"IEEE Spectrum",        // the by-source row
+		"443",           // articles stored
+		"140",           // hidden for matching no interest
+		"IEEE Spectrum", // the by-source row
+		"Processing queues",
+		"Full-text retrieval",
+		"Analysis",
 		"/day?date=2026-08-08", // the by-day row links to that day
 	} {
 		if !strings.Contains(body, want) {

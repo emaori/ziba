@@ -33,6 +33,9 @@ const (
 	// is a personal tool with no deadline, and a burst of requests only invites
 	// rate limiting.
 	maxParallelAnalyses = 4
+
+	// maxRetries is how many scheduled attempts follow the initial failure.
+	maxRetries = 3
 )
 
 // Runner performs the work. Build one with New and reuse it.
@@ -146,12 +149,17 @@ func (r *Runner) Collect(ctx context.Context) (CollectResult, error) {
 // turns into articles. An issue that yields nothing is still marked done —
 // a week with no links worth keeping is a normal week, not a failure to retry.
 func (r *Runner) Expand(ctx context.Context, batch int) (opened, queued int, err error) {
-	issues, err := r.store.UnexpandedRoundups(ctx, batch)
+	opened, queued, _, err = r.expandBatch(ctx, batch, time.Now())
+	return opened, queued, err
+}
+
+func (r *Runner) expandBatch(ctx context.Context, batch int, before time.Time) (opened, queued, failed int, err error) {
+	issues, err := r.store.UnexpandedRoundupsBefore(ctx, batch, before)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 	if len(issues) == 0 {
-		return 0, 0, nil
+		return 0, 0, 0, nil
 	}
 
 	done := make(map[domain.Outcome][]int64)
@@ -162,15 +170,17 @@ func (r *Runner) Expand(ctx context.Context, batch int) (opened, queued int, err
 
 		links, err := r.roundup.Links(ctx, issue)
 		if err != nil {
-			// Leave it unprocessed: unlike a missing article body, there is no
-			// partial result worth keeping, and the next run should try again.
 			r.log.Warn("roundup unavailable", "url", issue.URL, "error", err)
+			if recordErr := r.store.RecordRawItemFailure(ctx, issue.ID, err.Error(), maxRetries+1); recordErr != nil {
+				return opened, queued, failed, recordErr
+			}
+			failed++
 			continue
 		}
 
 		inserted, err := r.store.SaveRawItems(ctx, links)
 		if err != nil {
-			return len(done), queued, err
+			return len(done[domain.OutcomeExpanded]), queued, failed, err
 		}
 
 		r.log.Info("roundup expanded", "issue", issue.Title,
@@ -181,9 +191,9 @@ func (r *Runner) Expand(ctx context.Context, batch int) (opened, queued int, err
 
 	opened = len(done[domain.OutcomeExpanded])
 	if err := r.store.MarkRawItemsProcessed(ctx, done); err != nil {
-		return opened, queued, err
+		return opened, queued, failed, err
 	}
-	return opened, queued, nil
+	return opened, queued, failed, nil
 }
 
 // Hydrate turns collected items into articles by retrieving their full text.
@@ -244,11 +254,15 @@ func (r *Runner) Hydrate(ctx context.Context, batch int) (processed, created int
 
 // Analyze runs the AI pipeline over articles not yet analyzed.
 func (r *Runner) Analyze(ctx context.Context, batch int) (analyzed, aboveThreshold, failed int, err error) {
+	return r.analyzeBatch(ctx, batch, time.Now())
+}
+
+func (r *Runner) analyzeBatch(ctx context.Context, batch int, before time.Time) (analyzed, aboveThreshold, failed int, err error) {
 	if r.pipeline == nil {
 		return 0, 0, 0, fmt.Errorf("no analyzer configured")
 	}
 
-	articles, err := r.store.UnanalyzedArticles(ctx, batch)
+	articles, err := r.store.UnanalyzedArticlesBefore(ctx, batch, before)
 	if err != nil {
 		return 0, 0, 0, err
 	}
@@ -264,8 +278,9 @@ func (r *Runner) Analyze(ctx context.Context, batch int) (analyzed, aboveThresho
 	}
 
 	var (
-		mu      sync.Mutex
-		results []domain.Article
+		mu         sync.Mutex
+		results    []domain.Article
+		recordErrs []error
 	)
 
 	group, groupCtx := errgroup.WithContext(ctx)
@@ -274,21 +289,33 @@ func (r *Runner) Analyze(ctx context.Context, batch int) (analyzed, aboveThresho
 	for _, article := range articles {
 		group.Go(func() error {
 			result, err := r.pipeline.Analyze(groupCtx, article, declared[article.SourceID])
-
-			mu.Lock()
-			defer mu.Unlock()
 			if err != nil {
-				// A failure costs that article, not the run: it stays
-				// unanalyzed and is picked up next time.
+				if ctx.Err() != nil {
+					return nil
+				}
 				r.log.Error("analysis failed", "url", article.URL, "error", err)
+				recordErr := r.store.RecordAnalysisFailure(ctx, article.ID, err.Error(), maxRetries+1)
+				mu.Lock()
+				defer mu.Unlock()
 				failed++
+				if recordErr != nil {
+					recordErrs = append(recordErrs, recordErr)
+				}
 				return nil
 			}
+			mu.Lock()
+			defer mu.Unlock()
 			results = append(results, result)
 			return nil
 		})
 	}
 	_ = group.Wait()
+	if ctx.Err() != nil {
+		return 0, 0, failed, ctx.Err()
+	}
+	if len(recordErrs) > 0 {
+		return 0, 0, failed, errors.Join(recordErrs...)
+	}
 
 	for _, article := range results {
 		if err := r.store.SaveAnalysis(ctx, article); err != nil {
@@ -300,6 +327,64 @@ func (r *Runner) Analyze(ctx context.Context, batch int) (analyzed, aboveThresho
 		}
 	}
 	return analyzed, aboveThreshold, failed, nil
+}
+
+// ScheduledCollection collects once and drains every currently eligible queue
+// in bounded chunks. Failed rows wait for the next run, so they cannot loop
+// within the same drain.
+func (r *Runner) ScheduledCollection(ctx context.Context, batch int) error {
+	collected, err := r.Collect(ctx)
+	if err != nil {
+		return fmt.Errorf("collect: %w", err)
+	}
+	r.log.Info("collection finished",
+		"sources", collected.Sources, "new", collected.New, "failed", collected.Failed)
+	return r.Drain(ctx, batch)
+}
+
+// Drain processes every currently eligible item, keeping batch as the chunk
+// size rather than a total limit.
+func (r *Runner) Drain(ctx context.Context, batch int) error {
+	started := time.Now()
+	for {
+		opened, queued, failed, err := r.expandBatch(ctx, batch, started)
+		if err != nil {
+			return fmt.Errorf("expand roundups: %w", err)
+		}
+		if opened+failed == 0 {
+			break
+		}
+		r.log.Info("roundup chunk finished", "issues", opened,
+			"articles_queued", queued, "failed", failed)
+	}
+
+	for {
+		processed, created, err := r.Hydrate(ctx, batch)
+		if err != nil {
+			return fmt.Errorf("retrieve full text: %w", err)
+		}
+		if processed == 0 {
+			break
+		}
+		r.log.Info("full text chunk finished", "processed", processed, "articles", created)
+	}
+
+	if r.pipeline == nil {
+		r.log.Warn("no analyzer configured, skipping analysis")
+		return nil
+	}
+	for {
+		analyzed, above, failed, err := r.analyzeBatch(ctx, batch, started)
+		if err != nil {
+			return fmt.Errorf("analyze: %w", err)
+		}
+		if analyzed+failed == 0 {
+			break
+		}
+		r.log.Info("analysis chunk finished", "analyzed", analyzed,
+			"above_threshold", above, "failed", failed)
+	}
+	return nil
 }
 
 // Digest builds and stores the selection for a day.

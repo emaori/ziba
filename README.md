@@ -196,6 +196,10 @@ because reasoning tokens are billed as output and output costs several times
 input. The Statistics page reports exactly what has been spent, per interest and
 per day.
 
+The same page shows whether retrieval or analysis is falling behind. Temporary
+processing failures retry automatically; repeatedly failing items are reported
+there instead of blocking newer work.
+
 **It runs without a key.** With no API key configured, collection, retrieval
 and the archive all work, and only the analysis is skipped. That mode is crude
 and meant for debugging.

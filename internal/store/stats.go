@@ -44,7 +44,7 @@ const statsColumns = `
 	count(*) FILTER (WHERE r.outcome = 'stored'),
 	count(*) FILTER (WHERE r.outcome = 'duplicate'),
 	count(*) FILTER (WHERE r.outcome = 'skipped'),
-	count(*) FILTER (WHERE r.processed_at IS NULL AND r.kind <> 'provenance'),
+	count(*) FILTER (WHERE r.processed_at IS NULL AND r.failed_at IS NULL AND r.kind <> 'provenance'),
 	count(*) FILTER (WHERE r.processed_at IS NOT NULL AND r.outcome IS NULL)`
 
 func scanTally(row pgx.CollectableRow, t *Tally, lead ...any) error {
@@ -262,6 +262,60 @@ type ArticleStats struct {
 	NoText     int // the page could not be read: paywalled, or it refused us
 	Archived   int // marked read
 	AboveScore int // would clear the threshold on its own
+}
+
+// Backlog describes one processing queue. Pending excludes terminal failures.
+type Backlog struct {
+	Stage   string
+	Pending int
+	Failed  int
+	Oldest  time.Time
+}
+
+// Backlogs reports the health of roundup expansion, full-text retrieval and
+// analysis in pipeline order.
+func (s *Store) Backlogs(ctx context.Context) ([]Backlog, error) {
+	rows, err := s.pool.Query(ctx, `
+		WITH stages(stage, ordinal) AS (VALUES
+			('Roundup expansion', 1),
+			('Full-text retrieval', 2),
+			('Analysis', 3)
+		), queues AS (
+			SELECT CASE kind
+			         WHEN 'roundup' THEN 'Roundup expansion'
+			         ELSE 'Full-text retrieval'
+			       END AS stage, processed_at, failed_at,
+			       collected_at AS created_at
+			FROM raw_items
+			WHERE kind IN ('roundup', 'article')
+			UNION ALL
+			SELECT 'Analysis', processed_at, failed_at, collected_at
+			FROM articles
+		)
+		SELECT s.stage,
+		       count(q.stage) FILTER (WHERE q.processed_at IS NULL AND q.failed_at IS NULL),
+		       count(q.stage) FILTER (WHERE q.processed_at IS NULL AND q.failed_at IS NOT NULL),
+		       min(q.created_at) FILTER (WHERE q.processed_at IS NULL AND q.failed_at IS NULL)
+		FROM stages s LEFT JOIN queues q ON q.stage = s.stage
+		GROUP BY s.stage, s.ordinal
+		ORDER BY s.ordinal`)
+	if err != nil {
+		return nil, fmt.Errorf("query processing backlogs: %w", err)
+	}
+
+	backlogs, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (Backlog, error) {
+		var backlog Backlog
+		var oldest *time.Time
+		err := row.Scan(&backlog.Stage, &backlog.Pending, &backlog.Failed, &oldest)
+		if oldest != nil {
+			backlog.Oldest = *oldest
+		}
+		return backlog, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read processing backlogs: %w", err)
+	}
+	return backlogs, nil
 }
 
 // Articles reports the state of the library. interests and threshold are passed

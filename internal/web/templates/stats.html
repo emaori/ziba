@@ -13,6 +13,33 @@
     <p><strong>{{.Library.NoText}}</strong><span>with no text retrieved</span></p>
   </section>
 
+  <h2 class="section">Processing queues</h2>
+
+  <div class="scroller">
+    <table class="figures-table">
+      <thead>
+        <tr>
+          <th>Stage</th>
+          <th class="n">Pending</th>
+          <th class="n" title="Stopped after repeated failures">Failed</th>
+          <th class="n">Oldest pending</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Backlogs}}
+          <tr>
+            <td>{{.Stage}}</td>
+            <td class="n">{{.Pending}}</td>
+            <td class="n {{if .Failed}}note-cell{{end}}">{{.Failed}}</td>
+            <td class="n">{{age .Oldest}}</td>
+          </tr>
+        {{else}}
+          <tr><td colspan="4">No processing queues yet.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
   <h2 class="section">By source</h2>
 
   <div class="scroller">

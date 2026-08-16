@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -285,5 +286,66 @@ func TestAnalyzeAssignsDeclaredCategories(t *testing.T) {
 	}
 	if stats.Hidden != 0 {
 		t.Errorf("hidden = %d, want 0", stats.Hidden)
+	}
+}
+
+func TestDrainAnalyzesMoreThanOneBatch(t *testing.T) {
+	db := testStore(t)
+	ctx := context.Background()
+	source := seedSource(t, db, "https://example.com/feed")
+
+	for i := range 5 {
+		if _, _, err := db.SaveArticle(ctx, domain.Article{
+			SourceID:    source,
+			URL:         fmt.Sprintf("https://example.com/article-%d", i),
+			Title:       "AI article",
+			FullText:    "An article about AI agents.",
+			CollectedAt: time.Now().Add(time.Duration(i) * time.Second),
+		}); err != nil {
+			t.Fatalf("save article %d: %v", i, err)
+		}
+	}
+
+	interests := config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1, Subtopics: []string{"AI"}}}}
+	runner := New(config.Config{}, nil, interests, db,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Options{Analyzer: pipeline.NewDeterministic(interests)})
+
+	if err := runner.Drain(ctx, 2); err != nil {
+		t.Fatalf("Drain: %v", err)
+	}
+	stats, err := db.Articles(ctx, []string{"AI"}, 60)
+	if err != nil {
+		t.Fatalf("Articles: %v", err)
+	}
+	if stats.Analyzed != 5 {
+		t.Errorf("analyzed = %d, want all 5 across three chunks", stats.Analyzed)
+	}
+}
+
+func TestDrainHydratesMoreThanOneBatch(t *testing.T) {
+	db := testStore(t)
+	ctx := context.Background()
+	source := seedSource(t, db, "https://example.com/feed")
+	items := make([]domain.RawItem, 5)
+	for i := range items {
+		items[i] = domain.RawItem{
+			SourceID: source, Kind: domain.ItemKindArticle,
+			URL:   fmt.Sprintf("imap://newsletter/message-%d", i),
+			Title: "Newsletter essay", Text: "Stored newsletter text",
+			CollectedAt: time.Now().Add(time.Duration(i) * time.Second),
+		}
+	}
+	if _, err := db.SaveRawItems(ctx, items); err != nil {
+		t.Fatalf("SaveRawItems: %v", err)
+	}
+
+	if err := testRunner(t, db).Drain(ctx, 2); err != nil {
+		t.Fatalf("Drain: %v", err)
+	}
+	if count, err := db.CountArticles(ctx); err != nil {
+		t.Fatalf("CountArticles: %v", err)
+	} else if count != 5 {
+		t.Errorf("articles = %d, want all 5 across three chunks", count)
 	}
 }

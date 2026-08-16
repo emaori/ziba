@@ -111,7 +111,7 @@ func (s *Store) SaveRawItems(ctx context.Context, items []domain.RawItem) (int, 
 // origin, but it is not itself reading material and must never reach the
 // archive as an article.
 func (s *Store) UnprocessedRawItems(ctx context.Context, limit int) ([]domain.RawItem, error) {
-	return s.queueOf(ctx, domain.ItemKindArticle, limit)
+	return s.queueOf(ctx, domain.ItemKindArticle, limit, time.Now())
 }
 
 // UnexpandedRoundups returns the collected issues of link digests that have not
@@ -120,7 +120,12 @@ func (s *Store) UnprocessedRawItems(ctx context.Context, limit int) ([]domain.Ra
 // They queue separately from articles because they are drained by a different
 // stage: opening one produces articles rather than consuming them.
 func (s *Store) UnexpandedRoundups(ctx context.Context, limit int) ([]domain.RawItem, error) {
-	return s.queueOf(ctx, domain.ItemKindRoundup, limit)
+	return s.UnexpandedRoundupsBefore(ctx, limit, time.Now())
+}
+
+// UnexpandedRoundupsBefore excludes issues attempted during the current drain.
+func (s *Store) UnexpandedRoundupsBefore(ctx context.Context, limit int, before time.Time) ([]domain.RawItem, error) {
+	return s.queueOf(ctx, domain.ItemKindRoundup, limit, before)
 }
 
 // queueOf reads one kind's backlog.
@@ -130,7 +135,7 @@ func (s *Store) UnexpandedRoundups(ctx context.Context, limit int) ([]domain.Raw
 // constant, and an index like that is only usable when the query names it as a
 // constant too. The value comes from a package constant chosen here, never from
 // input, so there is nothing to inject.
-func (s *Store) queueOf(ctx context.Context, kind domain.ItemKind, limit int) ([]domain.RawItem, error) {
+func (s *Store) queueOf(ctx context.Context, kind domain.ItemKind, limit int, before time.Time) ([]domain.RawItem, error) {
 	var query string
 	switch kind {
 	case domain.ItemKindArticle:
@@ -141,7 +146,7 @@ func (s *Store) queueOf(ctx context.Context, kind domain.ItemKind, limit int) ([
 		return nil, fmt.Errorf("no queue for item kind %q", kind)
 	}
 
-	rows, err := s.pool.Query(ctx, query, limit)
+	rows, err := s.pool.Query(ctx, query, limit, before)
 	if err != nil {
 		return nil, fmt.Errorf("query unprocessed %s items: %w", kind, err)
 	}
@@ -166,9 +171,17 @@ func queueQuery(kind string) string {
 		       COALESCE(published_at, collected_at), collected_at, text
 		FROM raw_items
 		WHERE processed_at IS NULL
+		  AND failed_at IS NULL
+		  AND (last_attempt_at IS NULL OR last_attempt_at < $2)
 		  AND kind = '` + kind + `'
 		ORDER BY collected_at
 		LIMIT $1`
+}
+
+// RecordRawItemFailure records a failed attempt and marks the item terminal
+// after maxFailures.
+func (s *Store) RecordRawItemFailure(ctx context.Context, id int64, message string, maxFailures int) error {
+	return s.recordFailure(ctx, "raw_items", id, message, maxFailures)
 }
 
 // DeclaredCategories returns, per source id, the categories that source
@@ -232,7 +245,10 @@ func (s *Store) MarkRawItemsProcessed(ctx context.Context, finished map[domain.O
 		if len(ids) == 0 {
 			continue
 		}
-		batch.Queue(`UPDATE raw_items SET processed_at = now(), outcome = $2
+		batch.Queue(`UPDATE raw_items
+		             SET processed_at = now(), outcome = $2,
+		                 failure_count = 0, last_attempt_at = NULL,
+		                 last_error = '', failed_at = NULL
 		             WHERE id = ANY($1)`, ids, string(outcome))
 	}
 	if batch.Len() == 0 {
@@ -252,13 +268,20 @@ func (s *Store) MarkRawItemsProcessed(ctx context.Context, finished map[domain.O
 // UnanalyzedArticles returns articles the AI pipeline has not seen yet, oldest
 // first, up to limit.
 func (s *Store) UnanalyzedArticles(ctx context.Context, limit int) ([]domain.Article, error) {
+	return s.UnanalyzedArticlesBefore(ctx, limit, time.Now())
+}
+
+// UnanalyzedArticlesBefore excludes articles attempted during the current drain.
+func (s *Store) UnanalyzedArticlesBefore(ctx context.Context, limit int, before time.Time) ([]domain.Article, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, source_id, url, title, author,
 		       COALESCE(published_at, collected_at), collected_at, full_text
 		FROM articles
 		WHERE processed_at IS NULL
+		  AND failed_at IS NULL
+		  AND (last_attempt_at IS NULL OR last_attempt_at < $2)
 		ORDER BY collected_at
-		LIMIT $1`, limit)
+		LIMIT $1`, limit, before)
 	if err != nil {
 		return nil, fmt.Errorf("query unanalyzed articles: %w", err)
 	}
@@ -275,6 +298,39 @@ func (s *Store) UnanalyzedArticles(ctx context.Context, limit int) ([]domain.Art
 	return articles, nil
 }
 
+// RecordAnalysisFailure records a failed analysis and marks it terminal after
+// maxFailures.
+func (s *Store) RecordAnalysisFailure(ctx context.Context, id int64, message string, maxFailures int) error {
+	return s.recordFailure(ctx, "articles", id, message, maxFailures)
+}
+
+func (s *Store) recordFailure(ctx context.Context, table string, id int64, message string, maxFailures int) error {
+	if maxFailures < 1 {
+		return fmt.Errorf("max failures must be positive")
+	}
+	var query string
+	switch table {
+	case "raw_items", "articles":
+		query = `UPDATE ` + table + `
+			SET failure_count = failure_count + 1,
+			    last_attempt_at = now(),
+			    last_error = $2,
+			    failed_at = CASE WHEN failure_count + 1 >= $3 THEN now() ELSE NULL END
+			WHERE id = $1`
+	default:
+		return fmt.Errorf("unsupported failure table %q", table)
+	}
+
+	tag, err := s.pool.Exec(ctx, query, id, message, maxFailures)
+	if err != nil {
+		return fmt.Errorf("record failure for %s %d: %w", table, id, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("record failure: %s %d not found", table, id)
+	}
+	return nil
+}
+
 // SaveAnalysis stores what the pipeline produced for an article. Setting
 // processed_at is what takes the article out of the backlog, so it is written
 // in the same statement as the results: either both land or neither does.
@@ -283,7 +339,9 @@ func (s *Store) SaveAnalysis(ctx context.Context, a domain.Article) error {
 		UPDATE articles
 		SET categories = $2, entities = $3, tone = $4,
 		    summary = $5, score = $6, score_reason = $7, processed_at = $8,
-		    input_tokens = $9, output_tokens = $10
+		    input_tokens = $9, output_tokens = $10,
+		    failure_count = 0, last_attempt_at = NULL,
+		    last_error = '', failed_at = NULL
 		WHERE id = $1`,
 		a.ID, a.Categories, a.Entities, a.Tone,
 		a.Summary, int16(a.Score), a.ScoreReason, a.AnalyzedAt,
