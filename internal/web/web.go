@@ -7,7 +7,9 @@
 package web
 
 import (
+	"crypto/rand"
 	"embed"
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -85,7 +87,8 @@ func shortDate(t time.Time) string {
 
 // Server holds everything the handlers need.
 type Server struct {
-	store Store
+	store     Store
+	csrfToken string
 
 	// interests drive the tab bar and are the only values the interest routes
 	// accept. They come from the configuration file rather than from whatever
@@ -104,6 +107,14 @@ type Server struct {
 // New parses the templates and wires the routes. Parsing at startup means a
 // broken template fails on boot rather than on the first request that hits it.
 func New(store Store, interests config.Interests) (*Server, error) {
+	token, err := newCSRFToken()
+	if err != nil {
+		return nil, err
+	}
+	return newServer(store, interests, token)
+}
+
+func newServer(store Store, interests config.Interests, csrfToken string) (*Server, error) {
 	files, err := fs.Glob(assets, "templates/*.html")
 	if err != nil {
 		return nil, err
@@ -116,7 +127,13 @@ func New(store Store, interests config.Interests) (*Server, error) {
 			continue // the frame, not a page
 		}
 
-		set, err := template.New(name).Funcs(templateFuncs).
+		funcs := template.FuncMap{}
+		for name, fn := range templateFuncs {
+			funcs[name] = fn
+		}
+		funcs["csrfToken"] = func() string { return csrfToken }
+
+		set, err := template.New(name).Funcs(funcs).
 			ParseFS(assets, "templates/"+layoutFile, file)
 		if err != nil {
 			return nil, fmt.Errorf("parse template %s: %w", name, err)
@@ -135,10 +152,19 @@ func New(store Store, interests config.Interests) (*Server, error) {
 
 	return &Server{
 		store:     store,
+		csrfToken: csrfToken,
 		interests: names,
 		threshold: domain.RelevanceScore(interests.Threshold),
 		pages:     pages,
 	}, nil
+}
+
+func newCSRFToken() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", fmt.Errorf("generate CSRF token: %w", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(bytes), nil
 }
 
 // layoutFile holds the frame every page is rendered into.

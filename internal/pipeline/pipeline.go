@@ -17,14 +17,8 @@ import (
 	"github.com/emaori/ziba/internal/domain"
 )
 
-// Assessment is the cheap first pass: what an article is about, how relevant
-// it is to the configured interests, and why it scored what it scored.
-//
-// Identifying the subject and rating it were once two stages, matching the
-// functional documentation. They were merged because each stage sent the whole
-// article text and input tokens are almost the entire cost of a run — paying
-// for the same text twice doubled the bill for no benefit. Judging relevance
-// with the subject already in mind is, if anything, the better order.
+// Assessment identifies the article and rates it against configured interests
+// in one model call.
 type Assessment struct {
 	Categories []string
 	Entities   []string
@@ -34,13 +28,7 @@ type Assessment struct {
 	Usage      Usage
 }
 
-// Usage is what one or more calls cost, in tokens.
-//
-// It is reported rather than estimated. The first cost figures in this project
-// were arithmetic on request sizes, and they were wrong in both directions at
-// once: four characters to a token ran about a tenth over, while the reasoning
-// tokens nobody can see from outside were assumed three times too high. Only
-// the provider knows, and it says so in every reply.
+// Usage is the provider-reported token count for one or more calls.
 type Usage struct {
 	Input  int
 	Output int
@@ -120,14 +108,7 @@ func (p *Pipeline) Analyze(ctx context.Context, a domain.Article, declared []str
 	// looked at and set aside.
 	spent := assessment.Usage
 
-	// Nothing to summarize is decided here rather than left to the provider.
-	//
-	// The rule existed already, inside each provider, which meant the call was
-	// built and sent before anything noticed there was no text — and for a
-	// source that declares its categories, and so bypasses the threshold below,
-	// that happened every time. The first full run asked the expensive model to
-	// summarize two empty articles. Whether to summarize is this stage's
-	// decision, so the reason not to belongs here too.
+	// Avoid a model call when retrieval produced no text.
 	if strings.TrimSpace(a.FullText) == "" {
 		p.log.Debug("no text retrieved, not summarized", "url", a.URL)
 		a.InputTokens, a.OutputTokens = spent.Input, spent.Output

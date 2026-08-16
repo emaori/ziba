@@ -62,10 +62,17 @@ func (t *throttledTransport) reserve(host string) time.Duration {
 // A non-zero interval spaces requests to the same host apart. Pass zero for
 // hosts that are ours — the rendering sidecar is not a stranger to be polite to.
 func NewHTTPClient(timeout, interval time.Duration) *http.Client {
-	client := &http.Client{Timeout: timeout}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = nil
+	transport.DialContext = newSafeDialer().DialContext
+	return newHTTPClient(timeout, interval, transport)
+}
+
+func newHTTPClient(timeout, interval time.Duration, base http.RoundTripper) *http.Client {
+	client := &http.Client{Timeout: timeout, Transport: base}
 	if interval > 0 {
 		client.Transport = &throttledTransport{
-			base:     http.DefaultTransport,
+			base:     base,
 			interval: interval,
 			next:     make(map[string]time.Time),
 		}

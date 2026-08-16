@@ -14,13 +14,6 @@ import (
 	"github.com/emaori/ziba/internal/domain"
 )
 
-// Model defaults. Assessment is a mechanical judgement made on every collected
-// article, so it runs on the fast model; summarization only ever sees articles
-// above threshold, so it can afford the capable one. That split is what keeps a
-// daily run cheap.
-//
-// These are aliases rather than dated snapshot ids: same model, and they do not
-// need editing when a new snapshot ships.
 // maxArticleRunes bounds how much of an article is sent. Beyond this a longer
 // prompt buys nothing: the opening of a piece already says what it is about,
 // and the cost grows with every rune.
@@ -34,16 +27,8 @@ type Claude struct {
 	interests    config.Interests
 }
 
-// ClaudeOptions configures the analyzer.
-//
-// Both model names are required, as they are for every provider. There was once
-// a default pair here and it was removed on purpose: a model name written into
-// the code is a claim about what exists, made at the moment the line was typed
-// and never revisited. Model families are renamed, superseded and retired, and
-// a default that has gone stale fails at the first real article with an error
-// about an unknown model — long after the run looked configured. Naming them in
-// the environment puts the claim next to the key it is used with, where someone
-// will see it.
+// ClaudeOptions configures the analyzer. Both model names are required; there
+// are no defaults that can become stale.
 type ClaudeOptions struct {
 	APIKey       string
 	FastModel    string
@@ -74,26 +59,9 @@ func NewClaude(opts ClaudeOptions) (*Claude, error) {
 	}, nil
 }
 
-// assessmentSchema is the shape the model must answer in. Declaring it means
-// the response is parseable by construction, instead of being prose that has to
-// be coaxed into JSON.
-//
-// The field order matters: the model fills the structure in order, so naming
-// the subject before rating it means the score is reached with the subject
-// already established rather than in the same breath.
-//
-// Categories are restricted to the configured interests rather than left free.
-// They are what the interface files articles under, so a model inventing
-// "Artificial intelligence" one day and "AI and machine learning" the next would
-// scatter one subject across several headings and leave the reader's own
-// interests unrepresented. An article that fits none of them returns an empty
-// list, which is a legitimate answer.
-// assessmentSchema builds the structure the model must answer with.
-//
-// When the source has declared its categories there is nothing to choose, so
-// the field is left out of the schema entirely rather than asked for and
-// discarded — a question not asked cannot be answered wrongly, and the model
-// spends its attention on the score instead.
+// assessmentSchema constrains categories to configured interests. When a source
+// declares its categories, the field is omitted and those values are assigned
+// after decoding.
 func assessmentSchema(interests config.Interests, declared []string) map[string]any {
 	names := make([]string, 0, len(interests.Topics))
 	for _, topic := range interests.Topics {

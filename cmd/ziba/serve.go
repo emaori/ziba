@@ -83,18 +83,8 @@ func runCmd(ctx context.Context, args []string) error {
 // alongside it.
 func serveCmd(ctx context.Context, args []string) error {
 	flags := flag.NewFlagSet("serve", flag.ContinueOnError)
-	// A flag, and deliberately not an environment variable.
-	//
-	// Where Ziba listens is not deployment configuration: inside a container it
-	// is always :8080, which EXPOSE, the healthcheck and the port mapping all
-	// assume. What varies between deployments is the mapping, and that belongs
-	// to compose. ZIBA_PORT there is the host side of it.
-	//
-	// This was briefly read from ZIBA_PORT as well, which gave one name two
-	// meanings — host port to compose, listen port to the program — in a file
-	// both of them read. Setting it then moved the two ends of the mapping in
-	// opposite directions. One name, one meaning; the flag covers the only case
-	// that needs it, which is running two of these locally at once.
+	// Container deployments always listen on :8080; Compose controls the host
+	// port. The flag supports direct local runs without conflating those values.
 	addr := flags.String("addr", ":8080", "address to listen on")
 	noSchedule := flags.Bool("no-schedule", false, "serve only, do not collect or build digests on a timer")
 	offline := flags.Bool("offline", false, "schedule with the deterministic analyzer: no model, no network, no cost")
@@ -115,13 +105,8 @@ func serveCmd(ctx context.Context, args []string) error {
 
 	s, err := newSetup(ctx, mode)
 	if err != nil && mode == analyzerReal && errors.Is(err, errAnalyzerUnavailable) {
-		// Only this. A configuration error will fail again on the second
-		// attempt, so retrying it just prints a wrong explanation before the
-		// right one.
-		// The whole error, not errors.Unwrap of it: the sentinel is attached
-		// with a second %w, and Unwrap returns nil for a multiply-wrapped
-		// error — which logged "error=<nil>" and threw away the only useful
-		// part of the line.
+		// Only analyzer construction may fall back; other configuration errors
+		// remain fatal. Log the full multiply-wrapped error.
 		slog.Warn("scheduling without analysis", "error", err)
 		s, err = newSetup(ctx, analyzerNone)
 	}

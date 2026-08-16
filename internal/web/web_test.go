@@ -5,6 +5,7 @@ import (
 	"html"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"regexp"
 	"strings"
 	"testing"
@@ -123,12 +124,14 @@ func testInterests() config.Interests {
 
 func newTestServer(t *testing.T, s Store) http.Handler {
 	t.Helper()
-	server, err := New(s, testInterests())
+	server, err := newServer(s, testInterests(), testCSRFToken)
 	if err != nil {
 		t.Fatalf("New returned error: %v", err)
 	}
 	return server.Handler()
 }
+
+const testCSRFToken = "test-csrf-token"
 
 func get(t *testing.T, h http.Handler, path string) (int, string) {
 	t.Helper()
@@ -279,7 +282,9 @@ func TestParagraphs(t *testing.T) {
 
 func post(t *testing.T, h http.Handler, path, referer string) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, path, nil)
+	form := url.Values{"csrf_token": {testCSRFToken}}
+	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if referer != "" {
 		req.Header.Set("Referer", referer)
 	}
@@ -316,6 +321,52 @@ func TestArchiveAndUnarchive(t *testing.T) {
 
 	if len(store.archivedCalls) != 2 || !store.archivedCalls[0] || store.archivedCalls[1] {
 		t.Errorf("archived calls = %v, want [true false]", store.archivedCalls)
+	}
+}
+
+func TestArchiveRequiresCSRFToken(t *testing.T) {
+	store := &fakeStore{article: sampleArticle()}
+	handler := newTestServer(t, store)
+
+	for _, form := range []url.Values{
+		{},
+		{"csrf_token": {"wrong-token"}},
+	} {
+		req := httptest.NewRequest(http.MethodPost, "/article/42/archive",
+			strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusForbidden {
+			t.Errorf("token %q: status = %d, want 403", form.Get("csrf_token"), rec.Code)
+		}
+	}
+	if len(store.archivedCalls) != 0 {
+		t.Errorf("invalid CSRF requests changed state: %v", store.archivedCalls)
+	}
+}
+
+func TestArchiveFormCarriesCSRFToken(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{article: sampleArticle()})
+
+	_, body := get(t, handler, "/article/42")
+	want := `name="csrf_token" value="` + testCSRFToken + `"`
+	if !strings.Contains(body, want) {
+		t.Error("archive form does not carry the CSRF token")
+	}
+}
+
+func TestArchiveRejectsUnknownAction(t *testing.T) {
+	store := &fakeStore{article: sampleArticle()}
+	handler := newTestServer(t, store)
+
+	rec := post(t, handler, "/article/42/delete", "http://example.com/")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("status = %d, want 404", rec.Code)
+	}
+	if len(store.archivedCalls) != 0 {
+		t.Errorf("unknown action changed state: %v", store.archivedCalls)
 	}
 }
 
@@ -500,7 +551,9 @@ func TestArchiveAsyncGetsNoRedirect(t *testing.T) {
 	store := &fakeStore{}
 	handler := newTestServer(t, store)
 
-	req := httptest.NewRequest(http.MethodPost, "/article/42/archive", nil)
+	form := url.Values{"csrf_token": {testCSRFToken}}
+	req := httptest.NewRequest(http.MethodPost, "/article/42/archive", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("X-Ziba-Async", "1")
 	req.Header.Set("Referer", "http://example.com/")
 	rec := httptest.NewRecorder()

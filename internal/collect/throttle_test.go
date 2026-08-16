@@ -16,7 +16,7 @@ func TestThrottlePacesRequestsToOneHost(t *testing.T) {
 	defer server.Close()
 
 	const interval = 50 * time.Millisecond
-	client := NewHTTPClient(5*time.Second, interval)
+	client := newHTTPClient(5*time.Second, interval, http.DefaultTransport)
 
 	started := time.Now()
 	for range 4 {
@@ -84,7 +84,7 @@ func TestThrottleHonoursCancellation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer server.Close()
 
-	client := NewHTTPClient(5*time.Second, time.Hour)
+	client := newHTTPClient(5*time.Second, time.Hour, http.DefaultTransport)
 
 	resp, err := client.Get(server.URL) // first request takes the slot immediately
 	if err != nil {
