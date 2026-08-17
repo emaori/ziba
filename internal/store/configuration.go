@@ -49,6 +49,11 @@ func (s *Store) SaveSetupInterests(ctx context.Context, interests config.Interes
 	return nil
 }
 
+// SaveSetupSources persists wizard source drafts without enabling Ziba.
+func (s *Store) SaveSetupSources(ctx context.Context, interests config.Interests, sources []domain.Source) error {
+	return s.saveConfiguration(ctx, interests, sources, false)
+}
+
 // Configuration returns one consistent snapshot from PostgreSQL.
 func (s *Store) Configuration(ctx context.Context) (Configuration, error) {
 	var out Configuration
@@ -115,6 +120,10 @@ func scanConfiguredSource(row pgx.CollectableRow) (domain.Source, error) {
 // SaveConfiguration atomically replaces interests and upserts sources. Source
 // IDs are retained by their natural key, preserving every existing article.
 func (s *Store) SaveConfiguration(ctx context.Context, interests config.Interests, sources []domain.Source) error {
+	return s.saveConfiguration(ctx, interests, sources, true)
+}
+
+func (s *Store) saveConfiguration(ctx context.Context, interests config.Interests, sources []domain.Source, configured bool) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin configuration update: %w", err)
@@ -180,8 +189,8 @@ func (s *Store) SaveConfiguration(ctx context.Context, interests config.Interest
 		}
 	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE app_settings SET configured=TRUE, threshold=$1, updated_at=now()
-		WHERE singleton`, interests.Threshold); err != nil {
+		UPDATE app_settings SET configured=$2, threshold=$1, updated_at=now()
+		WHERE singleton`, interests.Threshold, configured); err != nil {
 		return fmt.Errorf("save application settings: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {

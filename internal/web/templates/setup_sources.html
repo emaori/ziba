@@ -1,53 +1,5 @@
-{{define "content"}}
-<section class="settings-page setup-page">
-  <p class="step">Step 2 of 2</p>
-  <h1 class="page-title">Where should Ziba look?</h1>
-  <p class="note">Add one or more RSS feeds or newsletter mailboxes. You can change them later in Settings.</p>
-  {{if .Error}}<p class="form-error">{{.Error}}</p>{{end}}
-  <form method="post" action="/setup/sources" class="settings-form">
-    <input type="hidden" name="csrf_token" value="{{csrfToken}}">
-    <div data-source-list>
-      {{range $i, $source := .WizardSources}}
-      <fieldset class="source-card" data-source-card>
-        <legend>Source <span data-source-number>{{add $i 1}}</span></legend>
-        <label>Name <input name="source_{{$i}}_name" value="{{$source.Name}}" placeholder="Hacker News" required></label>
-        <p class="help">A friendly name shown with its articles.</p>
-        <label>Type <select name="source_{{$i}}_type" data-source-type><option value="rss" {{if eq $source.Type "rss"}}selected{{end}}>RSS feed</option><option value="newsletter" {{if eq $source.Type "newsletter"}}selected{{end}}>Newsletter mailbox</option></select></label>
-        <label>Address <input name="source_{{$i}}_url" value="{{$source.URL}}" placeholder="https://example.com/feed.xml" required></label>
-        <p class="help">Use an HTTP address for RSS or an IMAP/IMAPS server address for newsletters.</p>
-        <label class="check"><input type="checkbox" name="source_{{$i}}_enabled" {{if $source.Enabled}}checked{{end}}> Collect this source</label>
-        <label>Declared interests <input name="source_{{$i}}_categories" value="{{join $source.Categories ", "}}" placeholder="AI, Computer Science"></label>
-        <p class="help">Optional comma-separated interest names when this source always covers known subjects.</p>
-        <div data-fields="rss" {{if eq $source.Type "newsletter"}}hidden{{end}}>
-          <label>Collect history <input name="source_{{$i}}_collect_from" value="{{$source.CollectFrom}}" placeholder="7d"></label>
-          <p class="help">How far back to read on first contact: 7d, 48h, a date, or all.</p>
-          <label class="check"><input type="checkbox" name="source_{{$i}}_roundup" {{if $source.Roundup}}checked{{end}}> Entries are link roundups</label>
-        </div>
-        <div data-fields="newsletter" {{if ne $source.Type "newsletter"}}hidden{{end}}>
-          <label>Folder <input name="source_{{$i}}_folder" value="{{$source.Folder}}" placeholder="INBOX"></label>
-          <label>Username <input name="source_{{$i}}_username" autocomplete="off" placeholder="Mailbox username"></label>
-          <label>Password <input type="password" name="source_{{$i}}_password" autocomplete="new-password" placeholder="Mailbox password"></label>
-          <p class="help">Credentials are stored but never displayed again.</p>
-          <label>Look-back days <input type="number" name="source_{{$i}}_days" min="0" value="{{$source.Days}}"></label>
-          <label>Maximum messages per run <input type="number" name="source_{{$i}}_max_messages" min="0" value="{{$source.MaxMessages}}"></label>
-        </div>
-        <button class="button secondary" type="button" data-remove-source>Remove source</button>
-      </fieldset>
-      {{end}}
-    </div>
-    <button class="button secondary" type="button" data-add-source>Add another source</button>
-    <div class="wizard-actions"><a class="button secondary" href="/setup/interests">Back: interests</a><button class="button" type="submit">Finish setup</button></div>
-  </form>
-  <template data-source-template><fieldset class="source-card" data-source-card>
-    <legend>Source <span data-source-number></span></legend>
-    <label>Name <input data-name="name" placeholder="Source name" required></label>
-    <label>Type <select data-name="type" data-source-type><option value="rss">RSS feed</option><option value="newsletter">Newsletter mailbox</option></select></label>
-    <label>Address <input data-name="url" placeholder="https://example.com/feed.xml" required></label>
-    <label class="check"><input type="checkbox" data-name="enabled" checked> Collect this source</label>
-    <label>Declared interests <input data-name="categories" placeholder="Comma-separated interest names"></label>
-    <div data-fields="rss"><label>Collect history <input data-name="collect_from" placeholder="7d"></label><label class="check"><input type="checkbox" data-name="roundup"> Entries are link roundups</label></div>
-    <div data-fields="newsletter" hidden><label>Folder <input data-name="folder" placeholder="INBOX"></label><label>Username <input data-name="username" autocomplete="off"></label><label>Password <input type="password" data-name="password" autocomplete="new-password"></label><label>Look-back days <input type="number" data-name="days" min="0" value="1"></label><label>Maximum messages <input type="number" data-name="max_messages" min="0" value="0"></label></div>
-    <button class="button secondary" type="button" data-remove-source>Remove source</button>
-  </fieldset></template>
-</section>
-{{end}}
+{{define "content"}}<section class="settings-page setup-page">
+<p class="step">Step 2 of 2</p><div class="section-heading"><div><h1 class="page-title">Where should Ziba look?</h1><p class="note">Sources are RSS feeds or newsletter mailboxes.</p></div><a class="button" href="/setup/source/new">Add source</a></div>
+{{if .Error}}<p class="form-error">{{.Error}}</p>{{end}}{{template "sourceTable" .}}{{template "sourcePresets" .}}
+<form method="post" action="/setup/sources"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><div class="wizard-actions"><a class="button secondary" href="/setup/interests">Back: interests</a>{{if .Settings.Sources}}<button class="button" type="submit">Finish setup</button>{{else}}<span class="help">Add at least one source to finish.</span>{{end}}</div></form>
+</section>{{end}}

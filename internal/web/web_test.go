@@ -51,6 +51,17 @@ func (f *configurableFakeStore) SaveSetupInterests(_ context.Context, interests 
 	return nil
 }
 
+func (f *configurableFakeStore) SaveSetupSources(_ context.Context, interests config.Interests, sources []domain.Source) error {
+	f.configuration.Interests = interests
+	for i := range sources {
+		if sources[i].ID == 0 {
+			sources[i].ID = int64(i + 1)
+		}
+	}
+	f.configuration.Sources = sources
+	return nil
+}
+
 func (f *fakeStore) LatestDigest(context.Context) (domain.Digest, error) {
 	return f.digest, nil
 }
@@ -316,23 +327,37 @@ func TestFirstRunIsGatedBySetupWizard(t *testing.T) {
 	if strings.Contains(body, `href="/stats"`) || strings.Contains(body, `href="/archive"`) {
 		t.Fatal("normal navigation is visible during setup")
 	}
-	if !strings.Contains(body, "comma-separated") {
+	if !strings.Contains(body, "Preconfigured interests") {
+		t.Fatal("setup does not offer preconfigured interests")
+	}
+	req = httptest.NewRequest(http.MethodGet, "/setup/interest/new", nil)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	body = rec.Body.String()
+	if !strings.Contains(body, "Separate subtopics with commas") {
 		t.Fatal("setup does not explain the subtopic format")
 	}
 
 	form := url.Values{
-		"csrf_token": {"setup-token"}, "threshold": {"60"},
-		"interest_topic": {"AI"}, "interest_priority": {"1"},
-		"interest_subtopics": {"agents, models"}, "interest_note": {"Practical work"},
+		"csrf_token": {"setup-token"}, "topic": {"AI"}, "priority": {"1"},
+		"subtopics": {"agents, models"}, "note": {"Practical work"},
 	}
-	req = httptest.NewRequest(http.MethodPost, "/setup/interests", strings.NewReader(form.Encode()))
+	req = httptest.NewRequest(http.MethodPost, "/setup/interest/new", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/setup/interests" {
+		t.Fatalf("interest step = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
+	}
+	form = url.Values{"csrf_token": {"setup-token"}, "name": {"Example"}, "type": {"rss"}, "url": {"https://example.com/feed"}, "enabled": {"on"}, "collect_from": {"7d"}}
+	req = httptest.NewRequest(http.MethodPost, "/setup/source/new", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec = httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/setup/sources" {
-		t.Fatalf("interest step = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
+		t.Fatalf("add source = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
 	}
-	form = url.Values{"csrf_token": {"setup-token"}, "source_0_name": {"Example"}, "source_0_type": {"rss"}, "source_0_url": {"https://example.com/feed"}, "source_0_enabled": {"on"}, "source_0_collect_from": {"7d"}}
+	form = url.Values{"csrf_token": {"setup-token"}}
 	req = httptest.NewRequest(http.MethodPost, "/setup/sources", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec = httptest.NewRecorder()
@@ -345,7 +370,7 @@ func TestFirstRunIsGatedBySetupWizard(t *testing.T) {
 	}
 }
 
-func TestWizardAcceptsMultipleSources(t *testing.T) {
+func TestWizardAddsPreconfiguredSources(t *testing.T) {
 	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{
 		Interests: config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
 	}}
@@ -353,21 +378,18 @@ func TestWizardAcceptsMultipleSources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("newServer: %v", err)
 	}
-	form := url.Values{
-		"csrf_token":    {"token"},
-		"source_0_name": {"Feed"}, "source_0_type": {"rss"}, "source_0_url": {"https://example.com/feed"}, "source_0_enabled": {"on"},
-		"source_1_name": {"Mail"}, "source_1_type": {"newsletter"}, "source_1_url": {"imaps://mail.example.com"}, "source_1_enabled": {"on"},
-		"source_1_folder": {"INBOX"}, "source_1_username": {"reader"}, "source_1_password": {"secret"}, "source_1_days": {"1"},
+	for _, id := range []string{"ieee-spectrum", "hacker-news"} {
+		form := url.Values{"csrf_token": {"token"}}
+		req := httptest.NewRequest(http.MethodPost, "/setup/sources/preset/"+id, strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+		if rec.Code != http.StatusSeeOther {
+			t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+		}
 	}
-	req := httptest.NewRequest(http.MethodPost, "/setup/sources", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	rec := httptest.NewRecorder()
-	server.Handler().ServeHTTP(rec, req)
-	if rec.Code != http.StatusSeeOther {
-		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
-	}
-	if len(db.saved.Sources) != 2 {
-		t.Fatalf("saved %d sources, want 2", len(db.saved.Sources))
+	if len(db.configuration.Sources) != 2 {
+		t.Fatalf("saved %d sources, want 2", len(db.configuration.Sources))
 	}
 }
 

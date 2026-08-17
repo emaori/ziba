@@ -447,6 +447,20 @@ code {
 .settings-nav { display: flex; gap: 0.5rem; margin: 0 0 2rem; border-bottom: 1px solid var(--rule); font-family: system-ui, sans-serif; }
 .settings-nav a { padding: 0.65rem 0.9rem; color: var(--ink-soft); text-decoration: none; border-bottom: 3px solid transparent; }
 .settings-nav a.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+.table-wrap { overflow-x: auto; margin: 1rem 0 1.5rem; }
+.config-table { width: 100%; border-collapse: collapse; font-family: system-ui, sans-serif; }
+.config-table th, .config-table td { padding: 0.8rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: middle; }
+.config-table th { color: var(--ink-soft); font-size: 0.85rem; }
+.config-table td:last-child { text-align: right; white-space: nowrap; }
+.breakable { overflow-wrap: anywhere; }
+.preset-box { margin: 1.5rem 0; padding: 1rem; border: 1px solid var(--rule); border-radius: 0.4rem; font-family: system-ui, sans-serif; }
+.preset-box h3 { margin-top: 0; }
+.preset-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.preset-actions form { margin: 0; }
+.compact-setting { display: flex; align-items: end; flex-wrap: wrap; gap: 0.7rem; margin: 1rem 0; font-family: system-ui, sans-serif; }
+.compact-setting label { font-weight: 600; }
+.compact-setting input { display: block; width: 8rem; margin-top: 0.25rem; padding: 0.55rem; }
+.compact-setting .help { flex-basis: 100%; margin: 0; }
 .form-actions, .wizard-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; margin-top: 1rem; }
 .source-card { position: relative; }
 .source-list { padding: 0.2rem 1rem; background: var(--card); border: 1px solid var(--rule); border-radius: 3px; font-family: system-ui, sans-serif; }

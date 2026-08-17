@@ -61,14 +61,16 @@ It holds `compose.yaml`, already arranged the way Compose expects. The image it 
 [`ghcr.io/emaori/ziba`](https://github.com/emaori/ziba/pkgs/container/ziba).
 
 Fill in `compose.yaml`, then start Ziba. On the first launch, open Ziba in a
-browser. The setup wizard has two steps: interests, then sources. You can move
-between the steps and add as many sources as you need. RSS and newsletter forms
-show only the fields that apply to the selected type. Collection does not start
-until setup is complete.
+browser. The setup wizard has two steps: interests, then sources. Each step has
+a table. Add or edit one item on its own page. You can also add a preconfigured
+interest or RSS source, then edit it if needed. RSS and newsletter forms show
+only the fields that apply to the selected type. Collection does not start until
+setup is complete.
 
 After setup, use **Settings** in the web interface. It has separate Interests
-and Sources sections. Changes apply without restarting Ziba. Interest changes
-affect new articles only. Existing articles are not re-analyzed.
+and Sources tables and the same add, edit, and preconfigured options. Changes
+apply without restarting Ziba. Interest changes affect new articles only.
+Existing articles are not re-analyzed.
 
 Newsletter credentials can be entered or changed in Settings. Stored usernames
 and passwords are never displayed again.

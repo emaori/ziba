@@ -95,40 +95,6 @@
     }
   }
 
-  // Interest rows can be added and removed without a frontend framework. The
-  // server still validates every submitted value.
-  document.addEventListener('click', function (event) {
-    if (event.target.matches('[data-add-interest]')) {
-      var template = document.querySelector('[data-interest-template]');
-      var list = document.querySelector('[data-interest-list]');
-      if (template && list) {
-        list.appendChild(template.content.cloneNode(true));
-      }
-    }
-    if (event.target.matches('[data-remove-interest]')) {
-      var rows = document.querySelectorAll('.interest-row');
-      if (rows.length > 1) {
-        event.target.closest('.interest-row').remove();
-      }
-    }
-    if (event.target.matches('[data-add-source]')) {
-      var sourceTemplate = document.querySelector('[data-source-template]');
-      var sourceList = document.querySelector('[data-source-list]');
-      if (sourceTemplate && sourceList) {
-        sourceList.appendChild(sourceTemplate.content.cloneNode(true));
-        reindexSources();
-        toggleSourceFields(sourceList.lastElementChild);
-      }
-    }
-    if (event.target.matches('[data-remove-source]')) {
-      var cards = document.querySelectorAll('[data-source-list] [data-source-card]');
-      if (cards.length > 1) {
-        event.target.closest('[data-source-card]').remove();
-        reindexSources();
-      }
-    }
-  });
-
   document.addEventListener('change', function (event) {
     if (event.target.matches('[data-source-type]')) {
       toggleSourceFields(event.target.closest('[data-source-card]'));
@@ -149,14 +115,4 @@
     });
   }
 
-  function reindexSources() {
-    document.querySelectorAll('[data-source-list] [data-source-card]').forEach(function (card, index) {
-      var number = card.querySelector('[data-source-number]');
-      if (number) number.textContent = index + 1;
-      card.querySelectorAll('input, select, textarea').forEach(function (field) {
-        var base = field.dataset.name || (field.name || '').replace(/^source_\d+_/, '');
-        if (base) field.name = 'source_' + index + '_' + base;
-      });
-    });
-  }
 })();

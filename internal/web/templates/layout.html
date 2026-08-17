@@ -44,26 +44,10 @@
 </html>
 {{end}}
 
-{{define "interestRows"}}
-<div data-interest-list>
-{{range .}}
-  <div class="interest-row">
-    <label>Interest name <input name="interest_topic" value="{{.Topic}}" placeholder="Computer Science" required></label>
-    <label>Priority <input type="number" name="interest_priority" min="1" value="{{.Priority}}" required></label>
-    <label>Subtopics (comma-separated) <input name="interest_subtopics" value="{{join .Subtopics ", "}}" placeholder="Distributed systems, compilers"></label>
-    <label class="wide">Notes <textarea name="interest_note" rows="2" placeholder="What makes this subject useful or interesting to you">{{.Note}}</textarea></label>
-    <button class="button secondary" type="button" data-remove-interest>Remove</button>
-  </div>
-{{end}}
-</div>
-<template data-interest-template><div class="interest-row">
-  <label>Interest name <input name="interest_topic" placeholder="New interest" required></label>
-  <label>Priority <input type="number" name="interest_priority" min="1" value="1" required></label>
-  <label>Subtopics (comma-separated) <input name="interest_subtopics" placeholder="Distributed systems, compilers"></label>
-  <label class="wide">Notes <textarea name="interest_note" rows="2"></textarea></label>
-  <button class="button secondary" type="button" data-remove-interest>Remove</button>
-</div></template>
-{{end}}
+{{define "interestTable"}}<div class="table-wrap"><table class="config-table"><thead><tr><th>Interest</th><th>Priority</th><th>Subtopics</th><th></th></tr></thead><tbody>{{range $i,$v:=.Settings.Interests.Topics}}<tr><td><strong>{{$v.Topic}}</strong></td><td>{{$v.Priority}}</td><td>{{if $v.Subtopics}}{{join $v.Subtopics ", "}}{{else}}—{{end}}</td><td><a class="button secondary" href="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/interest/{{$i}}">Edit</a></td></tr>{{else}}<tr><td colspan="4">No interests configured.</td></tr>{{end}}</tbody></table></div>{{end}}
+{{define "sourceTable"}}<div class="table-wrap"><table class="config-table"><thead><tr><th>Source</th><th>Type</th><th>Address</th><th>Status</th><th></th></tr></thead><tbody>{{range .Settings.Sources}}<tr><td><strong>{{.Name}}</strong></td><td>{{.Type}}</td><td class="breakable">{{.URL}}</td><td>{{if .Enabled}}Enabled{{else}}Disabled{{end}}</td><td><a class="button secondary" href="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/source/{{.ID}}">Edit</a></td></tr>{{else}}<tr><td colspan="5">No sources configured.</td></tr>{{end}}</tbody></table></div>{{end}}
+{{define "interestPresets"}}<section class="preset-box"><h3>Preconfigured interests</h3><p class="help">Add a useful starting point. You can edit it afterward.</p><div class="preset-actions">{{range .InterestPresets}}<form method="post" action="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/interests/preset/{{.ID}}"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><button class="button secondary" type="submit">Add {{.Label}}</button></form>{{end}}</div></section>{{end}}
+{{define "sourcePresets"}}<section class="preset-box"><h3>Preconfigured sources</h3><p class="help">Add a known RSS feed with one click. You can edit it afterward.</p><div class="preset-actions">{{range .SourcePresets}}<form method="post" action="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/sources/preset/{{.ID}}"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><button class="button secondary" type="submit">Add {{.Label}}</button></form>{{end}}</div></section>{{end}}
 
 {{define "settingsNav"}}<nav class="settings-nav"><a class="{{if eq .SettingsSection "interests"}}on{{end}}" href="/settings/interests">Interests</a><a class="{{if eq .SettingsSection "sources"}}on{{end}}" href="/settings/sources">Sources</a></nav>{{end}}
 

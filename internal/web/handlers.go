@@ -47,6 +47,7 @@ type Store interface {
 type configurationStore interface {
 	Configuration(ctx context.Context) (store.Configuration, error)
 	SaveSetupInterests(ctx context.Context, interests config.Interests) error
+	SaveSetupSources(ctx context.Context, interests config.Interests, sources []domain.Source) error
 	SaveConfiguration(ctx context.Context, interests config.Interests, sources []domain.Source) error
 }
 
@@ -78,11 +79,17 @@ type page struct {
 	Configured       bool
 	Settings         store.Configuration
 	Source           store.SourceInput
+	InterestForm     config.Interest
+	InterestIndex    int
+	EditingInterest  bool
 	EditingSource    bool
 	Error            string
 	SetupMode        bool
 	SettingsSection  string
-	WizardSources    []store.SourceInput
+	FormAction       string
+	CancelURL        string
+	InterestPresets  []interestPreset
+	SourcePresets    []sourcePreset
 }
 
 // handleInterest lists one interest's unread articles, most relevant first.
