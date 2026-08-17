@@ -244,9 +244,19 @@ func (s *Server) Handler() http.Handler {
 	// or a prefetching browser must not be able to empty the reading list.
 	mux.HandleFunc("POST /article/{id}/{action}", s.handleArchive)
 
-	mux.Handle("GET /static/", http.FileServerFS(assets))
+	mux.Handle("GET /static/", noCache(http.FileServerFS(assets)))
 
 	return s.setupGate(mux)
+}
+
+// Embedded assets have no useful modification time for HTTP revalidation.
+// Asking browsers to revalidate prevents an old app.js from surviving an image
+// upgrade and silently losing newer progressive enhancements.
+func noCache(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		next.ServeHTTP(w, r)
+	})
 }
 
 // thousands groups a number with thin spaces, so seven figures can be read

@@ -903,6 +903,23 @@ func TestScriptIsLoadedAndDeferred(t *testing.T) {
 	}
 }
 
+func TestStaticAssetsAreRevalidatedAfterAnUpgrade(t *testing.T) {
+	handler := newTestServer(t, &fakeStore{})
+	req := httptest.NewRequest(http.MethodGet, "/static/app.js", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if got := rec.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Errorf("Cache-Control = %q, want no-cache", got)
+	}
+	if got := strings.Count(rec.Body.String(), "form.submit()"); got != 1 {
+		t.Errorf("form.submit() count = %d, want only the date-picker submission", got)
+	}
+}
+
 // The reader repeats both controls at the head of the page, so a long article
 // need not be scrolled to its end to be marked read or opened at source.
 func TestReaderRepeatsActionsAtTop(t *testing.T) {
