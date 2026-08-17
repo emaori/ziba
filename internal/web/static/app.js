@@ -44,7 +44,8 @@
       credentials: 'same-origin'
     }).then(function (response) {
       if (!response.ok) {
-        throw new Error('unexpected status ' + response.status);
+        showArchiveError(form, button);
+        return;
       }
       button.disabled = false;
       // Every control for this article, not just the one clicked: the reader
@@ -56,12 +57,26 @@
           toggle(other, other.querySelector('button'));
         }
       });
-    }).catch(function () {
-      // Fall back to the ordinary post rather than leaving the reader unsure
-      // whether the click registered. Worst case they get the old behaviour.
-      form.submit();
+    }, function () {
+      showArchiveError(form, button);
     });
   });
+
+  // Once the script has intercepted a submission it must never submit the same
+  // form again: the request may have reached the server even when its response
+  // was lost. Retrying automatically could therefore perform the action twice
+  // and, more visibly, bring back the full-page reload this enhancement avoids.
+  function showArchiveError(form, button) {
+    button.disabled = false;
+    var error = form.querySelector('.action-error');
+    if (!error) {
+      error = document.createElement('span');
+      error.className = 'action-error';
+      error.setAttribute('role', 'alert');
+      form.appendChild(error);
+    }
+    error.textContent = 'Could not update. Try again.';
+  }
 
   // articleOf reads the article's id out of a form's address, which is either
   // /article/{id}/archive or /article/{id}/unarchive.

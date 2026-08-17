@@ -159,6 +159,14 @@ a { color: var(--accent); }
    used to stand a few pixels taller than the links beside it. */
 form.inline { display: flex; margin: 0; }
 
+.action-error {
+  align-self: center;
+  margin-left: 0.5rem;
+  color: #a52f2f;
+  font-family: system-ui, sans-serif;
+  font-size: 0.75rem;
+}
+
 .read-marker {
   margin: 0 0 1rem;
   font-family: system-ui, sans-serif;
