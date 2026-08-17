@@ -48,6 +48,7 @@ type configurationStore interface {
 	Configuration(ctx context.Context) (store.Configuration, error)
 	SaveSetupInterests(ctx context.Context, interests config.Interests) error
 	SaveSetupSources(ctx context.Context, interests config.Interests, sources []domain.Source) error
+	DeleteSetupSource(ctx context.Context, id int64) error
 	SaveConfiguration(ctx context.Context, interests config.Interests, sources []domain.Source) error
 }
 
@@ -90,6 +91,9 @@ type page struct {
 	CancelURL        string
 	InterestPresets  []interestPreset
 	SourcePresets    []sourcePreset
+	RemoveName       string
+	RemoveKind       string
+	RemoveAction     string
 }
 
 // handleInterest lists one interest's unread articles, most relevant first.

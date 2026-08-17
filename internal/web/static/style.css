@@ -411,17 +411,26 @@ code {
 .figures-table tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
 
 /* Setup and settings ------------------------------------------------------ */
-.settings-page { margin-bottom: 3rem; }
-.setup-page { max-width: 46rem; margin-left: auto; margin-right: auto; }
+.settings-page { width: min(62rem, calc(100vw - 2rem)); margin: 0 0 3rem 50%; transform: translateX(-50%); font-family: system-ui, sans-serif; }
+.setup-page { max-width: 54rem; }
 .setup-masthead { justify-content: center; }
-.step { margin: 1.5rem 0 -1rem; color: var(--accent); font: 700 0.78rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.08em; }
+.config-header { max-width: 42rem; margin: 1.8rem auto 0; text-align: center; }
+.config-header h1, .config-header h2 { margin-bottom: 0.3rem; }
+.step { margin: 0 0 0.4rem; color: var(--accent); font: 700 0.78rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.08em; }
+.setup-steps { display: grid; grid-template-columns: 1fr 1fr; margin: 1.5rem 0 2rem; border-bottom: 1px solid var(--rule); font-family: system-ui, sans-serif; }
+.setup-steps span { padding: 0.75rem; color: var(--ink-soft); text-align: center; border-bottom: 3px solid transparent; }
+.setup-steps span.current { color: var(--ink); border-bottom-color: var(--accent); font-weight: 700; }
+.setup-steps b { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; margin-right: 0.35rem; border: 1px solid var(--rule); border-radius: 50%; }
+.setup-steps .current b { color: var(--paper); background: var(--accent); border-color: var(--accent); }
+.primary-action { display: flex; justify-content: center; margin: 1.8rem 0 2.2rem; }
+.button.button-large { min-width: min(20rem, 100%); min-height: 3rem; justify-content: center; padding: 0.75rem 1.2rem; font-size: 1rem; font-weight: 700; border-radius: 7px; }
 .settings-form, .settings-section { font-family: system-ui, sans-serif; }
 .settings-form fieldset, .settings-section {
   margin: 1.25rem 0;
   padding: 1rem;
   background: var(--card);
   border: 1px solid var(--rule);
-  border-radius: 3px;
+  border-radius: 8px;
 }
 .settings-form legend { font-weight: 700; padding: 0 0.4rem; }
 .settings-form label { display: block; margin: 0.8rem 0 0.25rem; font-weight: 600; }
@@ -437,6 +446,7 @@ code {
   font: inherit;
 }
 .settings-form label.check { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; }
+.settings-form .status-fieldset { margin: 1.4rem 0; background: color-mix(in srgb, var(--accent) 5%, var(--card)); }
 .help { margin: 0.25rem 0 0.8rem; color: var(--ink-soft); font: 0.85rem/1.45 system-ui, sans-serif; }
 .form-error { padding: 0.8rem 1rem; border-left: 3px solid #b33; background: var(--card); color: #b33; font-family: system-ui, sans-serif; }
 .interest-row { display: grid; grid-template-columns: 2fr 0.7fr 2fr; gap: 0 0.8rem; padding: 0 0 1rem; margin: 0 0 1rem; border-bottom: 1px solid var(--rule); }
@@ -447,24 +457,57 @@ code {
 .settings-nav { display: flex; gap: 0.5rem; margin: 0 0 2rem; border-bottom: 1px solid var(--rule); font-family: system-ui, sans-serif; }
 .settings-nav a { padding: 0.65rem 0.9rem; color: var(--ink-soft); text-decoration: none; border-bottom: 3px solid transparent; }
 .settings-nav a.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
-.table-wrap { overflow-x: auto; margin: 1rem 0 1.5rem; }
+.config-list { margin: 0 0 2rem; }
+.list-title { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.7rem; font-size: 1.15rem; }
+.list-title span { min-width: 1.6rem; padding: 0.05rem 0.4rem; color: var(--ink-soft); background: var(--card); border: 1px solid var(--rule); border-radius: 999px; font-size: 0.75rem; text-align: center; }
+.table-wrap { overflow: hidden; background: var(--card); border: 1px solid var(--rule); border-radius: 8px; }
 .config-table { width: 100%; border-collapse: collapse; font-family: system-ui, sans-serif; }
-.config-table th, .config-table td { padding: 0.8rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: middle; }
-.config-table th { color: var(--ink-soft); font-size: 0.85rem; }
-.config-table td:last-child { text-align: right; white-space: nowrap; }
+.config-table th, .config-table td { padding: 0.9rem 1rem; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: middle; }
+.config-table thead th { color: var(--ink-soft); background: color-mix(in srgb, var(--rule) 25%, transparent); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.config-table tbody th { font-size: 0.95rem; }
+.config-table tbody tr:last-child > * { border-bottom: 0; }
+.config-table td:last-child { white-space: nowrap; }
+.row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.8rem; }
+.text-action { font: 600 0.85rem system-ui, sans-serif; }
+.danger-text { color: #a52f2f; }
+.status-badge { display: inline-block; padding: 0.15rem 0.5rem; color: var(--ink-soft); background: var(--paper); border: 1px solid var(--rule); border-radius: 999px; font-size: 0.78rem; white-space: nowrap; }
+.status-badge.active { color: #28643b; background: #edf8f0; border-color: #b9dbc3; }
+.empty-row td { padding: 1.5rem; color: var(--ink-soft); text-align: center; }
 .breakable { overflow-wrap: anywhere; }
-.preset-box { margin: 1.5rem 0; padding: 1rem; border: 1px solid var(--rule); border-radius: 0.4rem; font-family: system-ui, sans-serif; }
-.preset-box h3 { margin-top: 0; }
-.preset-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
-.preset-actions form { margin: 0; }
+.preset-box { margin: 2rem 0; padding-top: 1.5rem; border-top: 1px solid var(--rule); font-family: system-ui, sans-serif; }
+.preset-box h2 { margin: 0; font-size: 1.15rem; }
+.preset-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+.preset-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-width: 0; padding: 1rem; background: var(--card); border: 1px solid var(--rule); border-radius: 8px; }
+.preset-card h3, .preset-card p { margin: 0; }
+.preset-card h3 { font-size: 0.95rem; }
+.preset-card p { margin-top: 0.2rem; color: var(--ink-soft); font-size: 0.78rem; overflow-wrap: anywhere; }
+.preset-card form { flex: none; margin: 0; }
 .compact-setting { display: flex; align-items: end; flex-wrap: wrap; gap: 0.7rem; margin: 1rem 0; font-family: system-ui, sans-serif; }
 .compact-setting label { font-weight: 600; }
 .compact-setting input { display: block; width: 8rem; margin-top: 0.25rem; padding: 0.55rem; }
 .compact-setting .help { flex-basis: 100%; margin: 0; }
-.form-actions, .wizard-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; margin-top: 1rem; }
+.form-actions, .wizard-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); }
+.confirm-actions { display: flex; gap: 0.7rem; margin-top: 1.5rem; }
+.button.danger { background: #a52f2f; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .source-card { position: relative; }
 .source-list { padding: 0.2rem 1rem; background: var(--card); border: 1px solid var(--rule); border-radius: 3px; font-family: system-ui, sans-serif; }
 [hidden] { display: none !important; }
 .setting-row { padding: 0.8rem 0; border-top: 1px solid var(--rule); }
 .setting-row span, .setting-row small { display: block; color: var(--ink-soft); }
-@media (max-width: 40rem) { .interest-row { grid-template-columns: 1fr; } .interest-row .wide { grid-column: auto; } }
+@media (max-width: 40rem) {
+  .settings-page { width: 100%; margin-left: 0; transform: none; }
+  .preset-grid { grid-template-columns: 1fr; }
+  .config-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .config-table, .config-table tbody, .config-table tr, .config-table th, .config-table td { display: block; width: 100%; }
+  .config-table tbody tr { padding: 0.9rem 1rem; border-bottom: 1px solid var(--rule); }
+  .config-table th, .config-table td { display: grid; grid-template-columns: 7rem 1fr; gap: 0.6rem; padding: 0.25rem 0; border: 0; }
+  .config-table th::before, .config-table td::before { content: attr(data-label); color: var(--ink-soft); font-size: 0.78rem; font-weight: 500; }
+  .config-table .row-actions { display: flex; justify-content: flex-end; min-height: 44px; margin-top: 0.5rem; padding-top: 0.7rem; border-top: 1px solid var(--rule); }
+  .empty-row td { display: block; text-align: left; }
+  .empty-row td::before { content: none; }
+  .masthead { align-items: flex-start; }
+  .masthead nav { display: flex; max-width: 70%; overflow-x: auto; }
+  .masthead nav a { flex: none; }
+}

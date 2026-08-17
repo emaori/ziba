@@ -54,6 +54,22 @@ func (s *Store) SaveSetupSources(ctx context.Context, interests config.Interests
 	return s.saveConfiguration(ctx, interests, sources, false)
 }
 
+// DeleteSetupSource removes a draft created before setup completed. Collection
+// cannot run in setup mode, so a draft source cannot own collected articles.
+// The configured guard keeps this operation unavailable after setup.
+func (s *Store) DeleteSetupSource(ctx context.Context, id int64) error {
+	tag, err := s.pool.Exec(ctx, `
+		DELETE FROM sources
+		WHERE id=$1 AND NOT (SELECT configured FROM app_settings WHERE singleton)`, id)
+	if err != nil {
+		return fmt.Errorf("delete setup source: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("setup source not found")
+	}
+	return nil
+}
+
 // Configuration returns one consistent snapshot from PostgreSQL.
 func (s *Store) Configuration(ctx context.Context) (Configuration, error) {
 	var out Configuration

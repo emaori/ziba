@@ -231,6 +231,79 @@ func (s *Server) handleInterestPreset(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, modeURL(setup, "/setup/interests", "/settings/interests"), http.StatusSeeOther)
 }
 
+func (s *Server) handleSetupInterestRemove(w http.ResponseWriter, r *http.Request) {
+	cs, ok := s.configStore()
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	cfg, err := cs.Configuration(r.Context())
+	id, parseErr := strconv.Atoi(r.PathValue("id"))
+	if err != nil || parseErr != nil || id < 0 || id >= len(cfg.Interests.Topics) {
+		http.NotFound(w, r)
+		return
+	}
+	if r.Method == http.MethodGet {
+		s.render(w, r, "remove_setup.html", &page{Title: "Remove interest", SetupMode: true, RemoveName: cfg.Interests.Topics[id].Topic, RemoveKind: "interest", RemoveAction: r.URL.Path, CancelURL: "/setup/interests"})
+		return
+	}
+	if !s.validCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	if len(cfg.Interests.Topics) == 1 {
+		s.render(w, r, "setup_interests.html", &page{Title: "Welcome", SetupMode: true, Settings: cfg, InterestPresets: interestPresets, Error: "add another interest before removing the only one"})
+		return
+	}
+	cfg.Interests.Topics = append(cfg.Interests.Topics[:id], cfg.Interests.Topics[id+1:]...)
+	if err := cs.SaveSetupInterests(r.Context(), cfg.Interests); err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	http.Redirect(w, r, "/setup/interests", http.StatusSeeOther)
+}
+
+func (s *Server) handleSetupSourceRemove(w http.ResponseWriter, r *http.Request) {
+	cs, ok := s.configStore()
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || id < 1 {
+		http.NotFound(w, r)
+		return
+	}
+	cfg, err := cs.Configuration(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	var name string
+	for _, source := range cfg.Sources {
+		if source.ID == id {
+			name = source.Name
+		}
+	}
+	if name == "" {
+		http.NotFound(w, r)
+		return
+	}
+	if r.Method == http.MethodGet {
+		s.render(w, r, "remove_setup.html", &page{Title: "Remove source", SetupMode: true, RemoveName: name, RemoveKind: "source", RemoveAction: r.URL.Path, CancelURL: "/setup/sources"})
+		return
+	}
+	if !s.validCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	if err := cs.DeleteSetupSource(r.Context(), id); err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	http.Redirect(w, r, "/setup/sources", http.StatusSeeOther)
+}
+
 func (s *Server) handleThreshold(w http.ResponseWriter, r *http.Request) {
 	if !s.validCSRF(r) {
 		http.Error(w, "invalid CSRF token", http.StatusForbidden)

@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"html"
 	"net/http"
 	"net/http/httptest"
@@ -60,6 +61,16 @@ func (f *configurableFakeStore) SaveSetupSources(_ context.Context, interests co
 	}
 	f.configuration.Sources = sources
 	return nil
+}
+
+func (f *configurableFakeStore) DeleteSetupSource(_ context.Context, id int64) error {
+	for i := range f.configuration.Sources {
+		if f.configuration.Sources[i].ID == id {
+			f.configuration.Sources = append(f.configuration.Sources[:i], f.configuration.Sources[i+1:]...)
+			return nil
+		}
+	}
+	return fmt.Errorf("setup source not found")
 }
 
 func (f *fakeStore) LatestDigest(context.Context) (domain.Digest, error) {
@@ -327,7 +338,7 @@ func TestFirstRunIsGatedBySetupWizard(t *testing.T) {
 	if strings.Contains(body, `href="/stats"`) || strings.Contains(body, `href="/archive"`) {
 		t.Fatal("normal navigation is visible during setup")
 	}
-	if !strings.Contains(body, "Preconfigured interests") {
+	if !strings.Contains(body, "Need a starting point?") {
 		t.Fatal("setup does not offer preconfigured interests")
 	}
 	req = httptest.NewRequest(http.MethodGet, "/setup/interest/new", nil)
@@ -390,6 +401,30 @@ func TestWizardAddsPreconfiguredSources(t *testing.T) {
 	}
 	if len(db.configuration.Sources) != 2 {
 		t.Fatalf("saved %d sources, want 2", len(db.configuration.Sources))
+	}
+}
+
+func TestWizardCanRemoveDraftSource(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{
+		Interests: config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+		Sources:   []domain.Source{{ID: 7, Name: "Draft feed", Type: domain.SourceTypeRSS, URL: "https://example.com/feed", Enabled: true}},
+	}}
+	server, err := newServer(db, config.Interests{}, "token")
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	handler := server.Handler()
+	code, body := get(t, handler, "/setup/source/7/remove")
+	if code != http.StatusOK || !strings.Contains(body, "Remove “Draft feed”?") {
+		t.Fatalf("confirmation = %d %q", code, body)
+	}
+	form := url.Values{"csrf_token": {"token"}}
+	req := httptest.NewRequest(http.MethodPost, "/setup/source/7/remove", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || len(db.configuration.Sources) != 0 {
+		t.Fatalf("remove response = %d, sources = %d", rec.Code, len(db.configuration.Sources))
 	}
 }
 

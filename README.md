@@ -63,7 +63,8 @@ It holds `compose.yaml`, already arranged the way Compose expects. The image it 
 Fill in `compose.yaml`, then start Ziba. On the first launch, open Ziba in a
 browser. The setup wizard has two steps: interests, then sources. Each step has
 a table. Add or edit one item on its own page. You can also add a preconfigured
-interest or RSS source, then edit it if needed. RSS and newsletter forms show
+interest or RSS source, then edit it if needed. Items added during setup can be
+removed before setup is complete. RSS and newsletter forms show
 only the fields that apply to the selected type. Collection does not start until
 setup is complete.
 
@@ -74,6 +75,9 @@ Existing articles are not re-analyzed.
 
 Newsletter credentials can be entered or changed in Settings. Stored usernames
 and passwords are never displayed again.
+
+Turning off collection for a source stops future collection. It does not remove
+articles that Ziba already collected.
 
 Upgrades from an older version are automatic. If the database is not configured
 yet and the old YAML files are present, Ziba imports them once. Existing source
