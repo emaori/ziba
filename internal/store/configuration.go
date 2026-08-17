@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"net/url"
 	"os"
@@ -19,6 +20,50 @@ type Configuration struct {
 	Configured bool
 	Interests  config.Interests
 	Sources    []domain.Source
+	Schedule   config.CollectionSchedule
+}
+
+// InitializeSchedule imports the retired environment settings exactly once.
+// Empty legacy values become the current defaults. Concurrent starts are safe:
+// the first update fills both NULL columns and later calls leave them alone.
+func (s *Store) InitializeSchedule(ctx context.Context, legacyEvery, legacyAt string) error {
+	var initialized bool
+	if err := s.pool.QueryRow(ctx, `
+		SELECT collect_every IS NOT NULL AND collect_at IS NOT NULL
+		FROM app_settings WHERE singleton`).Scan(&initialized); err != nil {
+		return fmt.Errorf("check collection schedule: %w", err)
+	}
+	if initialized {
+		return nil
+	}
+	schedule, err := config.ParseCollectionSchedule(legacyEvery, legacyAt)
+	if err != nil {
+		return fmt.Errorf("import legacy schedule: %w", err)
+	}
+	_, err = s.pool.Exec(ctx, `
+		UPDATE app_settings
+		SET collect_every=COALESCE(collect_every, $1),
+		    collect_at=COALESCE(collect_at, $2), updated_at=now()
+		WHERE singleton`, schedule.Every.String(), schedule.At.String())
+	if err != nil {
+		return fmt.Errorf("initialize collection schedule: %w", err)
+	}
+	return nil
+}
+
+// SaveSchedule validates and stores the live collection schedule.
+func (s *Store) SaveSchedule(ctx context.Context, schedule config.CollectionSchedule) error {
+	validated, err := config.ParseCollectionSchedule(schedule.Every.String(), schedule.At.String())
+	if err != nil {
+		return err
+	}
+	_, err = s.pool.Exec(ctx, `
+		UPDATE app_settings SET collect_every=$1, collect_at=$2, updated_at=now()
+		WHERE singleton`, validated.Every.String(), validated.At.String())
+	if err != nil {
+		return fmt.Errorf("save collection schedule: %w", err)
+	}
+	return nil
 }
 
 // SaveSetupInterests persists the first wizard step without enabling Ziba.
@@ -51,7 +96,7 @@ func (s *Store) SaveSetupInterests(ctx context.Context, interests config.Interes
 
 // SaveSetupSources persists wizard source drafts without enabling Ziba.
 func (s *Store) SaveSetupSources(ctx context.Context, interests config.Interests, sources []domain.Source) error {
-	return s.saveConfiguration(ctx, interests, sources, false)
+	return s.saveConfiguration(ctx, interests, sources, false, false)
 }
 
 // DeleteSetupSource removes a draft created before setup completed. Collection
@@ -73,10 +118,18 @@ func (s *Store) DeleteSetupSource(ctx context.Context, id int64) error {
 // Configuration returns one consistent snapshot from PostgreSQL.
 func (s *Store) Configuration(ctx context.Context) (Configuration, error) {
 	var out Configuration
+	var every, at sql.NullString
 	if err := s.pool.QueryRow(ctx,
-		`SELECT configured, threshold FROM app_settings WHERE singleton`).
-		Scan(&out.Configured, &out.Interests.Threshold); err != nil {
+		`SELECT configured, threshold, collect_every, collect_at FROM app_settings WHERE singleton`).
+		Scan(&out.Configured, &out.Interests.Threshold, &every, &at); err != nil {
 		return out, fmt.Errorf("read application settings: %w", err)
+	}
+	if every.Valid && at.Valid {
+		var err error
+		out.Schedule, err = config.ParseCollectionSchedule(every.String, at.String)
+		if err != nil {
+			return out, fmt.Errorf("read collection schedule: %w", err)
+		}
 	}
 
 	rows, err := s.pool.Query(ctx, `
@@ -136,10 +189,16 @@ func scanConfiguredSource(row pgx.CollectableRow) (domain.Source, error) {
 // SaveConfiguration atomically replaces interests and upserts sources. Source
 // IDs are retained by their natural key, preserving every existing article.
 func (s *Store) SaveConfiguration(ctx context.Context, interests config.Interests, sources []domain.Source) error {
-	return s.saveConfiguration(ctx, interests, sources, true)
+	return s.saveConfiguration(ctx, interests, sources, true, false)
 }
 
-func (s *Store) saveConfiguration(ctx context.Context, interests config.Interests, sources []domain.Source, configured bool) error {
+// FinishSetup enables Ziba and optionally queues one immediate first run in the
+// same transaction, so a restart between those actions cannot lose the request.
+func (s *Store) FinishSetup(ctx context.Context, interests config.Interests, sources []domain.Source, collectNow bool) error {
+	return s.saveConfiguration(ctx, interests, sources, true, collectNow)
+}
+
+func (s *Store) saveConfiguration(ctx context.Context, interests config.Interests, sources []domain.Source, configured, collectNow bool) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin configuration update: %w", err)
@@ -205,14 +264,27 @@ func (s *Store) saveConfiguration(ctx context.Context, interests config.Interest
 		}
 	}
 	if _, err := tx.Exec(ctx, `
-		UPDATE app_settings SET configured=$2, threshold=$1, updated_at=now()
-		WHERE singleton`, interests.Threshold, configured); err != nil {
+		UPDATE app_settings SET configured=$2, threshold=$1,
+		collection_requested=collection_requested OR $3, updated_at=now()
+		WHERE singleton`, interests.Threshold, configured, collectNow); err != nil {
 		return fmt.Errorf("save application settings: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit configuration: %w", err)
 	}
 	return nil
+}
+
+// ClaimCollectionRequest atomically consumes the one-time request made by the
+// setup wizard. Only one scheduler can receive true.
+func (s *Store) ClaimCollectionRequest(ctx context.Context) (bool, error) {
+	tag, err := s.pool.Exec(ctx, `
+		UPDATE app_settings SET collection_requested=FALSE
+		WHERE singleton AND configured AND collection_requested`)
+	if err != nil {
+		return false, fmt.Errorf("claim collection request: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
 }
 
 func formatCollectFrom(value domain.CollectFrom) string {

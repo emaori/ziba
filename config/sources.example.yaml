@@ -96,7 +96,7 @@
 #          known, so overlap is harmless and normal. What is not harmless is a
 #          window shorter than the gap between runs: mail arriving in that gap
 #          would never be looked at. The window should therefore comfortably
-#          exceed ZIBA_COLLECT_EVERY — with collection every 6 hours, a day is
+#          exceed the interval configured in Settings — with collection every 6 hours, a day is
 #          ample; for a machine that is only switched on now and then, more.
 #
 #          Read and unread are deliberately ignored. That flag belongs to

@@ -35,6 +35,7 @@ type configurableFakeStore struct {
 	*fakeStore
 	configuration store.Configuration
 	saved         store.Configuration
+	collectNow    bool
 }
 
 func (f *configurableFakeStore) Configuration(context.Context) (store.Configuration, error) {
@@ -42,9 +43,14 @@ func (f *configurableFakeStore) Configuration(context.Context) (store.Configurat
 }
 
 func (f *configurableFakeStore) SaveConfiguration(_ context.Context, interests config.Interests, sources []domain.Source) error {
-	f.saved = store.Configuration{Configured: true, Interests: interests, Sources: sources}
+	f.saved = store.Configuration{Configured: true, Interests: interests, Sources: sources, Schedule: f.configuration.Schedule}
 	f.configuration = f.saved
 	return nil
+}
+
+func (f *configurableFakeStore) FinishSetup(ctx context.Context, interests config.Interests, sources []domain.Source, collectNow bool) error {
+	f.collectNow = collectNow
+	return f.SaveConfiguration(ctx, interests, sources)
 }
 
 func (f *configurableFakeStore) SaveSetupInterests(_ context.Context, interests config.Interests) error {
@@ -71,6 +77,11 @@ func (f *configurableFakeStore) DeleteSetupSource(_ context.Context, id int64) e
 		}
 	}
 	return fmt.Errorf("setup source not found")
+}
+
+func (f *configurableFakeStore) SaveSchedule(_ context.Context, schedule config.CollectionSchedule) error {
+	f.configuration.Schedule = schedule
+	return nil
 }
 
 func (f *fakeStore) LatestDigest(context.Context) (domain.Digest, error) {
@@ -318,7 +329,7 @@ func TestEmptyDigestRenders(t *testing.T) {
 }
 
 func TestFirstRunIsGatedBySetupWizard(t *testing.T) {
-	db := &configurableFakeStore{fakeStore: &fakeStore{}}
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{Schedule: config.CollectionSchedule{Every: 6 * time.Hour, At: config.TimeOfDay{Hour: 4}}}}
 	server, err := newServer(db, config.Interests{}, "setup-token")
 	if err != nil {
 		t.Fatalf("newServer: %v", err)
@@ -373,11 +384,29 @@ func TestFirstRunIsGatedBySetupWizard(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec = httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
-	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/" {
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/setup/schedule" {
 		t.Fatalf("source step = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
+	}
+	req = httptest.NewRequest(http.MethodGet, "/setup/schedule", nil)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	body = rec.Body.String()
+	if !strings.Contains(body, `name="collect_every_amount" min="0" step="1" value="6"`) || !strings.Contains(body, `value="hours" selected`) || !strings.Contains(body, `value="04:00"`) || !strings.Contains(body, `name="collect_now" checked`) {
+		t.Fatalf("schedule defaults were not proposed: %s", body)
+	}
+	form = url.Values{"csrf_token": {"setup-token"}, "collect_every_amount": {"6"}, "collect_every_unit": {"hours"}, "collect_at": {"04:00"}, "collect_now": {"on"}}
+	req = httptest.NewRequest(http.MethodPost, "/setup/schedule", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/" {
+		t.Fatalf("schedule step = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
 	}
 	if !db.saved.Configured || len(db.saved.Sources) != 1 || db.saved.Interests.Topics[0].Topic != "AI" {
 		t.Errorf("saved configuration = %+v", db.saved)
+	}
+	if !db.collectNow {
+		t.Error("setup did not request the default first collection")
 	}
 }
 
@@ -449,6 +478,30 @@ func TestNewsletterCredentialsAreNotRendered(t *testing.T) {
 	}
 	if strings.Contains(body, "private-user") || strings.Contains(body, "private-password") {
 		t.Fatal("stored newsletter credentials were rendered")
+	}
+}
+
+func TestScheduleSettingsSaveToConfiguration(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{
+		Configured: true,
+		Interests:  config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+		Schedule:   config.CollectionSchedule{Every: 6 * time.Hour, At: config.TimeOfDay{Hour: 4}},
+	}}
+	server, err := newServer(db, db.configuration.Interests, "token")
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	code, body := get(t, server.Handler(), "/settings/schedule")
+	if code != http.StatusOK || !strings.Contains(body, "Enter 0 to stop scheduled collection") {
+		t.Fatalf("schedule page = %d body=%s", code, body)
+	}
+	form := url.Values{"csrf_token": {"token"}, "collect_every_amount": {"8"}, "collect_every_unit": {"hours"}, "collect_at": {"05:15"}}
+	req := httptest.NewRequest(http.MethodPost, "/settings/schedule", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || db.configuration.Schedule.Every != 8*time.Hour || db.configuration.Schedule.At.String() != "05:15" {
+		t.Fatalf("saved schedule = %+v, status = %d", db.configuration.Schedule, rec.Code)
 	}
 }
 

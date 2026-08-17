@@ -58,6 +58,10 @@ func newSetupWithIncomplete(ctx context.Context, mode analyzerMode, allowIncompl
 		db.Close()
 		return nil, err
 	}
+	if err := db.InitializeSchedule(ctx, cfg.LegacyCollectEvery, cfg.LegacyCollectAt); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if err := importYAMLConfiguration(ctx, db, cfg); err != nil {
 		db.Close()
 		return nil, err

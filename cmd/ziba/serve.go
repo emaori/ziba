@@ -143,7 +143,7 @@ func serveCmd(ctx context.Context, args []string) error {
 	var wg sync.WaitGroup
 	if !*noSchedule {
 		runMode := mode
-		scheduler := job.NewSchedulerFunc(func(runCtx context.Context, batch int) error {
+		scheduler := job.NewDynamicSchedulerFunc(func(runCtx context.Context, batch int) error {
 			runner, runErr := s.currentRunner(runCtx, runMode)
 			if runErr != nil && runMode == analyzerReal && errors.Is(runErr, errAnalyzerUnavailable) {
 				slog.Warn("scheduled analysis unavailable", "error", runErr)
@@ -153,10 +153,10 @@ func serveCmd(ctx context.Context, args []string) error {
 				return runErr
 			}
 			return runner.ScheduledCollection(runCtx, batch)
-		}, s.store.HasDigestSince, job.Schedule{
-			Every: s.cfg.CollectEvery,
-			At:    s.cfg.CollectAt,
-		}, scheduleBatchSize, slog.Default())
+		}, s.store.HasDigestSince, func(scheduleCtx context.Context) (job.Schedule, error) {
+			stored, scheduleErr := s.store.Configuration(scheduleCtx)
+			return job.Schedule{Every: stored.Schedule.Every, At: stored.Schedule.At}, scheduleErr
+		}, s.store.ClaimCollectionRequest, scheduleBatchSize, slog.Default())
 
 		wg.Add(1)
 		go func() {

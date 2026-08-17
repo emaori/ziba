@@ -1,0 +1,29 @@
+{{define "content"}}
+<section class="settings-page setup-page">
+  {{template "setupSteps" "schedule"}}
+  <header class="config-header">
+    <p class="step">Step 3 of 3</p>
+    <h1 class="page-title">When should Ziba update?</h1>
+    <p class="note">Every run collects articles, processes them, and refreshes the last-24-hours digest.</p>
+  </header>
+  {{if .Error}}<p class="form-error" role="alert">{{.Error}}</p>{{end}}
+  <form method="post" action="/setup/schedule" class="settings-form schedule-form">
+    <input type="hidden" name="csrf_token" value="{{csrfToken}}">
+    <fieldset>
+      <legend>Collection schedule</legend>
+      <label for="collect-every-amount">Run every</label>
+      <div class="duration-control"><input id="collect-every-amount" type="number" name="collect_every_amount" min="0" step="1" value="{{.ScheduleAmount}}" required aria-describedby="collect-every-help"><select name="collect_every_unit" aria-label="Run interval unit"><option value="minutes" {{if eq .ScheduleUnit "minutes"}}selected{{end}}>minutes</option><option value="hours" {{if eq .ScheduleUnit "hours"}}selected{{end}}>hours</option></select></div>
+      <p class="help" id="collect-every-help">The proposed default is 6 hours. Enter 0 to disable scheduled collection.</p>
+      <label for="collect-at">Start the daily cycle at</label>
+      <input id="collect-at" type="time" name="collect_at" value="{{.ScheduleAt}}" step="60" required aria-describedby="collect-at-help">
+      <p class="help" id="collect-at-help">The first run of each day in the server's local time. The proposed default is 04:00.</p>
+    </fieldset>
+    <fieldset class="status-fieldset">
+      <legend>First collection</legend>
+      <label class="check"><input type="checkbox" name="collect_now" checked> Start the first collection after setup</label>
+      <p class="help">Recommended. Ziba starts once shortly after you finish, then follows the schedule above. Turn this off to wait for the next scheduled time.</p>
+    </fieldset>
+    <div class="wizard-actions"><a class="button secondary" href="/setup/sources">Back: sources</a><button class="button" type="submit">Finish setup</button></div>
+  </form>
+</section>
+{{end}}

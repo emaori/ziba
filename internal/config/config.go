@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 )
 
 // DefaultSourcesPath is the legacy source list imported on first upgraded run.
@@ -62,24 +61,25 @@ type Config struct {
 	// thing from outside.
 	LogDir string
 
-	// CollectEvery is how often the unattended schedule collects and analyzes.
-	CollectEvery time.Duration
-
-	// CollectAt anchors the unattended schedule to a local wall-clock time.
-	CollectAt TimeOfDay
+	// LegacyCollectEvery and LegacyCollectAt are read only for the one-time
+	// upgrade import. PostgreSQL owns the live schedule after that.
+	LegacyCollectEvery string
+	LegacyCollectAt    string
 }
 
 // Load reads the configuration from the environment.
 func Load() (Config, error) {
 	cfg := Config{
-		DatabaseURL:     os.Getenv("ZIBA_DATABASE_URL"),
-		SourcesPath:     envOr("ZIBA_SOURCES_FILE", DefaultSourcesPath),
-		InterestsPath:   envOr("ZIBA_INTERESTS_FILE", DefaultInterestsPath),
-		AnthropicAPIKey: os.Getenv("ANTHROPIC_API_KEY"),
-		OpenAIAPIKey:    os.Getenv("OPENAI_API_KEY"),
-		FastModel:       os.Getenv("ZIBA_FAST_MODEL"),
-		CapableModel:    os.Getenv("ZIBA_CAPABLE_MODEL"),
-		LogDir:          envOr("ZIBA_LOG_DIR", DefaultLogDir),
+		DatabaseURL:        os.Getenv("ZIBA_DATABASE_URL"),
+		SourcesPath:        envOr("ZIBA_SOURCES_FILE", DefaultSourcesPath),
+		InterestsPath:      envOr("ZIBA_INTERESTS_FILE", DefaultInterestsPath),
+		AnthropicAPIKey:    os.Getenv("ANTHROPIC_API_KEY"),
+		OpenAIAPIKey:       os.Getenv("OPENAI_API_KEY"),
+		FastModel:          os.Getenv("ZIBA_FAST_MODEL"),
+		CapableModel:       os.Getenv("ZIBA_CAPABLE_MODEL"),
+		LogDir:             envOr("ZIBA_LOG_DIR", DefaultLogDir),
+		LegacyCollectEvery: os.Getenv("ZIBA_COLLECT_EVERY"),
+		LegacyCollectAt:    os.Getenv("ZIBA_COLLECT_AT"),
 	}
 
 	// Anything other than a recognised truth is refused rather than read as
@@ -107,30 +107,10 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("ZIBA_DATABASE_URL is not set")
 	}
 
-	// The schedule is parsed here rather than where it is used, so a mistyped
-	// value fails at startup instead of at half past six some morning.
-	cfg.CollectEvery = DefaultCollectEvery
-	if raw := os.Getenv("ZIBA_COLLECT_EVERY"); raw != "" {
-		every, err := time.ParseDuration(raw)
-		if err != nil {
-			return Config{}, fmt.Errorf("ZIBA_COLLECT_EVERY: %w", err)
-		}
-		if every > 0 && every < time.Minute {
-			return Config{}, fmt.Errorf("ZIBA_COLLECT_EVERY: %s is too often; use a minute or more", every)
-		}
-		cfg.CollectEvery = every
-	}
-
-	anchor := os.Getenv("ZIBA_COLLECT_AT")
-	if anchor == "" {
+	if cfg.LegacyCollectAt == "" {
 		// Keep existing installations working while ZIBA_DIGEST_AT is retired.
-		anchor = envOr("ZIBA_DIGEST_AT", DefaultCollectAt)
+		cfg.LegacyCollectAt = os.Getenv("ZIBA_DIGEST_AT")
 	}
-	collectAt, err := ParseTimeOfDay(anchor)
-	if err != nil {
-		return Config{}, fmt.Errorf("ZIBA_COLLECT_AT: %w", err)
-	}
-	cfg.CollectAt = collectAt
 
 	return cfg, nil
 }

@@ -89,13 +89,6 @@ services:
       # Without this it uses UTC and the morning run happens at the wrong hour.
       TZ: UTC
 
-      # --- The schedule --------------------------------------------
-      # Every run collects, processes and refreshes the last-24-hours digest.
-      # The interval is anchored at 04:00, so restarts do not move it.
-      # ZIBA_COLLECT_EVERY=0 disables the schedule.
-      ZIBA_COLLECT_EVERY: 6h
-      ZIBA_COLLECT_AT: "04:00"
-
       # --- Debugging (optional) -----------------------------------------------
       # Record every request made to a model, and its reply, in
       # log/modelJournal.txt — the mount below is what makes it readable from

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
@@ -93,14 +94,54 @@ func (s *Server) handleSetupSources(w http.ResponseWriter, r *http.Request) {
 			s.render(w, r, "setup_sources.html", &page{Title: "Sources", SetupMode: true, Settings: cfg, SourcePresets: sourcePresets, Error: "add at least one source"})
 			return
 		}
-		if err := cs.SaveConfiguration(r.Context(), cfg.Interests, cfg.Sources); err != nil {
-			s.fail(w, r, err)
-			return
-		}
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		http.Redirect(w, r, "/setup/schedule", http.StatusSeeOther)
 		return
 	}
 	s.render(w, r, "setup_sources.html", &page{Title: "Sources", SetupMode: true, Settings: cfg, SourcePresets: sourcePresets})
+}
+
+func (s *Server) handleSetupSchedule(w http.ResponseWriter, r *http.Request) {
+	cs, ok := s.configStore()
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	cfg, err := cs.Configuration(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	if len(cfg.Interests.Topics) == 0 {
+		http.Redirect(w, r, "/setup/interests", http.StatusSeeOther)
+		return
+	}
+	if len(cfg.Sources) == 0 {
+		http.Redirect(w, r, "/setup/sources", http.StatusSeeOther)
+		return
+	}
+	amount, unit := scheduleParts(cfg.Schedule.Every)
+	data := &page{Title: "Schedule", SetupMode: true, Settings: cfg, ScheduleAmount: amount, ScheduleUnit: unit, ScheduleAt: cfg.Schedule.At.String()}
+	if r.Method == http.MethodPost {
+		if !s.validCSRF(r) {
+			http.Error(w, "invalid CSRF token", http.StatusForbidden)
+			return
+		}
+		data.ScheduleAt, data.ScheduleUnit = r.Form.Get("collect_at"), r.Form.Get("collect_every_unit")
+		data.ScheduleAmount, _ = strconv.Atoi(r.Form.Get("collect_every_amount"))
+		schedule, saveErr := parseScheduleForm(r)
+		if saveErr == nil {
+			saveErr = cs.SaveSchedule(r.Context(), schedule)
+		}
+		if saveErr == nil {
+			saveErr = cs.FinishSetup(r.Context(), cfg.Interests, cfg.Sources, r.Form.Get("collect_now") == "on")
+		}
+		if saveErr == nil {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+		data.Error = saveErr.Error()
+	}
+	s.render(w, r, "setup_schedule.html", data)
 }
 
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
@@ -117,8 +158,38 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	tmpl := "settings_interests.html"
 	if section == "sources" {
 		tmpl = "settings_sources.html"
+	} else if section == "schedule" {
+		tmpl = "settings_schedule.html"
 	}
-	s.render(w, r, tmpl, &page{Title: "Settings", Settings: cfg, SettingsSection: section, InterestPresets: interestPresets, SourcePresets: sourcePresets})
+	amount, unit := scheduleParts(cfg.Schedule.Every)
+	s.render(w, r, tmpl, &page{Title: "Settings", Settings: cfg, SettingsSection: section, InterestPresets: interestPresets, SourcePresets: sourcePresets, ScheduleAmount: amount, ScheduleUnit: unit, ScheduleAt: cfg.Schedule.At.String()})
+}
+
+func (s *Server) handleSettingsSchedule(w http.ResponseWriter, r *http.Request) {
+	if !s.validCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	cs, ok := s.configStore()
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	cfg, err := cs.Configuration(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	schedule, err := parseScheduleForm(r)
+	if err == nil {
+		err = cs.SaveSchedule(r.Context(), schedule)
+	}
+	if err != nil {
+		amount, _ := strconv.Atoi(r.Form.Get("collect_every_amount"))
+		s.render(w, r, "settings_schedule.html", &page{Title: "Settings", Settings: cfg, SettingsSection: "schedule", ScheduleAmount: amount, ScheduleUnit: r.Form.Get("collect_every_unit"), ScheduleAt: r.Form.Get("collect_at"), Error: err.Error()})
+		return
+	}
+	http.Redirect(w, r, "/settings/schedule", http.StatusSeeOther)
 }
 
 func (s *Server) handleInterestForm(w http.ResponseWriter, r *http.Request) {
@@ -447,6 +518,31 @@ func modeURL(setup bool, a, b string) string {
 		return a
 	}
 	return b
+}
+
+func scheduleParts(every time.Duration) (int, string) {
+	if every%time.Hour == 0 {
+		return int(every / time.Hour), "hours"
+	}
+	return int(every / time.Minute), "minutes"
+}
+
+func parseScheduleForm(r *http.Request) (config.CollectionSchedule, error) {
+	amount, err := strconv.Atoi(r.Form.Get("collect_every_amount"))
+	if err != nil || amount < 0 {
+		return config.CollectionSchedule{}, fmt.Errorf("run every must be zero or a positive whole number")
+	}
+	unit := r.Form.Get("collect_every_unit")
+	var every time.Duration
+	switch unit {
+	case "minutes":
+		every = time.Duration(amount) * time.Minute
+	case "hours":
+		every = time.Duration(amount) * time.Hour
+	default:
+		return config.CollectionSchedule{}, fmt.Errorf("choose minutes or hours for run every")
+	}
+	return config.ParseCollectionSchedule(every.String(), r.Form.Get("collect_at"))
 }
 func parseInterest(r *http.Request) (config.Interest, error) {
 	_ = r.ParseForm()

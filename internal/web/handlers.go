@@ -49,6 +49,8 @@ type configurationStore interface {
 	SaveSetupInterests(ctx context.Context, interests config.Interests) error
 	SaveSetupSources(ctx context.Context, interests config.Interests, sources []domain.Source) error
 	DeleteSetupSource(ctx context.Context, id int64) error
+	SaveSchedule(ctx context.Context, schedule config.CollectionSchedule) error
+	FinishSetup(ctx context.Context, interests config.Interests, sources []domain.Source, collectNow bool) error
 	SaveConfiguration(ctx context.Context, interests config.Interests, sources []domain.Source) error
 }
 
@@ -94,6 +96,10 @@ type page struct {
 	RemoveName       string
 	RemoveKind       string
 	RemoveAction     string
+	ScheduleEvery    string
+	ScheduleAt       string
+	ScheduleAmount   int
+	ScheduleUnit     string
 }
 
 // handleInterest lists one interest's unread articles, most relevant first.

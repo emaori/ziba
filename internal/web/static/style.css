@@ -417,7 +417,7 @@ code {
 .config-header { max-width: 42rem; margin: 1.8rem auto 0; text-align: center; }
 .config-header h1, .config-header h2 { margin-bottom: 0.3rem; }
 .step { margin: 0 0 0.4rem; color: var(--accent); font: 700 0.78rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: 0.08em; }
-.setup-steps { display: grid; grid-template-columns: 1fr 1fr; margin: 1.5rem 0 2rem; border-bottom: 1px solid var(--rule); font-family: system-ui, sans-serif; }
+.setup-steps { display: grid; grid-template-columns: repeat(3, 1fr); margin: 1.5rem 0 2rem; border-bottom: 1px solid var(--rule); font-family: system-ui, sans-serif; }
 .setup-steps span { padding: 0.75rem; color: var(--ink-soft); text-align: center; border-bottom: 3px solid transparent; }
 .setup-steps span.current { color: var(--ink); border-bottom-color: var(--accent); font-weight: 700; }
 .setup-steps b { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; margin-right: 0.35rem; border: 1px solid var(--rule); border-radius: 50%; }
@@ -425,6 +425,9 @@ code {
 .primary-action { display: flex; justify-content: center; margin: 1.8rem 0 2.2rem; }
 .button.button-large { min-width: min(20rem, 100%); min-height: 3rem; justify-content: center; padding: 0.75rem 1.2rem; font-size: 1rem; font-weight: 700; border-radius: 7px; }
 .settings-form, .settings-section { font-family: system-ui, sans-serif; }
+.schedule-form { max-width: 42rem; margin: 1.5rem auto 0; }
+.settings-form .duration-control { display: grid; grid-template-columns: minmax(7rem, 1fr) minmax(8rem, auto); gap: 0.6rem; align-items: end; }
+.settings-form .duration-control input, .settings-form .duration-control select { margin-top: 0.2rem; }
 .settings-form fieldset, .settings-section {
   margin: 1.25rem 0;
   padding: 1rem;

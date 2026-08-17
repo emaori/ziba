@@ -61,17 +61,27 @@ It holds `compose.yaml`, already arranged the way Compose expects. The image it 
 [`ghcr.io/emaori/ziba`](https://github.com/emaori/ziba/pkgs/container/ziba).
 
 Fill in `compose.yaml`, then start Ziba. On the first launch, open Ziba in a
-browser. The setup wizard has two steps: interests, then sources. Each step has
-a table. Add or edit one item on its own page. You can also add a preconfigured
+browser. The setup wizard has three steps: interests, sources, then the
+collection schedule. The first two have a table. Add or edit one item on its
+own page. You can also add a preconfigured
 interest or RSS source, then edit it if needed. Items added during setup can be
 removed before setup is complete. RSS and newsletter forms show
-only the fields that apply to the selected type. Collection does not start until
-setup is complete.
+only the fields that apply to the selected type. The Schedule step proposes the
+defaults `6h` and `04:00`. It also proposes starting the first collection as
+soon as setup finishes; clear that checkbox to wait for the next scheduled time.
+Collection does not start until setup is complete.
 
-After setup, use **Settings** in the web interface. It has separate Interests
-and Sources tables and the same add, edit, and preconfigured options. Changes
+After setup, use **Settings** in the web interface. It has separate Interests,
+Sources, and Schedule sections. The first two have the same add, edit, and
+preconfigured options as setup. Changes
 apply without restarting Ziba. Interest changes affect new articles only.
 Existing articles are not re-analyzed.
+
+The **Schedule** section controls when Ziba runs. **Run every** is the interval
+between runs. **Start the daily cycle at** anchors those runs to the local time
+set by `TZ`. For example, `6h` starting at `04:00` runs at 04:00, 10:00, 16:00,
+and 22:00. Enter `0` as the interval to stop scheduled collection. Changes take
+effect without restarting Ziba.
 
 Newsletter credentials can be entered or changed in Settings. Stored usernames
 and passwords are never displayed again.
@@ -83,6 +93,10 @@ Upgrades from an older version are automatic. If the database is not configured
 yet and the old YAML files are present, Ziba imports them once. Existing source
 IDs and articles are preserved. After the import, the YAML files are no longer
 read.
+
+The first upgraded start also imports the old `ZIBA_COLLECT_EVERY` and
+`ZIBA_COLLECT_AT` values. After that, remove them from the deployment and manage
+the schedule in Settings. Later environment changes are ignored.
 
 ### Settings
 
@@ -101,16 +115,6 @@ ones already uncommented are these:
 | `ZIBA_FAST_EFFORT` | how hard the fast model thinks | `low` — raising it costs more than the article does |
 | `ZIBA_CAPABLE_EFFORT` | the same, for summaries | `low` |
 | `TZ` | which local clock the schedule follows | your zone, e.g. `Europe/Rome`; otherwise UTC |
-| `ZIBA_COLLECT_EVERY` | how often Ziba runs | `6h`; `0` stops the schedule |
-| `ZIBA_COLLECT_AT` | when the daily cycle starts | `"04:00"`, in `TZ` above |
-
-These two settings define one schedule. `ZIBA_COLLECT_AT` sets the first run of
-each day. `ZIBA_COLLECT_EVERY` sets the interval between runs. For example,
-`ZIBA_COLLECT_AT=04:00` and `ZIBA_COLLECT_EVERY=6h` run Ziba at 04:00, 10:00,
-16:00, and 22:00. Each run collects articles, processes them, and refreshes the
-last-24-hours digest. Restarting Ziba does not change these times. Set
-`ZIBA_COLLECT_EVERY=0` to disable all scheduled runs.
-
 Four need a value before anything works properly: the database password in both
 places it appears, the API key, and the two model names. Everything else has a
 value that already makes sense.
@@ -197,7 +201,3 @@ chown 65534:65534 log
 Without it, startup fails with a message saying exactly this rather than
 quietly carrying on. It only matters while the journal is switched on — nothing
 writes there otherwise.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
