@@ -81,7 +81,7 @@ func (s *Store) SaveSetupInterests(ctx context.Context, interests config.Interes
 	}
 	for position, interest := range interests.Topics {
 		if _, err := tx.Exec(ctx, `INSERT INTO interests (topic, priority, subtopics, note, position) VALUES ($1,$2,$3,$4,$5)`,
-			interest.Topic, interest.Priority, interest.Subtopics, interest.Note, position); err != nil {
+			interest.Topic, interest.Priority, stringSlice(interest.Subtopics), interest.Note, position); err != nil {
 			return fmt.Errorf("save setup interest %q: %w", interest.Topic, err)
 		}
 	}
@@ -212,7 +212,7 @@ func (s *Store) saveConfiguration(ctx context.Context, interests config.Interest
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO interests (topic, priority, subtopics, note, position)
 			VALUES ($1, $2, $3, $4, $5)`, interest.Topic, interest.Priority,
-			interest.Subtopics, interest.Note, position); err != nil {
+			stringSlice(interest.Subtopics), interest.Note, position); err != nil {
 			return fmt.Errorf("save interest %q: %w", interest.Topic, err)
 		}
 	}
@@ -273,6 +273,15 @@ func (s *Store) saveConfiguration(ctx context.Context, interests config.Interest
 		return fmt.Errorf("commit configuration: %w", err)
 	}
 	return nil
+}
+
+// stringSlice preserves configured values while translating an omitted YAML or
+// form list into PostgreSQL's empty array rather than SQL NULL.
+func stringSlice(values []string) []string {
+	if values == nil {
+		return []string{}
+	}
+	return values
 }
 
 // ClaimCollectionRequest atomically consumes the one-time request made by the
