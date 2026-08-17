@@ -1,0 +1,13 @@
+{{define "content"}}
+<section class="settings-page">
+  <h1 class="page-title">{{if .EditingSource}}Edit source{{else}}Add source{{end}}</h1>
+  {{if not .SetupMode}}{{template "settingsNav" .}}{{end}}
+  <p class="note">A source is an RSS feed or a mailbox containing newsletters.</p>
+  {{if .Error}}<p class="form-error">{{.Error}}</p>{{end}}
+  <form method="post" class="settings-form">
+    <input type="hidden" name="csrf_token" value="{{csrfToken}}">
+    {{template "sourceFields" .}}
+    <div class="actions"><button class="button" type="submit">Save source</button><a class="button secondary" href="{{.CancelURL}}">Cancel</a></div>
+  </form>
+</section>
+{{end}}

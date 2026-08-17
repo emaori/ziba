@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"html"
 	"net/http"
 	"net/http/httptest"
@@ -28,6 +29,65 @@ type fakeStore struct {
 	missing  bool
 
 	archivedCalls []bool
+}
+
+type configurableFakeStore struct {
+	*fakeStore
+	configuration store.Configuration
+	saved         store.Configuration
+	collectNow    bool
+	running       bool
+	completed     uint64
+}
+
+func (f *configurableFakeStore) Configuration(context.Context) (store.Configuration, error) {
+	return f.configuration, nil
+}
+
+func (f *configurableFakeStore) SaveConfiguration(_ context.Context, interests config.Interests, sources []domain.Source) error {
+	f.saved = store.Configuration{Configured: true, Interests: interests, Sources: sources, Schedule: f.configuration.Schedule}
+	f.configuration = f.saved
+	return nil
+}
+
+func (f *configurableFakeStore) FinishSetup(ctx context.Context, interests config.Interests, sources []domain.Source, collectNow bool) error {
+	f.collectNow = collectNow
+	return f.SaveConfiguration(ctx, interests, sources)
+}
+
+func (f *configurableFakeStore) SaveSetupInterests(_ context.Context, interests config.Interests) error {
+	f.configuration.Interests = interests
+	return nil
+}
+
+func (f *configurableFakeStore) SaveSetupSources(_ context.Context, interests config.Interests, sources []domain.Source) error {
+	f.configuration.Interests = interests
+	for i := range sources {
+		if sources[i].ID == 0 {
+			sources[i].ID = int64(i + 1)
+		}
+	}
+	f.configuration.Sources = sources
+	return nil
+}
+
+func (f *configurableFakeStore) DeleteSetupSource(_ context.Context, id int64) error {
+	for i := range f.configuration.Sources {
+		if f.configuration.Sources[i].ID == id {
+			f.configuration.Sources = append(f.configuration.Sources[:i], f.configuration.Sources[i+1:]...)
+			return nil
+		}
+	}
+	return fmt.Errorf("setup source not found")
+}
+
+func (f *configurableFakeStore) SaveSchedule(_ context.Context, schedule config.CollectionSchedule) error {
+	f.configuration.Schedule = schedule
+	return nil
+}
+
+func (f *configurableFakeStore) CollectionState(context.Context) (bool, uint64, error) {
+	return f.running || f.collectNow, f.completed, nil
 }
 
 func (f *fakeStore) LatestDigest(context.Context) (domain.Digest, error) {
@@ -269,8 +329,210 @@ func TestEmptyDigestRenders(t *testing.T) {
 	if code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", code)
 	}
-	if !strings.Contains(body, "ziba run") {
-		t.Error("empty digest page does not explain how to generate one")
+	if !strings.Contains(body, "Nothing new to show yet") || strings.Contains(body, "ziba run") {
+		t.Error("empty digest page does not use the reader-facing empty state")
+	}
+}
+
+func TestCollectionStatusShowsRunningAndNextSchedule(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, running: true, completed: 4, configuration: store.Configuration{
+		Configured: true,
+		Interests:  config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+		Schedule:   config.CollectionSchedule{Every: 6 * time.Hour, At: config.TimeOfDay{Hour: 4}},
+	}}
+	server, err := newServer(db, db.configuration.Interests, "token")
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	code, body := get(t, server.Handler(), "/")
+	if code != http.StatusOK || !strings.Contains(body, "Collecting and preparing your digest") {
+		t.Fatalf("running status = %d body=%s", code, body)
+	}
+	db.running = false
+	code, body = get(t, server.Handler(), "/status")
+	if code != http.StatusOK || !strings.Contains(body, `"completed":4`) || !strings.Contains(body, `"next_label":"Next collection`) {
+		t.Fatalf("status endpoint = %d body=%s", code, body)
+	}
+}
+
+func TestFirstRunIsGatedBySetupWizard(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{Schedule: config.CollectionSchedule{Every: 6 * time.Hour, At: config.TimeOfDay{Hour: 4}}}}
+	server, err := newServer(db, config.Interests{}, "setup-token")
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	handler := server.Handler()
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/setup/interests" {
+		t.Fatalf("home response = %d %q, want setup redirect", rec.Code, rec.Header().Get("Location"))
+	}
+	req = httptest.NewRequest(http.MethodGet, "/setup/interests", nil)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	body := rec.Body.String()
+	if strings.Contains(body, `href="/stats"`) || strings.Contains(body, `href="/archive"`) {
+		t.Fatal("normal navigation is visible during setup")
+	}
+	if !strings.Contains(body, "Or start with") {
+		t.Fatal("setup does not offer preconfigured interests")
+	}
+	req = httptest.NewRequest(http.MethodGet, "/setup/interest/new", nil)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	body = rec.Body.String()
+	if !strings.Contains(body, "Separate subtopics with commas") {
+		t.Fatal("setup does not explain the subtopic format")
+	}
+
+	form := url.Values{
+		"csrf_token": {"setup-token"}, "topic": {"AI"}, "priority": {"1"},
+		"subtopics": {"agents, models"}, "note": {"Practical work"},
+	}
+	req = httptest.NewRequest(http.MethodPost, "/setup/interest/new", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/setup/interests" {
+		t.Fatalf("interest step = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
+	}
+	form = url.Values{"csrf_token": {"setup-token"}, "name": {"Example"}, "type": {"rss"}, "url": {"https://example.com/feed"}, "enabled": {"on"}, "collect_from": {"7d"}}
+	req = httptest.NewRequest(http.MethodPost, "/setup/source/new", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/setup/sources" {
+		t.Fatalf("add source = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
+	}
+	form = url.Values{"csrf_token": {"setup-token"}}
+	req = httptest.NewRequest(http.MethodPost, "/setup/sources", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/setup/schedule" {
+		t.Fatalf("source step = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
+	}
+	req = httptest.NewRequest(http.MethodGet, "/setup/schedule", nil)
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	body = rec.Body.String()
+	if !strings.Contains(body, `name="collect_every_amount" min="0" step="1" value="6"`) || !strings.Contains(body, `value="hours" selected`) || !strings.Contains(body, `value="04:00"`) || !strings.Contains(body, `name="collect_now" checked`) {
+		t.Fatalf("schedule defaults were not proposed: %s", body)
+	}
+	form = url.Values{"csrf_token": {"setup-token"}, "collect_every_amount": {"6"}, "collect_every_unit": {"hours"}, "collect_at": {"04:00"}, "collect_now": {"on"}}
+	req = httptest.NewRequest(http.MethodPost, "/setup/schedule", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec = httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/" {
+		t.Fatalf("schedule step = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
+	}
+	code, body := get(t, handler, "/")
+	if code != http.StatusOK || !strings.Contains(body, "Collecting and preparing your digest") {
+		t.Fatalf("post-setup landing status = %d body=%s", code, body)
+	}
+	if !db.saved.Configured || len(db.saved.Sources) != 1 || db.saved.Interests.Topics[0].Topic != "AI" {
+		t.Errorf("saved configuration = %+v", db.saved)
+	}
+	if !db.collectNow {
+		t.Error("setup did not request the default first collection")
+	}
+}
+
+func TestWizardAddsPreconfiguredSources(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{
+		Interests: config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+	}}
+	server, err := newServer(db, config.Interests{}, "token")
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	for _, id := range []string{"ieee-spectrum", "hacker-news"} {
+		form := url.Values{"csrf_token": {"token"}}
+		req := httptest.NewRequest(http.MethodPost, "/setup/sources/preset/"+id, strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+		server.Handler().ServeHTTP(rec, req)
+		if rec.Code != http.StatusSeeOther {
+			t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+		}
+	}
+	if len(db.configuration.Sources) != 2 {
+		t.Fatalf("saved %d sources, want 2", len(db.configuration.Sources))
+	}
+}
+
+func TestWizardCanRemoveDraftSource(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{
+		Interests: config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+		Sources:   []domain.Source{{ID: 7, Name: "Draft feed", Type: domain.SourceTypeRSS, URL: "https://example.com/feed", Enabled: true}},
+	}}
+	server, err := newServer(db, config.Interests{}, "token")
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	handler := server.Handler()
+	code, body := get(t, handler, "/setup/source/7/remove")
+	if code != http.StatusOK || !strings.Contains(body, "Remove “Draft feed”?") {
+		t.Fatalf("confirmation = %d %q", code, body)
+	}
+	form := url.Values{"csrf_token": {"token"}}
+	req := httptest.NewRequest(http.MethodPost, "/setup/source/7/remove", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || len(db.configuration.Sources) != 0 {
+		t.Fatalf("remove response = %d, sources = %d", rec.Code, len(db.configuration.Sources))
+	}
+}
+
+func TestNewsletterCredentialsAreNotRendered(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{
+		Configured: true,
+		Interests:  config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+		Sources: []domain.Source{{ID: 1, Name: "Mail", Type: domain.SourceTypeNewsletter,
+			URL: "imaps://mail.example/INBOX", Enabled: true,
+			Newsletter: &domain.NewsletterOptions{Folder: "INBOX", Username: "private-user", Password: "private-password", LookBackDays: 1}}},
+	}}
+	server, err := newServer(db, db.configuration.Interests, "token")
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/settings/source/1", nil)
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+	body := rec.Body.String()
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, body)
+	}
+	if strings.Contains(body, "private-user") || strings.Contains(body, "private-password") {
+		t.Fatal("stored newsletter credentials were rendered")
+	}
+}
+
+func TestScheduleSettingsSaveToConfiguration(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{
+		Configured: true,
+		Interests:  config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+		Schedule:   config.CollectionSchedule{Every: 6 * time.Hour, At: config.TimeOfDay{Hour: 4}},
+	}}
+	server, err := newServer(db, db.configuration.Interests, "token")
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	code, body := get(t, server.Handler(), "/settings/schedule")
+	if code != http.StatusOK || !strings.Contains(body, "Enter 0 to stop scheduled collection") {
+		t.Fatalf("schedule page = %d body=%s", code, body)
+	}
+	form := url.Values{"csrf_token": {"token"}, "collect_every_amount": {"8"}, "collect_every_unit": {"hours"}, "collect_at": {"05:15"}}
+	req := httptest.NewRequest(http.MethodPost, "/settings/schedule", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || db.configuration.Schedule.Every != 8*time.Hour || db.configuration.Schedule.At.String() != "05:15" {
+		t.Fatalf("saved schedule = %+v, status = %d", db.configuration.Schedule, rec.Code)
 	}
 }
 

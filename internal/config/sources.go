@@ -15,8 +15,7 @@ import (
 	"github.com/emaori/ziba/internal/domain"
 )
 
-// SourcesFile is the shape of sources.yaml, the hand-edited list of what Ziba
-// reads. Adding a source must stay as easy as adding four lines here.
+// SourcesFile is the legacy sources.yaml shape used by one-time upgrades.
 type SourcesFile struct {
 	Sources []SourceEntry `yaml:"sources"`
 }
@@ -143,6 +142,11 @@ func addressFor(sourceType domain.SourceType, raw string) (string, error) {
 			"name environment variables with username_env and password_env instead", raw)
 	}
 	return parsed.String(), nil
+}
+
+// SourceAddress validates and canonicalizes a source address for web forms.
+func SourceAddress(sourceType domain.SourceType, raw string) (string, error) {
+	return addressFor(sourceType, raw)
 }
 
 func (e SourceEntry) toDomain(knownInterests map[string]bool) (domain.Source, error) {
@@ -292,4 +296,9 @@ func parseCollectFrom(raw string) (domain.CollectFrom, error) {
 			"%q is not a duration such as \"7d\" or \"48h\", a date such as \"2026-01-01\", or \"all\"", value)
 	}
 	return domain.CollectFrom{Grace: grace}, nil
+}
+
+// ParseCollectFrom validates the history setting used by web-managed sources.
+func ParseCollectFrom(raw string) (domain.CollectFrom, error) {
+	return parseCollectFrom(raw)
 }

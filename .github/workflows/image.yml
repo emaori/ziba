@@ -4,7 +4,7 @@
 # own token, which is why it is used here rather than Docker Hub: one fewer
 # secret to hold and to rotate.
 #
-# Tags only. A push of v1.2.3 publishes 1.2.3, 1.2, 1 and latest, and nothing
+# Tags only. A push of 1.2.3 publishes 1.2.3, 1.2, 1 and latest, and nothing
 # else publishes anything — no image is built from a branch or a pull request.
 # The cost of that is worth knowing: a Dockerfile that stops building is found
 # when a release is cut rather than when the change was merged.
@@ -21,8 +21,7 @@ name: Docker build
 on:
   push:
     tags:
-      # Only semver-like tags (with or without the leading "v")
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      # Only semver-like tags without a leading "v".
       - "[0-9]+.[0-9]+.[0-9]+"
 
 # Never two publishes of the same ref at once. Not cancel-in-progress: a half
@@ -122,47 +121,24 @@ jobs:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: cosign sign --yes "ghcr.io/${{ github.repository }}@$DIGEST"
 
-  # The files somebody needs in order to run the image, attached to the release
-  # that produced it.
-  #
-  # Deploying should not require cloning a repository of Go source. Three small
-  # files do it, and shipping them with the release keeps them in step with the
-  # image by construction: the pair is built from one commit and published in
-  # one run.
-  #
-  # A tarball rather than loose files, because the two configuration examples
-  # have to end up in a config/ directory beside the compose file — that is
-  # where the mount looks — and reassembling that by hand is the obvious thing
-  # to get wrong.
-  bundle:
+  # Create the GitHub release only after the image has been published. The Git
+  # tag remains 1.2.3, while the release title shown to users is v1.2.3.
+  release:
     needs: publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # Both formats, from one directory. A .zip because File Explorer has
-      # opened those since forever and only Windows 11 23H2 learned to open a
-      # .tar.gz — on Windows 10 a double-click still gets nowhere. A .tar.gz
-      # because that is what anyone on Linux or macOS expects to find.
-      - name: Assemble the bundle
-        run: |
-          mkdir -p ziba/config
-          cp compose.yaml ziba/
-          cp config/interests.example.yaml config/sources.example.yaml ziba/config/
-          tar -czf ziba-deploy.tar.gz ziba
-          zip -qr ziba-deploy.zip ziba
-
-      # gh is on the runner already, so no third-party action is involved. A tag
-      # push does not create a release by itself, hence the create before the
-      # upload; --clobber makes a re-run of this job replace the assets rather
-      # than fail on them.
-      - name: Attach it to the release
+      # gh is available on the runner, so no third-party action is needed. Using
+      # the triggering tag for lookup makes reruns safe; --title adds the "v"
+      # only to the user-facing release name and does not create a second tag.
+      - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
-            || gh release create "$GITHUB_REF_NAME" --generate-notes
-          gh release upload "$GITHUB_REF_NAME" \
-            ziba-deploy.tar.gz ziba-deploy.zip compose.yaml --clobber
+            || gh release create "$GITHUB_REF_NAME" \
+                 --title "v$GITHUB_REF_NAME" \
+                 --generate-notes \
+                 --verify-tag

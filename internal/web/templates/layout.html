@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+  {{if not .SetupMode}}
   <header class="masthead">
     <a class="wordmark" href="/">Ziba</a>
     <nav>
@@ -14,8 +15,16 @@
       <a href="/day">By day</a>
       <a href="/archive">Everything</a>
       <a href="/stats">Stats</a>
+      <a href="/settings">Settings</a>
     </nav>
   </header>
+
+  <div class="collection-status" role="status" aria-live="polite" aria-atomic="true"
+       data-collection-status data-running="{{.CollectionRunning}}" data-completed="{{.CollectionCompleted}}">
+    <span class="collection-dot {{if .CollectionRunning}}running{{end}}" aria-hidden="true"></span>
+    <span data-collection-status-text>{{if .CollectionRunning}}Collecting and preparing your digest…{{else if .ScheduleDisabled}}Automatic collection is off.{{else}}{{nextCollectionLabel .NextCollection}}{{end}}</span>
+    <a href="/settings/schedule">Schedule</a>
+  </div>
 
   {{if .Interests}}
   <nav class="tabs">
@@ -23,6 +32,9 @@
       <a class="{{if eq . $.Active}}on{{end}}" href="/interest/{{pathEscape .}}">{{.}}</a>
     {{end}}
   </nav>
+  {{end}}
+  {{else}}
+  <header class="masthead setup-masthead"><span class="wordmark">Ziba</span></header>
   {{end}}
 
   <main>
@@ -37,6 +49,44 @@
   <script src="/static/app.js" defer></script>
 </body>
 </html>
+{{end}}
+
+{{define "interestTable"}}<section class="config-list"><div class="list-heading"><h2 class="list-title">Your interests <span>{{len .Settings.Interests.Topics}}</span></h2>{{if .Settings.Interests.Topics}}<a class="button secondary list-add" href="{{if .SetupMode}}/setup{{else}}/settings{{end}}/interest/new">＋ Add interest</a>{{end}}</div><div class="table-wrap"><table class="config-table"><caption class="visually-hidden">Configured interests</caption><thead><tr><th scope="col">Interest</th><th scope="col">Priority</th><th scope="col">Subtopics</th><th scope="col">Actions</th></tr></thead><tbody>{{range $i,$v:=.Settings.Interests.Topics}}<tr><th scope="row" data-label="Interest">{{$v.Topic}}</th><td data-label="Priority">{{$v.Priority}}</td><td data-label="Subtopics">{{if $v.Subtopics}}{{join $v.Subtopics ", "}}{{else}}—{{end}}</td><td class="row-actions"><a class="button secondary" href="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/interest/{{$i}}">Edit</a>{{if $.SetupMode}}<a class="text-action danger-text" href="/setup/interest/{{$i}}/remove">Remove</a>{{end}}</td></tr>{{else}}<tr class="empty-row"><td colspan="4"><p>No interests yet. Add your own or choose a starting point below.</p><a class="button button-large" href="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/interest/new">＋ Add interest</a></td></tr>{{end}}</tbody></table></div></section>{{end}}
+{{define "sourceTable"}}<section class="config-list"><div class="list-heading"><h2 class="list-title">Your sources <span>{{len .Settings.Sources}}</span></h2>{{if .Settings.Sources}}<a class="button secondary list-add" href="{{if .SetupMode}}/setup{{else}}/settings{{end}}/source/new">＋ Add source</a>{{end}}</div><div class="table-wrap"><table class="config-table"><caption class="visually-hidden">Configured sources</caption><thead><tr><th scope="col">Source</th><th scope="col">Type</th><th scope="col">Address</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead><tbody>{{range .Settings.Sources}}<tr><th scope="row" data-label="Source">{{.Name}}</th><td data-label="Type">{{.Type}}</td><td data-label="Address" class="breakable">{{.URL}}</td><td data-label="Status"><span class="status-badge {{if .Enabled}}active{{end}}">{{if .Enabled}}Collecting{{else}}Not collecting{{end}}</span></td><td class="row-actions"><a class="button secondary" href="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/source/{{.ID}}">Edit</a>{{if $.SetupMode}}<a class="text-action danger-text" href="/setup/source/{{.ID}}/remove">Remove</a>{{end}}</td></tr>{{else}}<tr class="empty-row"><td colspan="5"><p>No sources yet. Add your own or choose a starting point below.</p><a class="button button-large" href="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/source/new">＋ Add source</a></td></tr>{{end}}</tbody></table></div></section>{{end}}
+{{define "interestPresets"}}<section class="preset-box"><h2>Or start with…</h2><p class="help">Add a preconfigured interest, then adjust it to your taste.</p><div class="preset-grid">{{range .InterestPresets}}<article class="preset-card"><div><h3>{{.Label}}</h3><p>{{join .Value.Subtopics ", "}}</p></div><form method="post" action="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/interests/preset/{{.ID}}"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><button class="button secondary" type="submit">Add</button></form></article>{{end}}</div></section>{{end}}
+{{define "sourcePresets"}}<section class="preset-box"><h2>Or start with…</h2><p class="help">Add a known RSS feed, then adjust it if needed.</p><div class="preset-grid">{{range .SourcePresets}}<article class="preset-card"><div><h3>{{.Label}}</h3><p>{{.Value.URL}}</p></div><form method="post" action="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/sources/preset/{{.ID}}"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><button class="button secondary" type="submit">Add</button></form></article>{{end}}</div></section>{{end}}
+
+{{define "settingsNav"}}<nav class="settings-nav"><a class="{{if eq .SettingsSection "interests"}}on{{end}}" href="/settings/interests">Interests</a><a class="{{if eq .SettingsSection "sources"}}on{{end}}" href="/settings/sources">Sources</a><a class="{{if eq .SettingsSection "schedule"}}on{{end}}" href="/settings/schedule">Schedule</a></nav>{{end}}
+
+{{define "setupSteps"}}<nav class="setup-steps" aria-label="Setup progress"><span class="{{if eq . "interests"}}current{{end}}" {{if eq . "interests"}}aria-current="step"{{end}}><b>1</b> Interests</span><span class="{{if eq . "sources"}}current{{end}}" {{if eq . "sources"}}aria-current="step"{{end}}><b>2</b> Sources</span><span class="{{if eq . "schedule"}}current{{end}}" {{if eq . "schedule"}}aria-current="step"{{end}}><b>3</b> Schedule</span></nav>{{end}}
+
+{{define "sourceFields"}}
+<label>Name <input name="name" value="{{.Source.Name}}" placeholder="Hacker News" required></label>
+<p class="help">A friendly name shown in Statistics and article metadata.</p>
+<div data-source-card><label>Type <select name="type" data-source-type><option value="rss" {{if eq .Source.Type "rss"}}selected{{end}}>RSS feed</option><option value="newsletter" {{if eq .Source.Type "newsletter"}}selected{{end}}>Newsletter mailbox</option></select></label>
+<p class="help">RSS reads a feed address. Newsletter reads messages from one mailbox folder.</p>
+<label>Address <input type="url" name="url" value="{{.Source.URL}}" placeholder="https://example.com/feed.xml or imaps://imap.example.com" required></label>
+<p class="help">Use an HTTP address for RSS or an IMAP/IMAPS server address for newsletters. Do not put credentials in the address.</p>
+<fieldset class="status-fieldset"><legend>Collection status</legend><label class="check"><input type="checkbox" name="enabled" {{if .Source.Enabled}}checked{{end}}> Enable collection from this source</label>
+<p class="help">Turn this off to stop future collection. Previously collected articles are kept.</p></fieldset>
+<label>Declared interests <input name="categories" value="{{join .Source.Categories ", "}}" placeholder="Computer Science, .NET"></label>
+<p class="help">Optional comma-separated interest names. Use this when the source always covers those subjects.</p>
+<div data-fields="rss" {{if eq .Source.Type "newsletter"}}hidden{{end}}><label>Collect history <input name="collect_from" value="{{.Source.CollectFrom}}" placeholder="7d"></label>
+<p class="help">How far back to read on first contact: for example 7d, 48h, a date, or all.</p>
+<label class="check"><input type="checkbox" name="roundup" {{if .Source.Roundup}}checked{{end}}> RSS entries are link roundups</label>
+</div><div class="newsletter-fields" data-fields="newsletter" {{if ne .Source.Type "newsletter"}}hidden{{end}}>
+  <h3>Newsletter mailbox</h3>
+  <p class="help">Fill these fields only for a newsletter source.</p>
+  <label>Folder <input name="folder" value="{{.Source.Folder}}" placeholder="INBOX"></label>
+  <label>Username <input name="username" autocomplete="off" placeholder="{{if .EditingSource}}Leave blank to keep the stored username{{else}}Mailbox username{{end}}"></label>
+  <label>Password <input type="password" name="password" autocomplete="new-password" placeholder="{{if .EditingSource}}Leave blank to keep the stored password{{else}}Mailbox password{{end}}"></label>
+  <p class="help">Stored credentials are never displayed again. Enter a new value only when you want to change it.</p>
+  <label>Look-back days <input type="number" name="days" min="0" value="{{.Source.Days}}"></label>
+  <p class="help">How many recent days of mail to inspect on every run. Previously collected messages are ignored automatically.</p>
+  <label>Maximum messages per run <input type="number" name="max_messages" min="0" value="{{.Source.MaxMessages}}"></label>
+  <p class="help">A safety limit for one collection. Use 0 for the default of 50.</p>
+</div>
+</div>
 {{end}}
 
 {{/* The article card from the functional wireframe: category, source and date,

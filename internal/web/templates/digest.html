@@ -10,14 +10,14 @@
       <a href="/day">any day</a> — including what you have already read.
     </p>
   {{else}}
-    <h1 class="page-title">Nothing selected yet</h1>
-    <p class="note">
-      No digest has been generated. Run <code>ziba run</code> to collect articles
-      and build the latest selection.
-    </p>
+    <section class="empty-digest" data-empty-digest>
+    <h1 class="page-title">Nothing new to show yet</h1>
+    <p class="note">Your digest will appear here when Ziba finds relevant articles.</p>
     <p class="note">
       The tabs above browse by subject, and <a href="/archive">everything</a>
       lists all of it.
     </p>
+    <p class="note"><a href="/">Refresh this page</a></p>
+    </section>
   {{end}}
 {{end}}

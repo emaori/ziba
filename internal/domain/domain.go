@@ -115,13 +115,16 @@ func (c CollectFrom) Accepts(firstSeen, published time.Time) bool {
 // NewsletterOptions describes a mailbox of newsletters.
 //
 // Newsletters are read as link aggregators: the email is a list of links with
-// short blurbs, and the value is in the articles it points at. Credentials are
-// named here but never written here — the file holds the name of an environment
-// variable, so a source list stays safe to commit.
+// short blurbs, and the value is in the articles it points at. Environment
+// variable names remain only for importing legacy YAML configuration.
 type NewsletterOptions struct {
 	Folder      string
 	UsernameEnv string
 	PasswordEnv string
+	// Username and Password are populated from database-owned configuration.
+	// They are never rendered back into the web UI.
+	Username string
+	Password string
 
 	// LookBackDays defines the recent window read on every run. It must exceed
 	// the collection interval; deduplication handles messages seen more than once.

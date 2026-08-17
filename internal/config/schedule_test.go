@@ -137,42 +137,37 @@ func TestTimeOfDayAnchoredInterval(t *testing.T) {
 	}
 }
 
-func TestLoadScheduleDefaults(t *testing.T) {
-	t.Setenv("ZIBA_DATABASE_URL", "postgres://localhost/ziba")
-
-	cfg, err := Load()
+func TestParseCollectionScheduleDefaults(t *testing.T) {
+	cfg, err := ParseCollectionSchedule("", "")
 	if err != nil {
-		t.Fatalf("Load returned error: %v", err)
+		t.Fatalf("ParseCollectionSchedule returned error: %v", err)
 	}
-	if cfg.CollectEvery != DefaultCollectEvery {
-		t.Errorf("CollectEvery = %v, want %v", cfg.CollectEvery, DefaultCollectEvery)
+	if cfg.Every != DefaultCollectEvery {
+		t.Errorf("Every = %v, want %v", cfg.Every, DefaultCollectEvery)
 	}
-	if got := cfg.CollectAt.String(); got != DefaultCollectAt {
-		t.Errorf("CollectAt = %v, want %v", got, DefaultCollectAt)
+	if got := cfg.At.String(); got != DefaultCollectAt {
+		t.Errorf("At = %v, want %v", got, DefaultCollectAt)
 	}
 }
 
-func TestLoadScheduleRejectsBadValues(t *testing.T) {
+func TestParseCollectionScheduleRejectsBadValues(t *testing.T) {
 	tests := []struct {
 		name  string
-		key   string
-		value string
+		every string
+		at    string
 	}{
-		{"unparseable interval", "ZIBA_COLLECT_EVERY", "often"},
+		{"unparseable interval", "often", "04:00"},
 		// A schedule tighter than a minute would hammer every source and is
 		// certainly a typo — "30" meaning seconds rather than minutes.
-		{"interval too short", "ZIBA_COLLECT_EVERY", "30s"},
-		{"bad time", "ZIBA_COLLECT_AT", "half past six"},
-		{"impossible hour", "ZIBA_COLLECT_AT", "25:00"},
+		{"interval too short", "30s", "04:00"},
+		{"bad time", "6h", "half past six"},
+		{"impossible hour", "6h", "25:00"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("ZIBA_DATABASE_URL", "postgres://localhost/ziba")
-			t.Setenv(tt.key, tt.value)
-
-			if _, err := Load(); err == nil {
-				t.Errorf("Load accepted %s=%q, want an error", tt.key, tt.value)
+			if _, err := ParseCollectionSchedule(tt.every, tt.at); err == nil {
+				t.Errorf("ParseCollectionSchedule accepted every=%q at=%q, want an error", tt.every, tt.at)
 			}
 		})
 	}
@@ -186,8 +181,8 @@ func TestLoadLegacyDigestAtAsScheduleAnchor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load returned error: %v", err)
 	}
-	if got := cfg.CollectAt.String(); got != "05:30" {
-		t.Errorf("CollectAt = %v, want legacy value 05:30", got)
+	if got := cfg.LegacyCollectAt; got != "05:30" {
+		t.Errorf("LegacyCollectAt = %v, want legacy value 05:30", got)
 	}
 }
 
@@ -200,7 +195,7 @@ func TestLoadScheduleZeroDisables(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load returned error: %v", err)
 	}
-	if cfg.CollectEvery != 0 {
-		t.Errorf("CollectEvery = %v, want 0", cfg.CollectEvery)
+	if cfg.LegacyCollectEvery != "0" {
+		t.Errorf("LegacyCollectEvery = %v, want raw value 0", cfg.LegacyCollectEvery)
 	}
 }

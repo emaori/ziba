@@ -14,8 +14,8 @@ import (
 // ZIBA_INTERESTS_FILE says otherwise.
 const DefaultInterestsPath = "config/interests.yaml"
 
-// Interests describes what is worth reading. It is hand-edited and changes
-// rarely, which is why it is a file and not a screen.
+// Interests describes what is worth reading. PostgreSQL owns the live value;
+// YAML decoding remains for one-time upgrades.
 type Interests struct {
 	// Threshold is the relevance score an article must reach to be summarized
 	// and to appear in the latest digest. Below it the article is still stored
@@ -48,24 +48,31 @@ func LoadInterests(path string) (Interests, error) {
 		return Interests{}, fmt.Errorf("parse interests file %s: %w", path, err)
 	}
 
+	if err := ValidateInterests(interests); err != nil {
+		return Interests{}, fmt.Errorf("interests file %s: %w", path, err)
+	}
+	return interests, nil
+}
+
+// ValidateInterests applies the same rules to file and web configuration.
+func ValidateInterests(interests Interests) error {
 	if interests.Threshold < 0 || interests.Threshold > 100 {
-		return Interests{}, fmt.Errorf("interests file %s: threshold must be between 0 and 100, got %d",
-			path, interests.Threshold)
+		return fmt.Errorf("threshold must be between 0 and 100, got %d", interests.Threshold)
 	}
 	if len(interests.Topics) == 0 {
-		return Interests{}, fmt.Errorf("interests file %s defines no interests", path)
+		return fmt.Errorf("define at least one interest")
 	}
 
 	for i, topic := range interests.Topics {
 		if strings.TrimSpace(topic.Topic) == "" {
-			return Interests{}, fmt.Errorf("interests[%d]: topic is required", i)
+			return fmt.Errorf("interests[%d]: topic is required", i)
 		}
 		if topic.Priority < 1 {
-			return Interests{}, fmt.Errorf("interests[%d] (%q): priority must be 1 or greater",
+			return fmt.Errorf("interests[%d] (%q): priority must be 1 or greater",
 				i, topic.Topic)
 		}
 	}
-	return interests, nil
+	return nil
 }
 
 // Describe renders the interests as the text handed to the model. Keeping the

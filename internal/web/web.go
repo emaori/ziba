@@ -37,9 +37,10 @@ var templateFuncs = template.FuncMap{
 	// Token counts run to seven figures, and an unbroken run of digits cannot
 	// be read at a glance — the difference between 1904322 and 190432 is the
 	// whole point of the table.
-	"thousands": thousands,
-	"isoDate":   func(t time.Time) string { return t.Format(time.DateOnly) },
-	"age":       age,
+	"thousands":           thousands,
+	"isoDate":             func(t time.Time) string { return t.Format(time.DateOnly) },
+	"age":                 age,
+	"nextCollectionLabel": nextCollectionLabel,
 
 	// pathEscape, not the built-in urlquery, for anything that lands in a URL
 	// *path*. urlquery writes a space as "+", which a query string decodes back
@@ -201,6 +202,43 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /article/{id}", s.handleArticle)
 	mux.HandleFunc("GET /archive", s.handleArchiveAll)
 	mux.HandleFunc("GET /stats", s.handleStats)
+	mux.HandleFunc("GET /status", s.handleCollectionStatus)
+	mux.HandleFunc("GET /setup", s.handleSetup)
+	mux.HandleFunc("GET /setup/interests", s.handleSetupInterests)
+	mux.HandleFunc("GET /setup/interest/new", s.handleInterestForm)
+	mux.HandleFunc("POST /setup/interest/new", s.handleInterestForm)
+	mux.HandleFunc("GET /setup/interest/{id}", s.handleInterestForm)
+	mux.HandleFunc("POST /setup/interest/{id}", s.handleInterestForm)
+	mux.HandleFunc("POST /setup/interests/preset/{id}", s.handleInterestPreset)
+	mux.HandleFunc("POST /setup/interest/{id}/remove", s.handleSetupInterestRemove)
+	mux.HandleFunc("GET /setup/interest/{id}/remove", s.handleSetupInterestRemove)
+	mux.HandleFunc("GET /setup/sources", s.handleSetupSources)
+	mux.HandleFunc("POST /setup/sources", s.handleSetupSources)
+	mux.HandleFunc("GET /setup/schedule", s.handleSetupSchedule)
+	mux.HandleFunc("POST /setup/schedule", s.handleSetupSchedule)
+	mux.HandleFunc("GET /setup/source/new", s.handleSource)
+	mux.HandleFunc("POST /setup/source/new", s.handleSource)
+	mux.HandleFunc("GET /setup/source/{id}", s.handleSource)
+	mux.HandleFunc("POST /setup/source/{id}", s.handleSource)
+	mux.HandleFunc("POST /setup/sources/preset/{id}", s.handleSourcePreset)
+	mux.HandleFunc("POST /setup/source/{id}/remove", s.handleSetupSourceRemove)
+	mux.HandleFunc("GET /setup/source/{id}/remove", s.handleSetupSourceRemove)
+	mux.HandleFunc("GET /settings", s.handleSettings)
+	mux.HandleFunc("GET /settings/interests", s.handleSettings)
+	mux.HandleFunc("GET /settings/sources", s.handleSettings)
+	mux.HandleFunc("GET /settings/schedule", s.handleSettings)
+	mux.HandleFunc("POST /settings/schedule", s.handleSettingsSchedule)
+	mux.HandleFunc("GET /settings/interest/new", s.handleInterestForm)
+	mux.HandleFunc("POST /settings/interest/new", s.handleInterestForm)
+	mux.HandleFunc("GET /settings/interest/{id}", s.handleInterestForm)
+	mux.HandleFunc("POST /settings/interest/{id}", s.handleInterestForm)
+	mux.HandleFunc("POST /settings/interests/preset/{id}", s.handleInterestPreset)
+	mux.HandleFunc("POST /settings/interests/threshold", s.handleThreshold)
+	mux.HandleFunc("GET /settings/source/new", s.handleSource)
+	mux.HandleFunc("GET /settings/source/{id}", s.handleSource)
+	mux.HandleFunc("POST /settings/source/{id}", s.handleSource)
+	mux.HandleFunc("POST /settings/source/new", s.handleSource)
+	mux.HandleFunc("POST /settings/sources/preset/{id}", s.handleSourcePreset)
 
 	// Marking read changes state, so it is a post and never a link: a crawler
 	// or a prefetching browser must not be able to empty the reading list.
@@ -208,7 +246,7 @@ func (s *Server) Handler() http.Handler {
 
 	mux.Handle("GET /static/", http.FileServerFS(assets))
 
-	return mux
+	return s.setupGate(mux)
 }
 
 // thousands groups a number with thin spaces, so seven figures can be read

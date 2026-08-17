@@ -14,6 +14,36 @@ const (
 	DefaultCollectAt    = "04:00"
 )
 
+// CollectionSchedule controls the unattended collection and digest cycle.
+// PostgreSQL owns the live value; legacy environment values are imported once.
+type CollectionSchedule struct {
+	Every time.Duration
+	At    TimeOfDay
+}
+
+// ParseCollectionSchedule validates the values accepted by Settings and by the
+// one-time environment compatibility import. Empty values use the defaults.
+func ParseCollectionSchedule(everyRaw, atRaw string) (CollectionSchedule, error) {
+	if strings.TrimSpace(everyRaw) == "" {
+		everyRaw = DefaultCollectEvery.String()
+	}
+	every, err := time.ParseDuration(strings.TrimSpace(everyRaw))
+	if err != nil {
+		return CollectionSchedule{}, fmt.Errorf("collection interval: %w", err)
+	}
+	if every < 0 || (every > 0 && every < time.Minute) {
+		return CollectionSchedule{}, fmt.Errorf("collection interval %s is invalid; use 0 or one minute or more", every)
+	}
+	if strings.TrimSpace(atRaw) == "" {
+		atRaw = DefaultCollectAt
+	}
+	at, err := ParseTimeOfDay(atRaw)
+	if err != nil {
+		return CollectionSchedule{}, fmt.Errorf("collection start: %w", err)
+	}
+	return CollectionSchedule{Every: every, At: at}, nil
+}
+
 // TimeOfDay is a wall-clock time, without a date.
 //
 // The schedule anchor is a wall-clock idea. Storing it as hour and minute makes

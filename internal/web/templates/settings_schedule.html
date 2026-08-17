@@ -1,0 +1,25 @@
+{{define "content"}}
+<section class="settings-page schedule-page">
+  <h1 class="page-title">Settings</h1>
+  {{template "settingsNav" .}}
+  <header class="config-header">
+    <h2>Collection schedule</h2>
+    <p class="note">Choose when Ziba collects articles and refreshes the last-24-hours digest.</p>
+  </header>
+  {{if .Error}}<p class="form-error" role="alert">{{.Error}}</p>{{end}}
+  <form method="post" action="/settings/schedule" class="settings-form schedule-form">
+    <input type="hidden" name="csrf_token" value="{{csrfToken}}">
+    <fieldset>
+      <legend>Timing</legend>
+      <label for="collect-every-amount">Run every</label>
+      <div class="duration-control"><input id="collect-every-amount" type="number" name="collect_every_amount" min="0" step="1" value="{{.ScheduleAmount}}" required aria-describedby="collect-every-help"><select name="collect_every_unit" aria-label="Run interval unit"><option value="minutes" {{if eq .ScheduleUnit "minutes"}}selected{{end}}>minutes</option><option value="hours" {{if eq .ScheduleUnit "hours"}}selected{{end}}>hours</option></select></div>
+      <p class="help" id="collect-every-help">Use a whole number. Enter 0 to stop scheduled collection.</p>
+
+      <label for="collect-at">Start the daily cycle at</label>
+      <input id="collect-at" type="time" name="collect_at" value="{{.ScheduleAt}}" step="60" required aria-describedby="collect-at-help">
+      <p class="help" id="collect-at-help">The first run of each day in the server's local time. Later runs follow the interval above.</p>
+    </fieldset>
+    <div class="actions"><button class="button" type="submit">Save schedule</button></div>
+  </form>
+</section>
+{{end}}

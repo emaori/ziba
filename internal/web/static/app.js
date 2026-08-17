@@ -94,4 +94,71 @@
       card.classList.toggle('read', read);
     }
   }
+
+  document.addEventListener('change', function (event) {
+    if (event.target.matches('[data-source-type]')) {
+      toggleSourceFields(event.target.closest('[data-source-card]'));
+    }
+  });
+
+  document.querySelectorAll('[data-source-card]').forEach(toggleSourceFields);
+
+  // Collection is global state, shown above the interest tabs. Polling keeps
+  // that small status current; only an empty home page reloads after a run, so
+  // reading and forms are never interrupted.
+  var collectionStatus = document.querySelector('[data-collection-status]');
+  if (collectionStatus) {
+    var wasRunning = collectionStatus.dataset.running === 'true';
+    var completed = Number(collectionStatus.dataset.completed || 0);
+    var pollTimer;
+
+    function scheduleStatusPoll(delay) {
+      clearTimeout(pollTimer);
+      pollTimer = setTimeout(pollCollectionStatus, delay);
+    }
+
+    function pollCollectionStatus() {
+      if (document.hidden) return;
+      fetch('/status', { credentials: 'same-origin' }).then(function (response) {
+        if (!response.ok) throw new Error('unexpected status ' + response.status);
+        return response.json();
+      }).then(function (status) {
+        var text = status.running ? 'Collecting and preparing your digest…' :
+          (status.disabled ? 'Automatic collection is off.' : status.next_label);
+        var textNode = collectionStatus.querySelector('[data-collection-status-text]');
+        if (textNode.textContent !== text) textNode.textContent = text;
+        collectionStatus.querySelector('.collection-dot').classList.toggle('running', status.running);
+
+        var finished = (wasRunning && !status.running) || status.completed > completed;
+        wasRunning = status.running;
+        completed = status.completed;
+        if (finished && document.querySelector('[data-empty-digest]')) {
+          window.location.reload();
+          return;
+        }
+        scheduleStatusPoll(status.running ? 3000 : 10000);
+      }).catch(function () {
+        scheduleStatusPoll(30000);
+      });
+    }
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) pollCollectionStatus();
+      else clearTimeout(pollTimer);
+    });
+    scheduleStatusPoll(wasRunning ? 3000 : 10000);
+  }
+
+  function toggleSourceFields(card) {
+    if (!card) return;
+    var type = card.querySelector('[data-source-type]').value;
+    card.querySelectorAll('[data-fields]').forEach(function (fields) {
+      var hidden = fields.dataset.fields !== type;
+      fields.hidden = hidden;
+      fields.querySelectorAll('input, select, textarea').forEach(function (field) {
+        field.disabled = hidden;
+      });
+    });
+  }
+
 })();

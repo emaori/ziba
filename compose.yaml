@@ -1,5 +1,5 @@
 # Runs Ziba from its published image: two services, the application and its
-# database. Nothing is built here — see the Dockerfile for that.
+# database.
 #
 # Every setting lives in this file, documented where it is used. Fill in the
 # values below and there is nothing else to create.
@@ -16,9 +16,6 @@ services:
       # Change this.
       POSTGRES_PASSWORD: change-me
     ports:
-      # Loopback only: the database is never reachable from the network.
-      # Three parts, not two: host address, host port, container port. With two
-      # the first is read as a port number and compose refuses the file.
       - "127.0.0.1:5432:5432"
     volumes:
       - ziba-db-data:/var/lib/postgresql/data
@@ -49,7 +46,7 @@ services:
       # Which company answers: openai or anthropic. Set the matching key below.
       #
       # Without a key Ziba still collects, retrieves and serves the archive; only
-      # the analysis is skipped, and it says so at startup.
+      # the analysis is skipped.
       ZIBA_AI_PROVIDER: openai
 
       # The key for AI
@@ -59,7 +56,7 @@ services:
       # Which models. REQUIRED, whichever provider is chosen. Assessment —
       # deciding the interests and the score — runs on the fast one for every
       # article; summarization runs on the capable one, and only for articles
-      # above the threshold set in interests.yaml.
+      # above the threshold set in the web Settings page.
       #
       # There are no defaults on purpose: a model name written into a program is
       # a claim about what exists, and a stale one fails at the first article
@@ -89,41 +86,19 @@ services:
       # Without this it uses UTC and the morning run happens at the wrong hour.
       TZ: UTC
 
-      # --- A newsletter mailbox (optional) ------------------------------------
-      # Needed only when config/sources.yaml has a newsletter source. That file
-      # names the server and the folder; only the credentials belong here, and a
-      # source address carrying a password is refused at startup.
-      #
-      # Gmail wants an App Password rather than the account password, pasted
-      # without the spaces the interface displays.
-      # ZIBA_IMAP_USER:
-      # ZIBA_IMAP_PASSWORD:
-
-      # --- The schedule --------------------------------------------
-      # Every run collects, processes and refreshes the last-24-hours digest.
-      # The interval is anchored at 04:00, so restarts do not move it.
-      # ZIBA_COLLECT_EVERY=0 disables the schedule.
-      ZIBA_COLLECT_EVERY: 6h
-      ZIBA_COLLECT_AT: "04:00"
-
       # --- Debugging (optional) -----------------------------------------------
       # Record every request made to a model, and its reply, in
       # log/modelJournal.txt — the mount below is what makes it readable from
       # outside. Off by default and worth switching off again: it holds the full
       # text of every article sent and nothing rotates it. Headers are never
       # recorded, so the API key is not in it.
-      #
-      # Where it goes is deliberately not settable: the mount below is /app/log,
-      # and moving one without the other writes the file where nothing reads it.
       # ZIBA_MODEL_JOURNAL: "true"
 
     volumes:
-      # Your interests and your sources, read-only. Required: the image ships no
-      # configuration, so without these the container stops on its first run and
-      # says which file it wanted.
-      - ./config:/app/config:ro
-      # Where the model journal appears when it is switched on.
-      - ./log:/app/log
+      # Where the model journal appears when it is switched on. 
+      # Needed only if ZIBA_MODEL_JOURNAL is "true"
+      # The container runs as 'nobody', so chown 65534 is needed (chown 65534:65534 log)
+      # - ./log:/app/log
 
     ports:
       # Defaults to 8080. The container
@@ -133,7 +108,7 @@ services:
       # Set 127.0.0.1 to allow only this machine and reach it from elsewhere through
       # a reverse proxy or a VPN. Note that a published Docker port is not
       # covered by ufw.
-      - "0.0.0.0:8080:8080"
+      - "8080:8080"
 
 volumes:
   ziba-db-data:

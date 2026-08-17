@@ -9,8 +9,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// An upgrade must add retry state without rewriting any existing content.
-func TestRetryMigrationPreservesExistingData(t *testing.T) {
+// An upgrade must add retry and web configuration state without rewriting any
+// existing content.
+func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	db := testStore(t)
 	ctx := context.Background()
 	conn, err := db.pool.Acquire(ctx)
@@ -38,10 +39,14 @@ func TestRetryMigrationPreservesExistingData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load migrations: %v", err)
 	}
-	var retryMigration migration
+	var retryMigration, configurationMigration migration
 	for _, migration := range migrations {
 		if migration.version == 9 {
 			retryMigration = migration
+			continue
+		}
+		if migration.version == 10 {
+			configurationMigration = migration
 			continue
 		}
 		if migration.version > 9 {
@@ -53,6 +58,9 @@ func TestRetryMigrationPreservesExistingData(t *testing.T) {
 	}
 	if retryMigration.version == 0 {
 		t.Fatal("retry migration 9 is missing")
+	}
+	if configurationMigration.version == 0 {
+		t.Fatal("configuration migration 10 is missing")
 	}
 
 	var sourceID int64
@@ -71,6 +79,9 @@ func TestRetryMigrationPreservesExistingData(t *testing.T) {
 
 	if err := applyMigration(ctx, conn, retryMigration); err != nil {
 		t.Fatalf("apply retry migration: %v", err)
+	}
+	if err := applyMigration(ctx, conn, configurationMigration); err != nil {
+		t.Fatalf("apply configuration migration: %v", err)
 	}
 
 	var rawTitle, articleTitle, summary string

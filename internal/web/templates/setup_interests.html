@@ -1,0 +1,8 @@
+{{define "content"}}<section class="settings-page setup-page">
+{{template "setupSteps" "interests"}}
+<header class="config-header"><p class="step">Step 1 of 3</p><h1 class="page-title">What do you want to read?</h1><p class="note">Interests guide article scoring. You can change them later.</p></header>
+{{if .Error}}<p class="form-error" role="alert">{{.Error}}</p>{{end}}
+{{template "interestTable" .}}
+{{template "interestPresets" .}}
+<div class="wizard-actions"><span></span>{{if .Settings.Interests.Topics}}<a class="button" href="/setup/sources">Next: sources</a>{{else}}<span class="help">Add at least one interest to continue.</span>{{end}}</div>
+</section>{{end}}

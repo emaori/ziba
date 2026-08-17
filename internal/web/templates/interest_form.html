@@ -1,0 +1,8 @@
+{{define "content"}}<section class="settings-page {{if .SetupMode}}setup-page{{end}}"><h1 class="page-title">{{if .EditingInterest}}Edit interest{{else}}Add interest{{end}}</h1>{{if not .SetupMode}}{{template "settingsNav" .}}{{end}}
+<p class="note">Describe what you want Ziba to recognize in new articles.</p>{{if .Error}}<p class="form-error">{{.Error}}</p>{{end}}
+<form method="post" class="settings-form"><input type="hidden" name="csrf_token" value="{{csrfToken}}">
+<label>Interest name <input name="topic" value="{{.InterestForm.Topic}}" placeholder="Computer Science" required></label><p class="help">The broad subject. It is also shown as a reading tab.</p>
+<label>Priority <input type="number" name="priority" min="1" value="{{.InterestForm.Priority}}" required></label><p class="help">Priority 1 is highest. Use larger numbers for less important interests.</p>
+<label>Subtopics <input name="subtopics" value="{{join .InterestForm.Subtopics ", "}}" placeholder="Algorithms, distributed systems"></label><p class="help">Optional. Separate subtopics with commas.</p>
+<label>Notes <textarea name="note" rows="4" placeholder="Explain what matters to you">{{.InterestForm.Note}}</textarea></label><p class="help">Optional guidance that helps Ziba understand your preferences.</p>
+<div class="actions"><button class="button" type="submit">Save interest</button><a class="button secondary" href="{{.CancelURL}}">Cancel</a></div></form></section>{{end}}

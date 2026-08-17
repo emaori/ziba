@@ -1,0 +1,12 @@
+{{define "content"}}
+<section class="settings-page setup-page confirm-page">
+  <p class="step">Setup</p>
+  <h1 class="page-title">Remove “{{.RemoveName}}”?</h1>
+  <p>This removes the {{.RemoveKind}} from setup. You can add it again later.</p>
+  <form method="post" action="{{.RemoveAction}}" class="confirm-actions">
+    <input type="hidden" name="csrf_token" value="{{csrfToken}}">
+    <button class="button danger" type="submit">Remove {{.RemoveKind}}</button>
+    <a class="button secondary" href="{{.CancelURL}}">Cancel</a>
+  </form>
+</section>
+{{end}}

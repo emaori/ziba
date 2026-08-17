@@ -3,7 +3,9 @@ package web
 import (
 	"context"
 	"crypto/subtle"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
 	"github.com/emaori/ziba/internal/store"
 )
@@ -43,6 +46,20 @@ type Store interface {
 	Backlogs(ctx context.Context) ([]store.Backlog, error)
 }
 
+type configurationStore interface {
+	Configuration(ctx context.Context) (store.Configuration, error)
+	SaveSetupInterests(ctx context.Context, interests config.Interests) error
+	SaveSetupSources(ctx context.Context, interests config.Interests, sources []domain.Source) error
+	DeleteSetupSource(ctx context.Context, id int64) error
+	SaveSchedule(ctx context.Context, schedule config.CollectionSchedule) error
+	FinishSetup(ctx context.Context, interests config.Interests, sources []domain.Source, collectNow bool) error
+	SaveConfiguration(ctx context.Context, interests config.Interests, sources []domain.Source) error
+}
+
+type collectionStateStore interface {
+	CollectionState(ctx context.Context) (running bool, completed uint64, err error)
+}
+
 // page is the data every template receives. The interests appear in the tab bar
 // on every screen, so they travel with every page.
 type page struct {
@@ -61,19 +78,49 @@ type page struct {
 	Library  store.ArticleStats
 	Unknown  int
 
-	Tokens           store.TokenTally
-	TokensByInterest []store.TokenTally
-	TokensByDay      []store.TokenTally
-	Backlogs         []store.Backlog
-	Offset           int
-	PageSize         int
-	Threshold        domain.RelevanceScore
+	Tokens              store.TokenTally
+	TokensByInterest    []store.TokenTally
+	TokensByDay         []store.TokenTally
+	Backlogs            []store.Backlog
+	Offset              int
+	PageSize            int
+	Threshold           domain.RelevanceScore
+	Configured          bool
+	Settings            store.Configuration
+	Source              store.SourceInput
+	InterestForm        config.Interest
+	InterestIndex       int
+	EditingInterest     bool
+	EditingSource       bool
+	Error               string
+	SetupMode           bool
+	SettingsSection     string
+	FormAction          string
+	CancelURL           string
+	InterestPresets     []interestPreset
+	SourcePresets       []sourcePreset
+	RemoveName          string
+	RemoveKind          string
+	RemoveAction        string
+	ScheduleEvery       string
+	ScheduleAt          string
+	ScheduleAmount      int
+	ScheduleUnit        string
+	CollectionRunning   bool
+	CollectionCompleted uint64
+	NextCollection      time.Time
+	ScheduleDisabled    bool
 }
 
 // handleInterest lists one interest's unread articles, most relevant first.
 func (s *Server) handleInterest(w http.ResponseWriter, r *http.Request) {
+	interests, threshold, err := s.currentValues(r)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
 	interest := r.PathValue("name")
-	if !s.knownInterest(interest) {
+	if !knownInterest(interests, interest) {
 		http.NotFound(w, r)
 		return
 	}
@@ -81,7 +128,7 @@ func (s *Server) handleInterest(w http.ResponseWriter, r *http.Request) {
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 	offset = max(offset, 0)
 
-	articles, err := s.store.ArticlesByInterest(r.Context(), interest, s.threshold, listPageSize, offset)
+	articles, err := s.store.ArticlesByInterest(r.Context(), interest, threshold, listPageSize, offset)
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -96,8 +143,13 @@ func (s *Server) handleInterest(w http.ResponseWriter, r *http.Request) {
 // handleDay shows everything for one day — read, unread, and below threshold.
 // This is the view that hides nothing.
 func (s *Server) handleDay(w http.ResponseWriter, r *http.Request) {
+	interests, _, err := s.currentValues(r)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
 	interest := r.URL.Query().Get("interest")
-	if interest != "" && !s.knownInterest(interest) {
+	if interest != "" && !knownInterest(interests, interest) {
 		http.NotFound(w, r)
 		return
 	}
@@ -112,12 +164,12 @@ func (s *Server) handleDay(w http.ResponseWriter, r *http.Request) {
 		day = parsed
 	}
 
-	articles, err := s.store.ArticlesOnDay(r.Context(), interest, day, s.interests)
+	articles, err := s.store.ArticlesOnDay(r.Context(), interest, day, interests)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	nav, err := s.store.DayNavigation(r.Context(), interest, day, s.interests)
+	nav, err := s.store.DayNavigation(r.Context(), interest, day, interests)
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -233,10 +285,15 @@ func backTo(r *http.Request) string {
 }
 
 func (s *Server) handleArchiveAll(w http.ResponseWriter, r *http.Request) {
+	interests, _, err := s.currentValues(r)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 	offset = max(offset, 0)
 
-	articles, err := s.store.Archive(r.Context(), listPageSize, offset, s.interests)
+	articles, err := s.store.Archive(r.Context(), listPageSize, offset, interests)
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -253,6 +310,11 @@ const statsDays = 30
 
 // handleStats shows what collection has actually been doing.
 func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
+	interests, threshold, err := s.currentValues(r)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
 	bySource, err := s.store.TalliesBySource(r.Context())
 	if err != nil {
 		s.fail(w, r, err)
@@ -263,7 +325,7 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	library, err := s.store.Articles(r.Context(), s.interests, int(s.threshold))
+	library, err := s.store.Articles(r.Context(), interests, int(threshold))
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -273,7 +335,7 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	tokensByInterest, err := s.store.TokensByInterest(r.Context(), s.interests)
+	tokensByInterest, err := s.store.TokensByInterest(r.Context(), interests)
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -304,8 +366,8 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) knownInterest(name string) bool {
-	for _, i := range s.interests {
+func knownInterest(interests []string, name string) bool {
+	for _, i := range interests {
 		if i == name {
 			return true
 		}
@@ -316,8 +378,31 @@ func (s *Server) knownInterest(name string) bool {
 // render writes the page. The tab bar is the same on every screen, so it is
 // filled in here rather than in each handler.
 func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, data *page) {
-	data.Interests = s.interests
-	data.Threshold = s.threshold
+	interests, threshold, err := s.currentValues(r)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	data.Interests = interests
+	data.Threshold = threshold
+	if !data.SetupMode {
+		cfg, cfgErr := s.currentConfiguration(r)
+		if cfgErr != nil {
+			s.fail(w, r, cfgErr)
+			return
+		}
+		data.ScheduleDisabled = cfg.Schedule.Every <= 0
+		if !data.ScheduleDisabled {
+			data.NextCollection = cfg.Schedule.At.NextEvery(time.Now(), cfg.Schedule.Every)
+		}
+		if state, ok := s.store.(collectionStateStore); ok {
+			data.CollectionRunning, data.CollectionCompleted, cfgErr = state.CollectionState(r.Context())
+			if cfgErr != nil {
+				s.fail(w, r, cfgErr)
+				return
+			}
+		}
+	}
 
 	set, ok := s.pages[name]
 	if !ok {
@@ -331,6 +416,60 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, dat
 		// Too late for a status code: the response is already partly written.
 		slog.Error("render failed", "template", name, "error", err)
 	}
+}
+
+func (s *Server) handleCollectionStatus(w http.ResponseWriter, r *http.Request) {
+	cfg, err := s.currentConfiguration(r)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	running, completed := false, uint64(0)
+	if state, ok := s.store.(collectionStateStore); ok {
+		running, completed, err = state.CollectionState(r.Context())
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+	}
+	var next time.Time
+	if cfg.Schedule.Every > 0 {
+		next = cfg.Schedule.At.NextEvery(time.Now(), cfg.Schedule.Every)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(struct {
+		Running   bool      `json:"running"`
+		Completed uint64    `json:"completed"`
+		Disabled  bool      `json:"disabled"`
+		Next      time.Time `json:"next"`
+		NextLabel string    `json:"next_label"`
+	}{running, completed, cfg.Schedule.Every <= 0, next, nextCollectionLabel(next)})
+}
+
+func nextCollectionLabel(next time.Time) string {
+	if next.IsZero() {
+		return ""
+	}
+	now := time.Now()
+	day := "on " + next.Format("2 Jan")
+	if next.YearDay() == now.YearDay() && next.Year() == now.Year() {
+		day = "today"
+	} else if tomorrow := now.AddDate(0, 0, 1); next.YearDay() == tomorrow.YearDay() && next.Year() == tomorrow.Year() {
+		day = "tomorrow"
+	}
+	return fmt.Sprintf("Next collection %s at %s", day, next.Format("15:04"))
+}
+
+func (s *Server) currentValues(r *http.Request) ([]string, domain.RelevanceScore, error) {
+	cfg, err := s.currentConfiguration(r)
+	if err != nil {
+		return nil, 0, err
+	}
+	names := make([]string, 0, len(cfg.Interests.Topics))
+	for _, interest := range cfg.Interests.Topics {
+		names = append(names, interest.Topic)
+	}
+	return names, domain.RelevanceScore(cfg.Interests.Threshold), nil
 }
 
 func (s *Server) fail(w http.ResponseWriter, r *http.Request, err error) {

@@ -1,0 +1,5 @@
+{{define "content"}}<section class="settings-page"><h1 class="page-title">Settings</h1>{{template "settingsNav" .}}
+<header class="config-header"><h2>Interests</h2><p class="note">Changes guide new articles only. Existing articles are not re-analyzed.</p></header>
+{{if .Error}}<p class="form-error">{{.Error}}</p>{{end}}<form method="post" action="/settings/interests/threshold" class="compact-setting"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><label>Relevance threshold <input type="number" name="threshold" min="0" max="100" value="{{.Settings.Interests.Threshold}}" required></label><button class="button secondary" type="submit">Save threshold</button><p class="help">Articles at or above this score appear in the digest.</p></form>
+{{template "interestTable" .}}{{template "interestPresets" .}}
+</section>{{end}}

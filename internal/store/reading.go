@@ -64,8 +64,11 @@ func (s *Store) GenerateDigest(ctx context.Context, date time.Time,
 		FROM articles a JOIN sources s ON s.id = a.source_id
 		WHERE a.processed_at IS NOT NULL
 		  AND a.archived_at IS NULL
-		  AND a.collected_at > $3 - interval '24 hours'
-		  AND a.collected_at <= $3
+		  -- Cast the shared parameter explicitly. PostgreSQL otherwise infers it
+		  -- as an interval from the subtraction and later compares a timestamp to
+		  -- that interval, which fails when the digest is generated at runtime.
+		  AND a.collected_at > $3::timestamptz - interval '24 hours'
+		  AND a.collected_at <= $3::timestamptz
 		  -- A source that declares its categories was subscribed to on purpose,
 		  -- so the threshold does not apply to it: its score orders the day
 		  -- rather than deciding whether it belongs in it.

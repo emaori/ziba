@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/job"
@@ -36,28 +37,55 @@ const (
 )
 
 func newSetup(ctx context.Context, mode analyzerMode) (*setup, error) {
+	return newSetupWithIncomplete(ctx, mode, false)
+}
+
+func newServeSetup(ctx context.Context, mode analyzerMode) (*setup, error) {
+	return newSetupWithIncomplete(ctx, mode, true)
+}
+
+func newSetupWithIncomplete(ctx context.Context, mode analyzerMode, allowIncomplete bool) (*setup, error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return nil, err
 	}
 
-	// Interests first: a source may declare which of them it belongs to, and
-	// those names are validated against this list.
-	interests, err := config.LoadInterests(cfg.InterestsPath)
+	db, err := store.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return nil, err
 	}
-
-	sources, err := config.LoadSources(cfg.SourcesPath, interests)
-	if err != nil {
+	if _, err := db.Migrate(ctx); err != nil {
+		db.Close()
 		return nil, err
 	}
+	if err := db.InitializeSchedule(ctx, cfg.LegacyCollectEvery, cfg.LegacyCollectAt); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := importYAMLConfiguration(ctx, db, cfg); err != nil {
+		db.Close()
+		return nil, err
+	}
+	stored, err := db.Configuration(ctx)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	if !stored.Configured {
+		if allowIncomplete {
+			return &setup{cfg: cfg, store: db, interests: stored.Interests}, nil
+		}
+		db.Close()
+		return nil, fmt.Errorf("configuration is incomplete; open Ziba in a browser to finish setup")
+	}
+	interests, sources := stored.Interests, stored.Sources
 
 	// Open the journal before analyzer construction so an unwritable log path is
 	// fatal rather than mistaken for an unavailable analyzer.
 	var journal *pipeline.Journal
 	if cfg.ModelJournal {
 		if journal, err = pipeline.OpenJournal(cfg.LogDir); err != nil {
+			db.Close()
 			return nil, err
 		}
 		slog.Info("recording every model request", "file", journal.Path())
@@ -71,13 +99,9 @@ func newSetup(ctx context.Context, mode analyzerMode) (*setup, error) {
 		analyzer, err = newAnalyzer(cfg, interests, journal)
 		if err != nil {
 			// Mark the only startup failure that serve may continue past.
+			db.Close()
 			return nil, fmt.Errorf("%w: %w", errAnalyzerUnavailable, err)
 		}
-	}
-
-	db, err := store.Open(ctx, cfg.DatabaseURL)
-	if err != nil {
-		return nil, err
 	}
 
 	log := slog.Default()
@@ -87,6 +111,68 @@ func newSetup(ctx context.Context, mode analyzerMode) (*setup, error) {
 		runner:    job.New(cfg, sources, interests, db, log, job.Options{Analyzer: analyzer}),
 		interests: interests,
 	}, nil
+}
+
+func (s *setup) currentRunner(ctx context.Context, mode analyzerMode) (*job.Runner, error) {
+	stored, err := s.store.Configuration(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !stored.Configured {
+		return nil, fmt.Errorf("configuration is incomplete")
+	}
+	var journal *pipeline.Journal
+	if s.cfg.ModelJournal {
+		journal, err = pipeline.OpenJournal(s.cfg.LogDir)
+		if err != nil {
+			return nil, err
+		}
+	}
+	var analyzer pipeline.Analyzer
+	switch mode {
+	case analyzerOffline:
+		analyzer = pipeline.NewDeterministic(stored.Interests)
+	case analyzerReal:
+		analyzer, err = newAnalyzer(s.cfg, stored.Interests, journal)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", errAnalyzerUnavailable, err)
+		}
+	}
+	return job.New(s.cfg, stored.Sources, stored.Interests, s.store, slog.Default(), job.Options{Analyzer: analyzer}), nil
+}
+
+// importYAMLConfiguration is the one-way compatibility bridge. Once database
+// configuration exists, the files are never read again.
+func importYAMLConfiguration(ctx context.Context, db *store.Store, cfg config.Config) error {
+	stored, err := db.Configuration(ctx)
+	if err != nil || stored.Configured {
+		return err
+	}
+	if _, err := os.Stat(cfg.InterestsPath); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	if _, err := os.Stat(cfg.SourcesPath); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	interests, err := config.LoadInterests(cfg.InterestsPath)
+	if err != nil {
+		return err
+	}
+	sources, err := config.LoadSources(cfg.SourcesPath, interests)
+	if err != nil {
+		return err
+	}
+	if err := db.SaveConfiguration(ctx, interests, sources); err != nil {
+		return err
+	}
+	slog.Info("imported YAML configuration into the database; YAML files will no longer be read")
+	return nil
 }
 
 func (s *setup) Close() { s.store.Close() }
