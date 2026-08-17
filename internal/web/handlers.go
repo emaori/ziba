@@ -3,7 +3,9 @@ package web
 import (
 	"context"
 	"crypto/subtle"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -54,6 +56,10 @@ type configurationStore interface {
 	SaveConfiguration(ctx context.Context, interests config.Interests, sources []domain.Source) error
 }
 
+type collectionStateStore interface {
+	CollectionState(ctx context.Context) (running bool, completed uint64, err error)
+}
+
 // page is the data every template receives. The interests appear in the tab bar
 // on every screen, so they travel with every page.
 type page struct {
@@ -72,34 +78,38 @@ type page struct {
 	Library  store.ArticleStats
 	Unknown  int
 
-	Tokens           store.TokenTally
-	TokensByInterest []store.TokenTally
-	TokensByDay      []store.TokenTally
-	Backlogs         []store.Backlog
-	Offset           int
-	PageSize         int
-	Threshold        domain.RelevanceScore
-	Configured       bool
-	Settings         store.Configuration
-	Source           store.SourceInput
-	InterestForm     config.Interest
-	InterestIndex    int
-	EditingInterest  bool
-	EditingSource    bool
-	Error            string
-	SetupMode        bool
-	SettingsSection  string
-	FormAction       string
-	CancelURL        string
-	InterestPresets  []interestPreset
-	SourcePresets    []sourcePreset
-	RemoveName       string
-	RemoveKind       string
-	RemoveAction     string
-	ScheduleEvery    string
-	ScheduleAt       string
-	ScheduleAmount   int
-	ScheduleUnit     string
+	Tokens              store.TokenTally
+	TokensByInterest    []store.TokenTally
+	TokensByDay         []store.TokenTally
+	Backlogs            []store.Backlog
+	Offset              int
+	PageSize            int
+	Threshold           domain.RelevanceScore
+	Configured          bool
+	Settings            store.Configuration
+	Source              store.SourceInput
+	InterestForm        config.Interest
+	InterestIndex       int
+	EditingInterest     bool
+	EditingSource       bool
+	Error               string
+	SetupMode           bool
+	SettingsSection     string
+	FormAction          string
+	CancelURL           string
+	InterestPresets     []interestPreset
+	SourcePresets       []sourcePreset
+	RemoveName          string
+	RemoveKind          string
+	RemoveAction        string
+	ScheduleEvery       string
+	ScheduleAt          string
+	ScheduleAmount      int
+	ScheduleUnit        string
+	CollectionRunning   bool
+	CollectionCompleted uint64
+	NextCollection      time.Time
+	ScheduleDisabled    bool
 }
 
 // handleInterest lists one interest's unread articles, most relevant first.
@@ -375,6 +385,24 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, dat
 	}
 	data.Interests = interests
 	data.Threshold = threshold
+	if !data.SetupMode {
+		cfg, cfgErr := s.currentConfiguration(r)
+		if cfgErr != nil {
+			s.fail(w, r, cfgErr)
+			return
+		}
+		data.ScheduleDisabled = cfg.Schedule.Every <= 0
+		if !data.ScheduleDisabled {
+			data.NextCollection = cfg.Schedule.At.NextEvery(time.Now(), cfg.Schedule.Every)
+		}
+		if state, ok := s.store.(collectionStateStore); ok {
+			data.CollectionRunning, data.CollectionCompleted, cfgErr = state.CollectionState(r.Context())
+			if cfgErr != nil {
+				s.fail(w, r, cfgErr)
+				return
+			}
+		}
+	}
 
 	set, ok := s.pages[name]
 	if !ok {
@@ -388,6 +416,48 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, dat
 		// Too late for a status code: the response is already partly written.
 		slog.Error("render failed", "template", name, "error", err)
 	}
+}
+
+func (s *Server) handleCollectionStatus(w http.ResponseWriter, r *http.Request) {
+	cfg, err := s.currentConfiguration(r)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	running, completed := false, uint64(0)
+	if state, ok := s.store.(collectionStateStore); ok {
+		running, completed, err = state.CollectionState(r.Context())
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
+	}
+	var next time.Time
+	if cfg.Schedule.Every > 0 {
+		next = cfg.Schedule.At.NextEvery(time.Now(), cfg.Schedule.Every)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(struct {
+		Running   bool      `json:"running"`
+		Completed uint64    `json:"completed"`
+		Disabled  bool      `json:"disabled"`
+		Next      time.Time `json:"next"`
+		NextLabel string    `json:"next_label"`
+	}{running, completed, cfg.Schedule.Every <= 0, next, nextCollectionLabel(next)})
+}
+
+func nextCollectionLabel(next time.Time) string {
+	if next.IsZero() {
+		return ""
+	}
+	now := time.Now()
+	day := "on " + next.Format("2 Jan")
+	if next.YearDay() == now.YearDay() && next.Year() == now.Year() {
+		day = "today"
+	} else if tomorrow := now.AddDate(0, 0, 1); next.YearDay() == tomorrow.YearDay() && next.Year() == tomorrow.Year() {
+		day = "tomorrow"
+	}
+	return fmt.Sprintf("Next collection %s at %s", day, next.Format("15:04"))
 }
 
 func (s *Server) currentValues(r *http.Request) ([]string, domain.RelevanceScore, error) {

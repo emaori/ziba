@@ -71,6 +71,10 @@ defaults `6h` and `04:00`. It also proposes starting the first collection as
 soon as setup finishes; clear that checkbox to wait for the next scheduled time.
 Collection does not start until setup is complete.
 
+After setup, a small status row below the header shows when collection is
+running. Otherwise, it shows the next scheduled time or says that automatic
+collection is off. An empty home page refreshes itself when collection finishes.
+
 After setup, use **Settings** in the web interface. It has separate Interests,
 Sources, and Schedule sections. The first two have the same add, edit, and
 preconfigured options as setup. Changes

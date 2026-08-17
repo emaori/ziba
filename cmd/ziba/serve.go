@@ -144,6 +144,8 @@ func serveCmd(ctx context.Context, args []string) error {
 	if !*noSchedule {
 		runMode := mode
 		scheduler := job.NewDynamicSchedulerFunc(func(runCtx context.Context, batch int) error {
+			s.store.BeginCollection()
+			defer s.store.EndCollection()
 			runner, runErr := s.currentRunner(runCtx, runMode)
 			if runErr != nil && runMode == analyzerReal && errors.Is(runErr, errAnalyzerUnavailable) {
 				slog.Warn("scheduled analysis unavailable", "error", runErr)

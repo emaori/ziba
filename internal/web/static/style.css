@@ -64,6 +64,24 @@ a { color: var(--accent); }
   text-decoration: none;
 }
 
+.collection-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0.45rem 0;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--rule);
+  font: 0.78rem/1.4 system-ui, sans-serif;
+}
+.collection-status a { margin-left: auto; padding: 0.35rem 0; font-weight: 600; }
+.collection-dot { width: 0.55rem; height: 0.55rem; flex: none; background: var(--rule); border-radius: 50%; }
+.collection-dot.running { background: var(--accent); animation: collection-pulse 1.4s ease-in-out infinite; }
+@keyframes collection-pulse { 50% { opacity: 0.35; transform: scale(0.8); } }
+@media (prefers-reduced-motion: reduce) { .collection-dot.running { animation: none; } }
+
 /* Interest tabs ---------------------------------------------------------- */
 
 .tabs {

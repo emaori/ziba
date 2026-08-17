@@ -5,6 +5,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -12,7 +13,25 @@ import (
 // Store is the entry point to the database. It wraps a connection pool, which
 // is safe for concurrent use, so a single Store is shared by the whole program.
 type Store struct {
-	pool *pgxpool.Pool
+	pool                 *pgxpool.Pool
+	collectionRunning    atomic.Bool
+	completedCollections atomic.Uint64
+}
+
+// BeginCollection and EndCollection expose the scheduler's live state to the
+// web UI. Process-local state is deliberate: a restart cannot leave a stale
+// "running" marker behind.
+func (s *Store) BeginCollection() { s.collectionRunning.Store(true) }
+func (s *Store) EndCollection() {
+	s.collectionRunning.Store(false)
+	s.completedCollections.Add(1)
+}
+func (s *Store) CollectionState(ctx context.Context) (bool, uint64, error) {
+	var requested bool
+	if err := s.pool.QueryRow(ctx, `SELECT collection_requested FROM app_settings WHERE singleton`).Scan(&requested); err != nil {
+		return false, 0, fmt.Errorf("read collection request state: %w", err)
+	}
+	return s.collectionRunning.Load() || requested, s.completedCollections.Load(), nil
 }
 
 // Open connects to PostgreSQL and verifies the connection is usable. The caller

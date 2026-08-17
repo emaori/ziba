@@ -36,6 +36,8 @@ type configurableFakeStore struct {
 	configuration store.Configuration
 	saved         store.Configuration
 	collectNow    bool
+	running       bool
+	completed     uint64
 }
 
 func (f *configurableFakeStore) Configuration(context.Context) (store.Configuration, error) {
@@ -82,6 +84,10 @@ func (f *configurableFakeStore) DeleteSetupSource(_ context.Context, id int64) e
 func (f *configurableFakeStore) SaveSchedule(_ context.Context, schedule config.CollectionSchedule) error {
 	f.configuration.Schedule = schedule
 	return nil
+}
+
+func (f *configurableFakeStore) CollectionState(context.Context) (bool, uint64, error) {
+	return f.running || f.collectNow, f.completed, nil
 }
 
 func (f *fakeStore) LatestDigest(context.Context) (domain.Digest, error) {
@@ -323,8 +329,29 @@ func TestEmptyDigestRenders(t *testing.T) {
 	if code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", code)
 	}
-	if !strings.Contains(body, "ziba run") {
-		t.Error("empty digest page does not explain how to generate one")
+	if !strings.Contains(body, "Nothing new to show yet") || strings.Contains(body, "ziba run") {
+		t.Error("empty digest page does not use the reader-facing empty state")
+	}
+}
+
+func TestCollectionStatusShowsRunningAndNextSchedule(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, running: true, completed: 4, configuration: store.Configuration{
+		Configured: true,
+		Interests:  config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+		Schedule:   config.CollectionSchedule{Every: 6 * time.Hour, At: config.TimeOfDay{Hour: 4}},
+	}}
+	server, err := newServer(db, db.configuration.Interests, "token")
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	code, body := get(t, server.Handler(), "/")
+	if code != http.StatusOK || !strings.Contains(body, "Collecting and preparing your digest") {
+		t.Fatalf("running status = %d body=%s", code, body)
+	}
+	db.running = false
+	code, body = get(t, server.Handler(), "/status")
+	if code != http.StatusOK || !strings.Contains(body, `"completed":4`) || !strings.Contains(body, `"next_label":"Next collection`) {
+		t.Fatalf("status endpoint = %d body=%s", code, body)
 	}
 }
 
@@ -401,6 +428,10 @@ func TestFirstRunIsGatedBySetupWizard(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/" {
 		t.Fatalf("schedule step = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
+	}
+	code, body := get(t, handler, "/")
+	if code != http.StatusOK || !strings.Contains(body, "Collecting and preparing your digest") {
+		t.Fatalf("post-setup landing status = %d body=%s", code, body)
 	}
 	if !db.saved.Configured || len(db.saved.Sources) != 1 || db.saved.Interests.Topics[0].Topic != "AI" {
 		t.Errorf("saved configuration = %+v", db.saved)

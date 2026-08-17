@@ -284,7 +284,11 @@ func (s *Store) ClaimCollectionRequest(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("claim collection request: %w", err)
 	}
-	return tag.RowsAffected() == 1, nil
+	claimed := tag.RowsAffected() == 1
+	if claimed {
+		s.collectionRunning.Store(true)
+	}
+	return claimed, nil
 }
 
 func formatCollectFrom(value domain.CollectFrom) string {

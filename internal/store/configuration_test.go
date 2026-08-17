@@ -97,6 +97,10 @@ func TestFinishSetupQueuesFirstCollectionOnce(t *testing.T) {
 	if err := db.FinishSetup(ctx, interests, nil, true); err != nil {
 		t.Fatalf("FinishSetup: %v", err)
 	}
+	running, _, err := db.CollectionState(ctx)
+	if err != nil || !running {
+		t.Fatalf("state before scheduler claim = %v, %v; want collecting", running, err)
+	}
 	requested, err := db.ClaimCollectionRequest(ctx)
 	if err != nil || !requested {
 		t.Fatalf("first claim = %v, %v; want true", requested, err)
@@ -104,6 +108,15 @@ func TestFinishSetupQueuesFirstCollectionOnce(t *testing.T) {
 	requested, err = db.ClaimCollectionRequest(ctx)
 	if err != nil || requested {
 		t.Fatalf("second claim = %v, %v; want false", requested, err)
+	}
+	running, _, err = db.CollectionState(ctx)
+	if err != nil || !running {
+		t.Fatalf("state after request is claimed = %v, %v; want collecting", running, err)
+	}
+	db.EndCollection()
+	running, _, err = db.CollectionState(ctx)
+	if err != nil || running {
+		t.Fatalf("state after collection ends = %v, %v; want idle", running, err)
 	}
 }
 

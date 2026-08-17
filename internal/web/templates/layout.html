@@ -19,6 +19,13 @@
     </nav>
   </header>
 
+  <div class="collection-status" role="status" aria-live="polite" aria-atomic="true"
+       data-collection-status data-running="{{.CollectionRunning}}" data-completed="{{.CollectionCompleted}}">
+    <span class="collection-dot {{if .CollectionRunning}}running{{end}}" aria-hidden="true"></span>
+    <span data-collection-status-text>{{if .CollectionRunning}}Collecting and preparing your digest…{{else if .ScheduleDisabled}}Automatic collection is off.{{else}}{{nextCollectionLabel .NextCollection}}{{end}}</span>
+    <a href="/settings/schedule">Schedule</a>
+  </div>
+
   {{if .Interests}}
   <nav class="tabs">
     {{range .Interests}}

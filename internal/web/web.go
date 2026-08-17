@@ -37,9 +37,10 @@ var templateFuncs = template.FuncMap{
 	// Token counts run to seven figures, and an unbroken run of digits cannot
 	// be read at a glance — the difference between 1904322 and 190432 is the
 	// whole point of the table.
-	"thousands": thousands,
-	"isoDate":   func(t time.Time) string { return t.Format(time.DateOnly) },
-	"age":       age,
+	"thousands":           thousands,
+	"isoDate":             func(t time.Time) string { return t.Format(time.DateOnly) },
+	"age":                 age,
+	"nextCollectionLabel": nextCollectionLabel,
 
 	// pathEscape, not the built-in urlquery, for anything that lands in a URL
 	// *path*. urlquery writes a space as "+", which a query string decodes back
@@ -201,6 +202,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /article/{id}", s.handleArticle)
 	mux.HandleFunc("GET /archive", s.handleArchiveAll)
 	mux.HandleFunc("GET /stats", s.handleStats)
+	mux.HandleFunc("GET /status", s.handleCollectionStatus)
 	mux.HandleFunc("GET /setup", s.handleSetup)
 	mux.HandleFunc("GET /setup/interests", s.handleSetupInterests)
 	mux.HandleFunc("GET /setup/interest/new", s.handleInterestForm)
