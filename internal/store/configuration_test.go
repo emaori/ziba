@@ -2,12 +2,23 @@ package store
 
 import (
 	"context"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
 )
+
+func TestStringSliceStoresOmittedValuesAsEmptyArray(t *testing.T) {
+	if got := stringSlice(nil); got == nil || len(got) != 0 {
+		t.Fatalf("stringSlice(nil) = %#v, want non-nil empty slice", got)
+	}
+	want := []string{"LLMs", "agents"}
+	if got := stringSlice(want); !reflect.DeepEqual(got, want) {
+		t.Fatalf("stringSlice(values) = %#v, want %#v", got, want)
+	}
+}
 
 func TestConfigurationPreservesExistingSourceData(t *testing.T) {
 	db := testStore(t)
