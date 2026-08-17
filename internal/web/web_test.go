@@ -338,7 +338,7 @@ func TestFirstRunIsGatedBySetupWizard(t *testing.T) {
 	if strings.Contains(body, `href="/stats"`) || strings.Contains(body, `href="/archive"`) {
 		t.Fatal("normal navigation is visible during setup")
 	}
-	if !strings.Contains(body, "Need a starting point?") {
+	if !strings.Contains(body, "Or start with") {
 		t.Fatal("setup does not offer preconfigured interests")
 	}
 	req = httptest.NewRequest(http.MethodGet, "/setup/interest/new", nil)

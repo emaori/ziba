@@ -458,7 +458,9 @@ code {
 .settings-nav a { padding: 0.65rem 0.9rem; color: var(--ink-soft); text-decoration: none; border-bottom: 3px solid transparent; }
 .settings-nav a.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
 .config-list { margin: 0 0 2rem; }
+.list-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.7rem; }
 .list-title { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.7rem; font-size: 1.15rem; }
+.list-heading .list-title { margin: 0; }
 .list-title span { min-width: 1.6rem; padding: 0.05rem 0.4rem; color: var(--ink-soft); background: var(--card); border: 1px solid var(--rule); border-radius: 999px; font-size: 0.75rem; text-align: center; }
 .table-wrap { overflow: hidden; background: var(--card); border: 1px solid var(--rule); border-radius: 8px; }
 .config-table { width: 100%; border-collapse: collapse; font-family: system-ui, sans-serif; }
@@ -473,6 +475,7 @@ code {
 .status-badge { display: inline-block; padding: 0.15rem 0.5rem; color: var(--ink-soft); background: var(--paper); border: 1px solid var(--rule); border-radius: 999px; font-size: 0.78rem; white-space: nowrap; }
 .status-badge.active { color: #28643b; background: #edf8f0; border-color: #b9dbc3; }
 .empty-row td { padding: 1.5rem; color: var(--ink-soft); text-align: center; }
+.empty-row p { margin: 0 0 1rem; }
 .breakable { overflow-wrap: anywhere; }
 .preset-box { margin: 2rem 0; padding-top: 1.5rem; border-top: 1px solid var(--rule); font-family: system-ui, sans-serif; }
 .preset-box h2 { margin: 0; font-size: 1.15rem; }
@@ -498,6 +501,8 @@ code {
 .setting-row span, .setting-row small { display: block; color: var(--ink-soft); }
 @media (max-width: 40rem) {
   .settings-page { width: 100%; margin-left: 0; transform: none; }
+  .list-heading { align-items: stretch; flex-direction: column; }
+  .list-add { min-height: 44px; justify-content: center; }
   .preset-grid { grid-template-columns: 1fr; }
   .config-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
   .config-table, .config-table tbody, .config-table tr, .config-table th, .config-table td { display: block; width: 100%; }

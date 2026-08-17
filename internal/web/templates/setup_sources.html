@@ -2,7 +2,6 @@
 {{template "setupSteps" "sources"}}
 <header class="config-header"><p class="step">Step 2 of 2</p><h1 class="page-title">Where should Ziba look?</h1><p class="note">Sources are RSS feeds or newsletter mailboxes.</p></header>
 {{if .Error}}<p class="form-error" role="alert">{{.Error}}</p>{{end}}
-<div class="primary-action"><a class="button button-large" href="/setup/source/new">＋ Add source</a></div>
 {{template "sourceTable" .}}{{template "sourcePresets" .}}
 <form method="post" action="/setup/sources"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><div class="wizard-actions"><a class="button secondary" href="/setup/interests">Back: interests</a>{{if .Settings.Sources}}<button class="button" type="submit">Finish setup</button>{{else}}<span class="help">Add at least one source to finish.</span>{{end}}</div></form>
 </section>{{end}}
