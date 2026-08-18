@@ -1,9 +1,11 @@
 package web
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"html"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -834,6 +836,32 @@ func TestArchiveAsyncGetsNoRedirect(t *testing.T) {
 	}
 	if location := rec.Header().Get("Location"); location != "" {
 		t.Errorf("async post was redirected to %q, want no redirect", location)
+	}
+	if len(store.archivedCalls) != 1 || !store.archivedCalls[0] {
+		t.Errorf("archivedCalls = %v, want one archive", store.archivedCalls)
+	}
+}
+
+func TestArchiveAsyncAcceptsBrowserFormData(t *testing.T) {
+	store := &fakeStore{}
+	handler := newTestServer(t, store)
+
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	if err := form.WriteField("csrf_token", testCSRFToken); err != nil {
+		t.Fatal(err)
+	}
+	if err := form.Close(); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/article/42/archive", &body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	req.Header.Set("X-Ziba-Async", "1")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("status = %d, want 204; body = %q", rec.Code, rec.Body.String())
 	}
 	if len(store.archivedCalls) != 1 || !store.archivedCalls[0] {
 		t.Errorf("archivedCalls = %v, want one archive", store.archivedCalls)

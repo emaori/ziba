@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"mime"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -232,7 +233,17 @@ func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if err := r.ParseForm(); err != nil {
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	if mediaType == "multipart/form-data" {
+		err = r.ParseMultipartForm(32 << 10)
+	} else {
+		err = r.ParseForm()
+	}
+	if err != nil {
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
