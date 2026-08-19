@@ -118,6 +118,63 @@
 
   document.querySelectorAll('[data-source-card]').forEach(toggleSourceFields);
 
+  var linkwardenAuth = document.querySelector('[data-linkwarden-auth]');
+  if (linkwardenAuth) {
+    linkwardenAuth.addEventListener('change', toggleLinkwardenAuth);
+    toggleLinkwardenAuth();
+  }
+
+  document.querySelectorAll('[data-tag-picker]').forEach(function (picker) {
+    var input = picker.querySelector('[data-tag-input]');
+    var selected = picker.querySelector('[data-selected-tags]');
+    var form = picker.closest('form');
+
+    function addTag(raw) {
+      var name = raw.trim();
+      if (!name) return;
+      var duplicate = false;
+      selected.querySelectorAll('[data-tag]').forEach(function (tag) {
+        if (tag.dataset.tag.toLowerCase() === name.toLowerCase()) duplicate = true;
+      });
+      if (duplicate) {
+        input.value = '';
+        return;
+      }
+
+      var chip = document.createElement('span');
+      chip.className = 'selected-tag';
+      chip.dataset.tag = name;
+      var label = document.createElement('span');
+      label.textContent = name;
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = '×';
+      remove.title = 'Remove ' + name;
+      remove.setAttribute('aria-label', remove.title);
+      var hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'tag_names';
+      hidden.value = name;
+      chip.appendChild(label);
+      chip.appendChild(remove);
+      chip.appendChild(hidden);
+      selected.appendChild(chip);
+      input.value = '';
+    }
+
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ',') {
+        event.preventDefault();
+        addTag(input.value.replace(/,$/, ''));
+      }
+    });
+    input.addEventListener('change', function () { addTag(input.value); });
+    selected.addEventListener('click', function (event) {
+      if (event.target.matches('button')) event.target.closest('[data-tag]').remove();
+    });
+    form.addEventListener('submit', function () { addTag(input.value); });
+  });
+
   // Collection is global state, shown above the interest tabs. Polling keeps
   // that small status current; only an empty home page reloads after a run, so
   // reading and forms are never interrupted.
@@ -171,6 +228,16 @@
       var hidden = fields.dataset.fields !== type;
       fields.hidden = hidden;
       fields.querySelectorAll('input, select, textarea').forEach(function (field) {
+        field.disabled = hidden;
+      });
+    });
+  }
+
+  function toggleLinkwardenAuth() {
+    document.querySelectorAll('[data-linkwarden-fields]').forEach(function (fields) {
+      var hidden = fields.dataset.linkwardenFields !== linkwardenAuth.value;
+      fields.hidden = hidden;
+      fields.querySelectorAll('input').forEach(function (field) {
         field.disabled = hidden;
       });
     });

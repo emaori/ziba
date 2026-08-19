@@ -8,6 +8,7 @@ import (
 
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
+	"github.com/emaori/ziba/internal/linkwarden"
 )
 
 func TestStringSliceStoresOmittedValuesAsEmptyArray(t *testing.T) {
@@ -65,6 +66,26 @@ func TestNewsletterCredentialsRoundTripInternally(t *testing.T) {
 	}
 	if got.Sources[0].Newsletter.Username != "reader" || got.Sources[0].Newsletter.Password != "secret" {
 		t.Error("newsletter credentials were not retained for collection")
+	}
+}
+
+func TestLinkwardenSecretsArePreservedWhenFormsLeaveThemBlank(t *testing.T) {
+	db := testStore(t)
+	ctx := context.Background()
+	first := linkwarden.Configuration{Enabled: true, URL: "https://links.example", Auth: linkwarden.AuthCredentials, Username: "reader", Password: "secret-password"}
+	if err := db.SaveLinkwarden(ctx, first); err != nil {
+		t.Fatalf("SaveLinkwarden: %v", err)
+	}
+	first.Password = ""
+	if err := db.SaveLinkwarden(ctx, first); err != nil {
+		t.Fatalf("SaveLinkwarden blank password: %v", err)
+	}
+	got, err := db.Configuration(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Linkwarden.Password != "secret-password" || got.Linkwarden.Username != "reader" {
+		t.Errorf("Linkwarden configuration = %+v", got.Linkwarden)
 	}
 }
 

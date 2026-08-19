@@ -4,7 +4,7 @@
       Last 24 hours
       <span class="subtitle">{{len .Digest.Articles}} articles, most relevant first</span>
     </h1>
-    {{range .Digest.Articles}}{{template "card" .}}{{end}}
+    {{range .Digest.Articles}}{{template "card" (card . $.LinkwardenEnabled $.ReturnTo)}}{{end}}
     <p class="note">
       Browse by subject with the tabs above, or look at
       <a href="/day">any day</a> — including what you have already read.

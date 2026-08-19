@@ -62,7 +62,10 @@ func testStore(t *testing.T) *Store {
 	}
 	if _, err := db.pool.Exec(ctx,
 		`TRUNCATE digest_articles, digests, articles, raw_items, sources, interests RESTART IDENTITY CASCADE;
-		 UPDATE app_settings SET configured=FALSE, threshold=60, updated_at=now() WHERE singleton`); err != nil {
+		 UPDATE app_settings SET configured=FALSE, threshold=60,
+		 linkwarden_enabled=FALSE, linkwarden_url='', linkwarden_auth='credentials',
+		 linkwarden_username='', linkwarden_password='', linkwarden_token='',
+		 updated_at=now() WHERE singleton`); err != nil {
 		t.Fatalf("empty the test database: %v", err)
 	}
 	return db

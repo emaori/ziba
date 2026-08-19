@@ -478,6 +478,15 @@ code {
 .settings-form .status-fieldset { margin: 1.4rem 0; background: color-mix(in srgb, var(--accent) 5%, var(--card)); }
 .help { margin: 0.25rem 0 0.8rem; color: var(--ink-soft); font: 0.85rem/1.45 system-ui, sans-serif; }
 .form-error { padding: 0.8rem 1rem; border-left: 3px solid #b33; background: var(--card); color: #b33; font-family: system-ui, sans-serif; }
+.form-success { padding: 0.8rem 1rem; border-left: 3px solid #28643b; background: var(--card); color: #28643b; font-family: system-ui, sans-serif; }
+.integration-form { max-width: 42rem; margin: 1.5rem auto 0; }
+.tag-combobox { padding: 0.55rem; background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; }
+.tag-combobox > input { width: 100%; margin: 0; border: 0; background: transparent; outline: none; }
+.selected-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.selected-tags:not(:empty) { margin-bottom: 0.5rem; }
+.selected-tag { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.35rem 0.2rem 0.55rem; color: var(--ink); background: var(--card); border: 1px solid var(--rule); border-radius: 999px; font: 0.78rem/1.4 system-ui, sans-serif; }
+.selected-tag button { width: 1.35rem; height: 1.35rem; padding: 0; color: var(--ink-soft); background: transparent; border: 0; border-radius: 50%; font: inherit; cursor: pointer; }
+.selected-tag button:hover, .selected-tag button:focus-visible { color: var(--ink); background: var(--rule); }
 .interest-row { display: grid; grid-template-columns: 2fr 0.7fr 2fr; gap: 0 0.8rem; padding: 0 0 1rem; margin: 0 0 1rem; border-bottom: 1px solid var(--rule); }
 .interest-row .wide { grid-column: 1 / -1; }
 .interest-row button { justify-self: start; }

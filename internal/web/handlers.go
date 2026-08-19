@@ -17,6 +17,7 @@ import (
 
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
+	"github.com/emaori/ziba/internal/linkwarden"
 	"github.com/emaori/ziba/internal/store"
 )
 
@@ -55,6 +56,7 @@ type configurationStore interface {
 	SaveSchedule(ctx context.Context, schedule config.CollectionSchedule) error
 	FinishSetup(ctx context.Context, interests config.Interests, sources []domain.Source, collectNow bool) error
 	SaveConfiguration(ctx context.Context, interests config.Interests, sources []domain.Source) error
+	SaveLinkwarden(ctx context.Context, configuration linkwarden.Configuration) error
 }
 
 type collectionStateStore interface {
@@ -79,38 +81,50 @@ type page struct {
 	Library  store.ArticleStats
 	Unknown  int
 
-	Tokens              store.TokenTally
-	TokensByInterest    []store.TokenTally
-	TokensByDay         []store.TokenTally
-	Backlogs            []store.Backlog
-	Offset              int
-	PageSize            int
-	Threshold           domain.RelevanceScore
-	Configured          bool
-	Settings            store.Configuration
-	Source              store.SourceInput
-	InterestForm        config.Interest
-	InterestIndex       int
-	EditingInterest     bool
-	EditingSource       bool
-	Error               string
-	SetupMode           bool
-	SettingsSection     string
-	FormAction          string
-	CancelURL           string
-	InterestPresets     []interestPreset
-	SourcePresets       []sourcePreset
-	RemoveName          string
-	RemoveKind          string
-	RemoveAction        string
-	ScheduleEvery       string
-	ScheduleAt          string
-	ScheduleAmount      int
-	ScheduleUnit        string
-	CollectionRunning   bool
-	CollectionCompleted uint64
-	NextCollection      time.Time
-	ScheduleDisabled    bool
+	Tokens                 store.TokenTally
+	TokensByInterest       []store.TokenTally
+	TokensByDay            []store.TokenTally
+	Backlogs               []store.Backlog
+	Offset                 int
+	PageSize               int
+	Threshold              domain.RelevanceScore
+	Configured             bool
+	Settings               store.Configuration
+	Source                 store.SourceInput
+	InterestForm           config.Interest
+	InterestIndex          int
+	EditingInterest        bool
+	EditingSource          bool
+	Error                  string
+	SetupMode              bool
+	SettingsSection        string
+	FormAction             string
+	CancelURL              string
+	InterestPresets        []interestPreset
+	SourcePresets          []sourcePreset
+	RemoveName             string
+	RemoveKind             string
+	RemoveAction           string
+	ScheduleEvery          string
+	ScheduleAt             string
+	ScheduleAmount         int
+	ScheduleUnit           string
+	CollectionRunning      bool
+	CollectionCompleted    uint64
+	NextCollection         time.Time
+	ScheduleDisabled       bool
+	LinkwardenEnabled      bool
+	LinkwardenForm         linkwarden.Configuration
+	LinkwardenCollections  []linkwarden.Collection
+	LinkwardenTags         []linkwarden.Tag
+	LinkwardenName         string
+	LinkwardenDescription  string
+	LinkwardenCollectionID int64
+	LinkwardenSelectedTags map[int64]bool
+	LinkwardenNewTags      string
+	LinkwardenTagNames     []string
+	ReturnTo               string
+	Success                string
 }
 
 // handleInterest lists one interest's unread articles, most relevant first.
@@ -208,7 +222,12 @@ func (s *Server) handleArticle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.render(w, r, "article.html", &page{Title: article.Title, Article: article})
+	cfg, configErr := s.currentConfiguration(r)
+	if configErr != nil {
+		s.fail(w, r, configErr)
+		return
+	}
+	s.render(w, r, "article.html", &page{Title: article.Title, Article: article, LinkwardenEnabled: cfg.Linkwarden.Enabled})
 }
 
 // handleArchive marks an article read, or puts it back.
@@ -403,6 +422,10 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, dat
 			return
 		}
 		data.ScheduleDisabled = cfg.Schedule.Every <= 0
+		data.LinkwardenEnabled = cfg.Linkwarden.Enabled
+		if data.ReturnTo == "" {
+			data.ReturnTo = r.URL.RequestURI()
+		}
 		if !data.ScheduleDisabled {
 			data.NextCollection = cfg.Schedule.At.NextEvery(time.Now(), cfg.Schedule.Every)
 		}

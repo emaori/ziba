@@ -11,6 +11,7 @@ import (
 
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
+	"github.com/emaori/ziba/internal/linkwarden"
 	"github.com/emaori/ziba/internal/store"
 )
 
@@ -160,9 +161,55 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		tmpl = "settings_sources.html"
 	} else if section == "schedule" {
 		tmpl = "settings_schedule.html"
+	} else if section == "linkwarden" {
+		tmpl = "settings_linkwarden.html"
 	}
 	amount, unit := scheduleParts(cfg.Schedule.Every)
-	s.render(w, r, tmpl, &page{Title: "Settings", Settings: cfg, SettingsSection: section, InterestPresets: interestPresets, SourcePresets: sourcePresets, ScheduleAmount: amount, ScheduleUnit: unit, ScheduleAt: cfg.Schedule.At.String()})
+	form := cfg.Linkwarden
+	form.Password, form.Token = "", ""
+	s.render(w, r, tmpl, &page{Title: "Settings", Settings: cfg, SettingsSection: section, LinkwardenForm: form, InterestPresets: interestPresets, SourcePresets: sourcePresets, ScheduleAmount: amount, ScheduleUnit: unit, ScheduleAt: cfg.Schedule.At.String()})
+}
+
+func (s *Server) handleSettingsLinkwarden(w http.ResponseWriter, r *http.Request) {
+	if !s.validCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	cs, ok := s.configStore()
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	stored, err := cs.Configuration(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	in := linkwarden.Configuration{
+		Enabled: r.Form.Get("enabled") == "on", URL: r.Form.Get("url"),
+		Auth: linkwarden.AuthMethod(r.Form.Get("auth")), Username: r.Form.Get("username"),
+		Password: r.Form.Get("password"), Token: r.Form.Get("token"),
+	}
+	if in.Password == "" {
+		in.Password = stored.Linkwarden.Password
+	}
+	if in.Token == "" {
+		in.Token = stored.Linkwarden.Token
+	}
+	if err = in.Validate(); err == nil && in.Enabled {
+		s.linkwarden.Configure(in)
+		err = s.linkwarden.Test(r.Context())
+	}
+	if err == nil {
+		err = cs.SaveLinkwarden(r.Context(), in)
+	}
+	if err != nil {
+		in.Password, in.Token = "", ""
+		stored.Linkwarden = in
+		s.render(w, r, "settings_linkwarden.html", &page{Title: "Settings", Settings: stored, SettingsSection: "linkwarden", LinkwardenForm: in, Error: err.Error()})
+		return
+	}
+	http.Redirect(w, r, "/settings/linkwarden?saved=1", http.StatusSeeOther)
 }
 
 func (s *Server) handleSettingsSchedule(w http.ResponseWriter, r *http.Request) {
