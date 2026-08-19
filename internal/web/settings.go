@@ -16,8 +16,7 @@ import (
 )
 
 func (s *Server) configStore() (configurationStore, bool) {
-	cs, ok := s.store.(configurationStore)
-	return cs, ok
+	return s.configuration, s.configuration != nil
 }
 func (s *Server) currentConfiguration(r *http.Request) (store.Configuration, error) {
 	if cs, ok := s.configStore(); ok {
@@ -69,7 +68,7 @@ func (s *Server) handleSetupInterests(w http.ResponseWriter, r *http.Request) {
 	if cfg.Interests.Threshold == 0 {
 		cfg.Interests.Threshold = 60
 	}
-	s.render(w, r, "setup_interests.html", &page{Title: "Welcome", SetupMode: true, Settings: cfg, InterestPresets: interestPresets})
+	s.render(w, r, "setup_interests.html", &settingsPage{layoutData: layoutData{Title: "Welcome", SetupMode: true}, Settings: cfg, InterestPresets: interestPresets})
 }
 func (s *Server) handleSetupSources(w http.ResponseWriter, r *http.Request) {
 	cs, ok := s.configStore()
@@ -92,13 +91,13 @@ func (s *Server) handleSetupSources(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if len(cfg.Sources) == 0 {
-			s.render(w, r, "setup_sources.html", &page{Title: "Sources", SetupMode: true, Settings: cfg, SourcePresets: sourcePresets, Error: "add at least one source"})
+			s.render(w, r, "setup_sources.html", &settingsPage{layoutData: layoutData{Title: "Sources", SetupMode: true}, Settings: cfg, SourcePresets: sourcePresets, Error: "add at least one source"})
 			return
 		}
 		http.Redirect(w, r, "/setup/schedule", http.StatusSeeOther)
 		return
 	}
-	s.render(w, r, "setup_sources.html", &page{Title: "Sources", SetupMode: true, Settings: cfg, SourcePresets: sourcePresets})
+	s.render(w, r, "setup_sources.html", &settingsPage{layoutData: layoutData{Title: "Sources", SetupMode: true}, Settings: cfg, SourcePresets: sourcePresets})
 }
 
 func (s *Server) handleSetupSchedule(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +120,7 @@ func (s *Server) handleSetupSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	amount, unit := scheduleParts(cfg.Schedule.Every)
-	data := &page{Title: "Schedule", SetupMode: true, Settings: cfg, ScheduleAmount: amount, ScheduleUnit: unit, ScheduleAt: cfg.Schedule.At.String()}
+	data := &settingsPage{layoutData: layoutData{Title: "Schedule", SetupMode: true}, Settings: cfg, ScheduleAmount: amount, ScheduleUnit: unit, ScheduleAt: cfg.Schedule.At.String()}
 	if r.Method == http.MethodPost {
 		if !s.validCSRF(r) {
 			http.Error(w, "invalid CSRF token", http.StatusForbidden)
@@ -168,7 +167,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	var feedback store.ScoreFeedbackSummary
 	if section == "scoring" {
-		feedback, err = s.store.ScoreFeedbackSummary(r.Context())
+		feedback, err = s.feedback.ScoreFeedbackSummary(r.Context())
 		if err != nil {
 			s.fail(w, r, err)
 			return
@@ -177,11 +176,11 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	amount, unit := scheduleParts(cfg.Schedule.Every)
 	form := cfg.Linkwarden
 	form.Password, form.Token = "", ""
-	s.render(w, r, tmpl, &page{Title: "Settings", Settings: cfg, SettingsSection: section, LinkwardenForm: form, InterestPresets: interestPresets, SourcePresets: sourcePresets, ScheduleAmount: amount, ScheduleUnit: unit, ScheduleAt: cfg.Schedule.At.String(), ScoreFeedbackSummary: feedback, Success: r.URL.Query().Get("success")})
+	s.render(w, r, tmpl, &settingsPage{layoutData: layoutData{Title: "Settings"}, Settings: cfg, SettingsSection: section, LinkwardenForm: form, InterestPresets: interestPresets, SourcePresets: sourcePresets, ScheduleAmount: amount, ScheduleUnit: unit, ScheduleAt: cfg.Schedule.At.String(), ScoreFeedbackSummary: feedback, Success: r.URL.Query().Get("success")})
 }
 
 func (s *Server) handleScoringReset(w http.ResponseWriter, r *http.Request) {
-	summary, err := s.store.ScoreFeedbackSummary(r.Context())
+	summary, err := s.feedback.ScoreFeedbackSummary(r.Context())
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -191,14 +190,14 @@ func (s *Server) handleScoringReset(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid CSRF token", http.StatusForbidden)
 			return
 		}
-		if err := s.store.ResetPersonalizedScoring(r.Context()); err != nil {
+		if err := s.feedback.ResetPersonalizedScoring(r.Context()); err != nil {
 			s.fail(w, r, err)
 			return
 		}
 		http.Redirect(w, r, "/settings/scoring?success=reset", http.StatusSeeOther)
 		return
 	}
-	s.render(w, r, "reset_scoring.html", &page{Title: "Reset personalized scoring", SettingsSection: "scoring", ScoreFeedbackSummary: summary})
+	s.render(w, r, "reset_scoring.html", &settingsPage{layoutData: layoutData{Title: "Reset personalized scoring"}, SettingsSection: "scoring", ScoreFeedbackSummary: summary})
 }
 
 func (s *Server) handleSettingsLinkwarden(w http.ResponseWriter, r *http.Request) {
@@ -237,7 +236,7 @@ func (s *Server) handleSettingsLinkwarden(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		in.Password, in.Token = "", ""
 		stored.Linkwarden = in
-		s.render(w, r, "settings_linkwarden.html", &page{Title: "Settings", Settings: stored, SettingsSection: "linkwarden", LinkwardenForm: in, Error: err.Error()})
+		s.render(w, r, "settings_linkwarden.html", &settingsPage{layoutData: layoutData{Title: "Settings"}, Settings: stored, SettingsSection: "linkwarden", LinkwardenForm: in, Error: err.Error()})
 		return
 	}
 	http.Redirect(w, r, "/settings/linkwarden?saved=1", http.StatusSeeOther)
@@ -264,7 +263,7 @@ func (s *Server) handleSettingsSchedule(w http.ResponseWriter, r *http.Request) 
 	}
 	if err != nil {
 		amount, _ := strconv.Atoi(r.Form.Get("collect_every_amount"))
-		s.render(w, r, "settings_schedule.html", &page{Title: "Settings", Settings: cfg, SettingsSection: "schedule", ScheduleAmount: amount, ScheduleUnit: r.Form.Get("collect_every_unit"), ScheduleAt: r.Form.Get("collect_at"), Error: err.Error()})
+		s.render(w, r, "settings_schedule.html", &settingsPage{layoutData: layoutData{Title: "Settings"}, Settings: cfg, SettingsSection: "schedule", ScheduleAmount: amount, ScheduleUnit: r.Form.Get("collect_every_unit"), ScheduleAt: r.Form.Get("collect_at"), Error: err.Error()})
 		return
 	}
 	http.Redirect(w, r, "/settings/schedule", http.StatusSeeOther)
@@ -294,7 +293,7 @@ func (s *Server) handleInterestForm(w http.ResponseWriter, r *http.Request) {
 	if id >= 0 {
 		interest = cfg.Interests.Topics[id]
 	}
-	data := &page{Title: "Interest", SetupMode: setup, Settings: cfg, SettingsSection: "interests", InterestForm: interest, InterestIndex: id, EditingInterest: id >= 0, CancelURL: modeURL(setup, "/setup/interests", "/settings/interests")}
+	data := &settingsPage{layoutData: layoutData{Title: "Interest", SetupMode: setup}, Settings: cfg, SettingsSection: "interests", InterestForm: interest, InterestIndex: id, EditingInterest: id >= 0, CancelURL: modeURL(setup, "/setup/interests", "/settings/interests")}
 	if r.Method == http.MethodPost {
 		if !s.validCSRF(r) {
 			http.Error(w, "invalid CSRF token", http.StatusForbidden)
@@ -393,7 +392,7 @@ func (s *Server) handleSetupInterestRemove(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if r.Method == http.MethodGet {
-		s.render(w, r, "remove_setup.html", &page{Title: "Remove interest", SetupMode: true, RemoveName: cfg.Interests.Topics[id].Topic, RemoveKind: "interest", RemoveAction: r.URL.Path, CancelURL: "/setup/interests"})
+		s.render(w, r, "remove_setup.html", &settingsPage{layoutData: layoutData{Title: "Remove interest", SetupMode: true}, RemoveName: cfg.Interests.Topics[id].Topic, RemoveKind: "interest", RemoveAction: r.URL.Path, CancelURL: "/setup/interests"})
 		return
 	}
 	if !s.validCSRF(r) {
@@ -401,7 +400,7 @@ func (s *Server) handleSetupInterestRemove(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if len(cfg.Interests.Topics) == 1 {
-		s.render(w, r, "setup_interests.html", &page{Title: "Welcome", SetupMode: true, Settings: cfg, InterestPresets: interestPresets, Error: "add another interest before removing the only one"})
+		s.render(w, r, "setup_interests.html", &settingsPage{layoutData: layoutData{Title: "Welcome", SetupMode: true}, Settings: cfg, InterestPresets: interestPresets, Error: "add another interest before removing the only one"})
 		return
 	}
 	cfg.Interests.Topics = append(cfg.Interests.Topics[:id], cfg.Interests.Topics[id+1:]...)
@@ -439,7 +438,7 @@ func (s *Server) handleSetupSourceRemove(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if r.Method == http.MethodGet {
-		s.render(w, r, "remove_setup.html", &page{Title: "Remove source", SetupMode: true, RemoveName: name, RemoveKind: "source", RemoveAction: r.URL.Path, CancelURL: "/setup/sources"})
+		s.render(w, r, "remove_setup.html", &settingsPage{layoutData: layoutData{Title: "Remove source", SetupMode: true}, RemoveName: name, RemoveKind: "source", RemoveAction: r.URL.Path, CancelURL: "/setup/sources"})
 		return
 	}
 	if !s.validCSRF(r) {
@@ -474,7 +473,7 @@ func (s *Server) handleThreshold(w http.ResponseWriter, r *http.Request) {
 		err = cs.SaveConfiguration(r.Context(), cfg.Interests, cfg.Sources)
 	}
 	if err != nil {
-		s.render(w, r, "settings_interests.html", &page{Title: "Settings", Settings: cfg, SettingsSection: "interests", InterestPresets: interestPresets, Error: err.Error()})
+		s.render(w, r, "settings_interests.html", &settingsPage{layoutData: layoutData{Title: "Settings"}, Settings: cfg, SettingsSection: "interests", InterestPresets: interestPresets, Error: err.Error()})
 		return
 	}
 	http.Redirect(w, r, "/settings/interests", http.StatusSeeOther)
@@ -507,7 +506,7 @@ func (s *Server) handleSource(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cancel := modeURL(setup, "/setup/sources", "/settings/sources")
-	data := &page{Title: "Source", SetupMode: setup, Settings: cfg, SettingsSection: "sources", Source: input, EditingSource: existing != nil, CancelURL: cancel}
+	data := &settingsPage{layoutData: layoutData{Title: "Source", SetupMode: setup}, Settings: cfg, SettingsSection: "sources", Source: input, EditingSource: existing != nil, CancelURL: cancel}
 	if r.Method == http.MethodPost {
 		if !s.validCSRF(r) {
 			http.Error(w, "invalid CSRF token", http.StatusForbidden)

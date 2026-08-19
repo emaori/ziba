@@ -122,9 +122,13 @@ func shortDate(t time.Time) string {
 
 // Server holds everything the handlers need.
 type Server struct {
-	store      Store
-	csrfToken  string
-	linkwarden linkwardenClient
+	reading         readingStore
+	feedback        feedbackStore
+	statistics      statisticsStore
+	configuration   configurationStore
+	collectionState collectionStateStore
+	csrfToken       string
+	linkwarden      linkwardenClient
 
 	// interests drive the tab bar and are the only values the interest routes
 	// accept. They come from the configuration file rather than from whatever
@@ -194,13 +198,19 @@ func newServer(store Store, interests config.Interests, csrfToken string) (*Serv
 		names = append(names, topic.Topic)
 	}
 
+	configuration, _ := any(store).(configurationStore)
+	collectionState, _ := any(store).(collectionStateStore)
 	return &Server{
-		store:      store,
-		csrfToken:  csrfToken,
-		linkwarden: linkwarden.NewClient(),
-		interests:  names,
-		threshold:  domain.RelevanceScore(interests.Threshold),
-		pages:      pages,
+		reading:         store,
+		feedback:        store,
+		statistics:      store,
+		configuration:   configuration,
+		collectionState: collectionState,
+		csrfToken:       csrfToken,
+		linkwarden:      linkwarden.NewClient(),
+		interests:       names,
+		threshold:       domain.RelevanceScore(interests.Threshold),
+		pages:           pages,
 	}, nil
 }
 
