@@ -253,6 +253,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /settings/sources", s.handleSettings)
 	mux.HandleFunc("GET /settings/schedule", s.handleSettings)
 	mux.HandleFunc("GET /settings/linkwarden", s.handleSettings)
+	mux.HandleFunc("GET /settings/scoring", s.handleSettings)
+	mux.HandleFunc("GET /settings/scoring/reset", s.handleScoringReset)
+	mux.HandleFunc("POST /settings/scoring/reset", s.handleScoringReset)
 	mux.HandleFunc("POST /settings/schedule", s.handleSettingsSchedule)
 	mux.HandleFunc("POST /settings/linkwarden", s.handleSettingsLinkwarden)
 	mux.HandleFunc("GET /settings/interest/new", s.handleInterestForm)
@@ -269,7 +272,9 @@ func (s *Server) Handler() http.Handler {
 
 	// Marking read changes state, so it is a post and never a link: a crawler
 	// or a prefetching browser must not be able to empty the reading list.
-	mux.HandleFunc("POST /article/{id}/{action}", s.handleArchive)
+	mux.HandleFunc("POST /article/{id}/archive", s.handleArchive)
+	mux.HandleFunc("POST /article/{id}/unarchive", s.handleArchive)
+	mux.HandleFunc("POST /article/{id}/feedback", s.handleScoreFeedback)
 
 	mux.Handle("GET /static/", noCache(http.FileServerFS(assets)))
 

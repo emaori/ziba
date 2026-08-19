@@ -68,21 +68,33 @@ type Analyzer interface {
 	Summarizer
 }
 
+// ScoreCalibrator personalizes a provider score from local feedback. It is
+// deliberately independent of Analyzer: no feedback is sent to an AI vendor.
+type ScoreCalibrator interface {
+	CalibrateScore(ctx context.Context, categories []string, base domain.RelevanceScore) (domain.RelevanceScore, error)
+}
+
 // Pipeline runs the three stages in order.
 type Pipeline struct {
-	analyzer  Analyzer
-	threshold domain.RelevanceScore
-	log       *slog.Logger
+	analyzer   Analyzer
+	threshold  domain.RelevanceScore
+	log        *slog.Logger
+	calibrator ScoreCalibrator
 }
 
 // New builds a pipeline. Articles scoring below threshold are not summarized,
 // which is where most of the cost is saved: the expensive model only ever sees
 // what is worth reading.
 func New(analyzer Analyzer, threshold int, log *slog.Logger) *Pipeline {
+	return NewPersonalized(analyzer, threshold, log, nil)
+}
+
+func NewPersonalized(analyzer Analyzer, threshold int, log *slog.Logger, calibrator ScoreCalibrator) *Pipeline {
 	return &Pipeline{
-		analyzer:  analyzer,
-		threshold: domain.RelevanceScore(threshold),
-		log:       log,
+		analyzer:   analyzer,
+		threshold:  domain.RelevanceScore(threshold),
+		log:        log,
+		calibrator: calibrator,
 	}
 }
 
@@ -95,6 +107,13 @@ func (p *Pipeline) Analyze(ctx context.Context, a domain.Article, declared []str
 	assessment, err := p.analyzer.Assess(ctx, a, declared)
 	if err != nil {
 		return a, fmt.Errorf("assess %s: %w", a.URL, err)
+	}
+	a.BaseScore = assessment.Score
+	if p.calibrator != nil {
+		assessment.Score, err = p.calibrator.CalibrateScore(ctx, assessment.Categories, a.BaseScore)
+		if err != nil {
+			return a, fmt.Errorf("calibrate score for %s: %w", a.URL, err)
+		}
 	}
 
 	a.Categories = assessment.Categories

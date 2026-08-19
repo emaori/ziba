@@ -210,6 +210,15 @@ type RawItem struct {
 // interests, from 0 to 100.
 type RelevanceScore int
 
+// ScoreFeedback says whether the reader believes the model scored an article
+// too low or too high. It corrects ranking, not whether the article was liked.
+type ScoreFeedback string
+
+const (
+	FeedbackHigher ScoreFeedback = "higher"
+	FeedbackLower  ScoreFeedback = "lower"
+)
+
 // ContentQuality records whether the text retrieved for an article can support
 // an ordinary summary. It is deliberately separate from Summary: display code
 // must not guess reliability from prose written by a model.
@@ -250,8 +259,12 @@ type Article struct {
 	ContentQuality       ContentQuality
 	ContentQualityReason string
 	Score                RelevanceScore
-	ScoreReason          string
-	AnalyzedAt           time.Time
+	// BaseScore is the provider's untouched answer. Score may include the local
+	// personalization learned from feedback on earlier articles.
+	BaseScore     RelevanceScore
+	ScoreReason   string
+	ScoreFeedback ScoreFeedback
+	AnalyzedAt    time.Time
 
 	// InputTokens and OutputTokens are what the analysis cost, summed over the
 	// assessment and the summary. Zero for an article analyzed offline, which
@@ -274,6 +287,9 @@ func (a Article) Archived() bool { return !a.ArchivedAt.IsZero() }
 func (a Article) LimitedOverview() bool {
 	return a.Summary != "" && a.ContentQuality != "" && a.ContentQuality != ContentComplete
 }
+
+// PersonalizedScore reports whether local feedback moved the provider's score.
+func (a Article) PersonalizedScore() bool { return a.BaseScore != 0 && a.Score != a.BaseScore }
 
 // HasReadableText reports whether the stored body should be shown to a reader.
 // Mismatched text belongs to another page or an index and is more misleading

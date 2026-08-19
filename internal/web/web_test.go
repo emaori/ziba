@@ -31,7 +31,23 @@ type fakeStore struct {
 	articles []domain.Article
 	missing  bool
 
-	archivedCalls []bool
+	archivedCalls   []bool
+	feedback        domain.ScoreFeedback
+	feedbackSummary store.ScoreFeedbackSummary
+	resetScoring    bool
+}
+
+func (f *fakeStore) SetScoreFeedback(_ context.Context, _ int64, feedback domain.ScoreFeedback) error {
+	f.feedback = feedback
+	return nil
+}
+func (f *fakeStore) ScoreFeedbackSummary(context.Context) (store.ScoreFeedbackSummary, error) {
+	return f.feedbackSummary, nil
+}
+func (f *fakeStore) ResetPersonalizedScoring(context.Context) error {
+	f.resetScoring = true
+	f.feedbackSummary = store.ScoreFeedbackSummary{}
+	return nil
 }
 
 type configurableFakeStore struct {
@@ -754,6 +770,123 @@ func TestArchivingIsNotReachableByGet(t *testing.T) {
 
 	if code, _ := get(t, handler, "/article/42/archive"); code == http.StatusOK {
 		t.Error("a GET marked an article read; it must only answer POST")
+	}
+}
+
+func TestScoreFeedbackCanBeSavedAndCleared(t *testing.T) {
+	fake := &fakeStore{article: sampleArticle()}
+	handler := newTestServer(t, fake)
+	for _, value := range []string{"higher", ""} {
+		form := url.Values{"csrf_token": {testCSRFToken}, "feedback": {value}}
+		req := httptest.NewRequest(http.MethodPost, "/article/42/feedback", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Referer", "/archive")
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != http.StatusSeeOther {
+			t.Fatalf("feedback %q status = %d, want 303", value, rec.Code)
+		}
+		if string(fake.feedback) != value {
+			t.Fatalf("saved feedback = %q, want %q", fake.feedback, value)
+		}
+	}
+}
+
+func TestScoreFeedbackValidationAndCSRF(t *testing.T) {
+	for _, tt := range []struct {
+		name, token, feedback string
+		want                  int
+	}{
+		{"missing token", "", "higher", http.StatusForbidden},
+		{"wrong token", "wrong", "higher", http.StatusForbidden},
+		{"unknown direction", testCSRFToken, "excellent", http.StatusBadRequest},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &fakeStore{article: sampleArticle()}
+			handler := newTestServer(t, fake)
+			form := url.Values{"csrf_token": {tt.token}, "feedback": {tt.feedback}}
+			req := httptest.NewRequest(http.MethodPost, "/article/42/feedback", strings.NewReader(form.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+			if rec.Code != tt.want {
+				t.Fatalf("status = %d, want %d", rec.Code, tt.want)
+			}
+			if fake.feedback != "" {
+				t.Fatalf("invalid request saved %q", fake.feedback)
+			}
+		})
+	}
+}
+
+func TestScoreFeedbackAsyncAndSelectedRendering(t *testing.T) {
+	article := sampleArticle()
+	article.ScoreFeedback = domain.FeedbackHigher
+	fake := &fakeStore{article: article, digest: domain.Digest{Articles: []domain.Article{article}}}
+	handler := newTestServer(t, fake)
+	code, body := get(t, handler, "/")
+	if code != http.StatusOK {
+		t.Fatalf("GET status = %d", code)
+	}
+	if !strings.Contains(body, `data-choice="higher"`) || !strings.Contains(body, `aria-pressed="true"`) || !strings.Contains(body, `✓ ↑ Should be higher`) {
+		t.Fatal("selected higher feedback is not rendered accessibly")
+	}
+	form := url.Values{"csrf_token": {testCSRFToken}, "feedback": {"lower"}}
+	req := httptest.NewRequest(http.MethodPost, "/article/42/feedback", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set(asyncHeader, "1")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent || fake.feedback != domain.FeedbackLower {
+		t.Fatalf("async status=%d feedback=%q", rec.Code, fake.feedback)
+	}
+}
+
+func TestScoringSettingsAndConfirmedReset(t *testing.T) {
+	fake := &fakeStore{feedbackSummary: store.ScoreFeedbackSummary{Count: 4, Active: true}}
+	handler := newTestServer(t, fake)
+	code, body := get(t, handler, "/settings/scoring")
+	if code != http.StatusOK || !strings.Contains(body, "Personalized scoring is active, based on 4 articles") {
+		t.Fatalf("settings status=%d body missing active state", code)
+	}
+	code, body = get(t, handler, "/settings/scoring/reset")
+	if code != http.StatusOK || !strings.Contains(body, "Reset personalized scoring?") {
+		t.Fatalf("reset confirmation status=%d or missing copy", code)
+	}
+	rec := post(t, handler, "/settings/scoring/reset", "/settings/scoring/reset")
+	if rec.Code != http.StatusSeeOther || !fake.resetScoring {
+		t.Fatalf("reset status=%d reset=%v", rec.Code, fake.resetScoring)
+	}
+}
+
+func TestScoringSettingsLearningStates(t *testing.T) {
+	for _, tt := range []struct {
+		count  int
+		active bool
+		text   string
+	}{
+		{0, false, "No feedback yet"},
+		{2, false, "Learning from 2 articles"},
+		{3, true, "Personalized scoring is active, based on 3 articles"},
+	} {
+		handler := newTestServer(t, &fakeStore{feedbackSummary: store.ScoreFeedbackSummary{Count: tt.count, Active: tt.active}})
+		code, body := get(t, handler, "/settings/scoring")
+		if code != http.StatusOK || !strings.Contains(body, tt.text) {
+			t.Errorf("count %d: status=%d missing %q", tt.count, code, tt.text)
+		}
+	}
+}
+
+func TestScoringResetRequiresCSRF(t *testing.T) {
+	fake := &fakeStore{feedbackSummary: store.ScoreFeedbackSummary{Count: 3, Active: true}}
+	handler := newTestServer(t, fake)
+	form := url.Values{"csrf_token": {"wrong"}}
+	req := httptest.NewRequest(http.MethodPost, "/settings/scoring/reset", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden || fake.resetScoring {
+		t.Fatalf("status=%d reset=%v", rec.Code, fake.resetScoring)
 	}
 }
 

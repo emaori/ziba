@@ -62,6 +62,43 @@
     });
   });
 
+  // Score feedback also works as ordinary POST-and-redirect forms. Enhance it
+  // in place so correcting several cards does not disturb reading position.
+  document.addEventListener('submit', function (event) {
+    var form = event.target;
+    if (!form.classList.contains('feedback-form')) return;
+    event.preventDefault();
+    var group = form.closest('[data-score-feedback]');
+    var desired = form.querySelector('input[name=feedback]').value;
+    group.querySelectorAll('button').forEach(function (button) { button.disabled = true; });
+    fetch(form.action, {
+      method: 'POST', body: new FormData(form),
+      headers: { 'X-Ziba-Async': '1' }, credentials: 'same-origin'
+    }).then(function (response) {
+      if (!response.ok) throw new Error('unexpected status ' + response.status);
+      document.querySelectorAll('[data-score-feedback="' + group.dataset.scoreFeedback + '"]').forEach(function (other) {
+        other.querySelectorAll('.feedback-form').forEach(function (choiceForm) {
+          var choice = choiceForm.dataset.choice;
+          var selected = choice === desired;
+          var button = choiceForm.querySelector('button');
+          button.disabled = false;
+          button.classList.toggle('selected', selected);
+          button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+          button.textContent = (selected ? '✓ ' : '') + (choice === 'higher' ? '↑ Should be higher' : '↓ Should be lower');
+          choiceForm.querySelector('input[name=feedback]').value = selected ? '' : choice;
+        });
+        var status = other.querySelector('.feedback-status');
+        status.textContent = desired ? 'Feedback saved. This will guide scores for new articles.' : 'Feedback removed.';
+      });
+    }).catch(function () {
+      group.querySelectorAll('button').forEach(function (button) { button.disabled = false; });
+      var status = group.querySelector('.feedback-status');
+      status.classList.remove('visually-hidden');
+      status.setAttribute('role', 'alert');
+      status.textContent = 'Could not save feedback. Try again.';
+    });
+  });
+
   // Once the script has intercepted a submission it must never submit the same
   // form again: the request may have reached the server even when its response
   // was lost. Retrying automatically could therefore perform the action twice

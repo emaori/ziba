@@ -68,7 +68,7 @@ func New(cfg config.Config, sources []domain.Source, interests config.Interests,
 
 	var p *pipeline.Pipeline
 	if opts.Analyzer != nil {
-		p = pipeline.New(opts.Analyzer, interests.Threshold, log)
+		p = pipeline.NewPersonalized(opts.Analyzer, interests.Threshold, log, db)
 	}
 
 	return &Runner{
@@ -309,9 +309,12 @@ func (r *Runner) analyzeBatch(ctx context.Context, batch int, before time.Time) 
 			return nil
 		})
 	}
-	_ = group.Wait()
+	groupErr := group.Wait()
 	if ctx.Err() != nil {
 		return 0, 0, failed, ctx.Err()
+	}
+	if groupErr != nil {
+		return 0, 0, failed, groupErr
 	}
 	if len(recordErrs) > 0 {
 		return 0, 0, failed, errors.Join(recordErrs...)

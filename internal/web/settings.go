@@ -163,11 +163,42 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		tmpl = "settings_schedule.html"
 	} else if section == "linkwarden" {
 		tmpl = "settings_linkwarden.html"
+	} else if section == "scoring" {
+		tmpl = "settings_scoring.html"
+	}
+	var feedback store.ScoreFeedbackSummary
+	if section == "scoring" {
+		feedback, err = s.store.ScoreFeedbackSummary(r.Context())
+		if err != nil {
+			s.fail(w, r, err)
+			return
+		}
 	}
 	amount, unit := scheduleParts(cfg.Schedule.Every)
 	form := cfg.Linkwarden
 	form.Password, form.Token = "", ""
-	s.render(w, r, tmpl, &page{Title: "Settings", Settings: cfg, SettingsSection: section, LinkwardenForm: form, InterestPresets: interestPresets, SourcePresets: sourcePresets, ScheduleAmount: amount, ScheduleUnit: unit, ScheduleAt: cfg.Schedule.At.String()})
+	s.render(w, r, tmpl, &page{Title: "Settings", Settings: cfg, SettingsSection: section, LinkwardenForm: form, InterestPresets: interestPresets, SourcePresets: sourcePresets, ScheduleAmount: amount, ScheduleUnit: unit, ScheduleAt: cfg.Schedule.At.String(), ScoreFeedbackSummary: feedback, Success: r.URL.Query().Get("success")})
+}
+
+func (s *Server) handleScoringReset(w http.ResponseWriter, r *http.Request) {
+	summary, err := s.store.ScoreFeedbackSummary(r.Context())
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	if r.Method == http.MethodPost {
+		if !s.validCSRF(r) {
+			http.Error(w, "invalid CSRF token", http.StatusForbidden)
+			return
+		}
+		if err := s.store.ResetPersonalizedScoring(r.Context()); err != nil {
+			s.fail(w, r, err)
+			return
+		}
+		http.Redirect(w, r, "/settings/scoring?success=reset", http.StatusSeeOther)
+		return
+	}
+	s.render(w, r, "reset_scoring.html", &page{Title: "Reset personalized scoring", SettingsSection: "scoring", ScoreFeedbackSummary: summary})
 }
 
 func (s *Server) handleSettingsLinkwarden(w http.ResponseWriter, r *http.Request) {

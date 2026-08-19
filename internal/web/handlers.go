@@ -10,6 +10,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"time"
 
@@ -31,6 +32,9 @@ type Store interface {
 	LatestDigest(ctx context.Context) (domain.Digest, error)
 	Article(ctx context.Context, id int64) (domain.Article, error)
 	SetArchived(ctx context.Context, id int64, archived bool) error
+	SetScoreFeedback(ctx context.Context, id int64, feedback domain.ScoreFeedback) error
+	ScoreFeedbackSummary(ctx context.Context) (store.ScoreFeedbackSummary, error)
+	ResetPersonalizedScoring(ctx context.Context) error
 
 	ArticlesByInterest(ctx context.Context, interest string, threshold domain.RelevanceScore, limit, offset int) ([]domain.Article, error)
 	ArticlesOnDay(ctx context.Context, interest string, day time.Time, interests []string) ([]domain.Article, error)
@@ -125,6 +129,41 @@ type page struct {
 	LinkwardenTagNames     []string
 	ReturnTo               string
 	Success                string
+	ScoreFeedbackSummary   store.ScoreFeedbackSummary
+}
+
+func (s *Server) handleScoreFeedback(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	if !s.validCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	feedback := domain.ScoreFeedback(r.Form.Get("feedback"))
+	if feedback != "" && feedback != domain.FeedbackHigher && feedback != domain.FeedbackLower {
+		http.Error(w, "invalid feedback", http.StatusBadRequest)
+		return
+	}
+	if err := s.store.SetScoreFeedback(r.Context(), id, feedback); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.NotFound(w, r)
+			return
+		}
+		s.fail(w, r, err)
+		return
+	}
+	if r.Header.Get(asyncHeader) != "" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	http.Redirect(w, r, backTo(r), http.StatusSeeOther)
 }
 
 // handleInterest lists one interest's unread articles, most relevant first.
@@ -248,6 +287,9 @@ func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	action := r.PathValue("action")
+	if action == "" {
+		action = path.Base(r.URL.Path)
+	}
 	if action != "archive" && action != "unarchive" {
 		http.NotFound(w, r)
 		return
