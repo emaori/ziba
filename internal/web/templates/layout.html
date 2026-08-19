@@ -6,7 +6,7 @@
   <title>{{.Title}} — Ziba</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body id="top">
   {{if not .SetupMode}}
   <header class="masthead">
     <a class="wordmark" href="/">Ziba</a>
@@ -61,6 +61,8 @@
 {{define "scoreFeedback"}}<div class="score-feedback" data-score-feedback="{{.ID}}"><span>Adjust score</span><form class="feedback-form" method="post" action="/article/{{.ID}}/feedback" data-choice="higher"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><input type="hidden" name="feedback" value="{{if eq .ScoreFeedback "higher"}}{{else}}higher{{end}}"><button class="button secondary{{if eq .ScoreFeedback "higher"}} selected{{end}}" type="submit" aria-pressed="{{if eq .ScoreFeedback "higher"}}true{{else}}false{{end}}">{{if eq .ScoreFeedback "higher"}}✓ {{end}}↑ Should be higher</button></form><form class="feedback-form" method="post" action="/article/{{.ID}}/feedback" data-choice="lower"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><input type="hidden" name="feedback" value="{{if eq .ScoreFeedback "lower"}}{{else}}lower{{end}}"><button class="button secondary{{if eq .ScoreFeedback "lower"}} selected{{end}}" type="submit" aria-pressed="{{if eq .ScoreFeedback "lower"}}true{{else}}false{{end}}">{{if eq .ScoreFeedback "lower"}}✓ {{end}}↓ Should be lower</button></form><span class="feedback-status visually-hidden" role="status" aria-live="polite"></span></div>{{end}}
 
 {{define "setupSteps"}}<nav class="setup-steps" aria-label="Setup progress"><span class="{{if eq . "interests"}}current{{end}}" {{if eq . "interests"}}aria-current="step"{{end}}><b>1</b> Interests</span><span class="{{if eq . "sources"}}current{{end}}" {{if eq . "sources"}}aria-current="step"{{end}}><b>2</b> Sources</span><span class="{{if eq . "schedule"}}current{{end}}" {{if eq . "schedule"}}aria-current="step"{{end}}><b>3</b> Schedule</span></nav>{{end}}
+
+{{define "backToTop"}}<nav class="back-to-top" aria-label="Page navigation"><a class="button secondary back-to-top-link" href="#top"><span aria-hidden="true">↑</span> Back to top</a></nav>{{end}}
 
 {{define "sourceFields"}}
 <label>Name <input name="name" value="{{.Source.Name}}" placeholder="Hacker News" required></label>

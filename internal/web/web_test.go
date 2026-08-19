@@ -421,6 +421,37 @@ func TestEmptyDigestRenders(t *testing.T) {
 	if !strings.Contains(body, "Nothing new to show yet") || strings.Contains(body, "ziba run") {
 		t.Error("empty digest page does not use the reader-facing empty state")
 	}
+	if strings.Contains(body, "Back to top") {
+		t.Error("short empty state has an unnecessary back-to-top control")
+	}
+}
+
+func TestBackToTopAppearsOnlyOnNonEmptyReadingLists(t *testing.T) {
+	article := sampleArticle()
+	handler := newTestServer(t, &fakeStore{
+		digest:   domain.Digest{Articles: []domain.Article{article}},
+		article:  article,
+		articles: []domain.Article{article},
+	})
+
+	for _, path := range []string{"/", "/interest/Robotics"} {
+		_, body := get(t, handler, path)
+		for _, want := range []string{`<body id="top">`, `href="#top"`, `Back to top`, `aria-hidden="true">↑`} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s is missing %q", path, want)
+			}
+		}
+	}
+
+	_, articleBody := get(t, handler, "/article/42")
+	if strings.Contains(articleBody, "Back to top") {
+		t.Error("article reader received a control outside the requested scope")
+	}
+
+	_, laterPage := get(t, handler, "/interest/Robotics?offset=50")
+	if !strings.Contains(laterPage, "← First page") || strings.Contains(laterPage, "← Top") {
+		t.Error("interest pagination is ambiguous with the back-to-top control")
+	}
 }
 
 func TestCollectionStatusShowsRunningAndNextSchedule(t *testing.T) {
