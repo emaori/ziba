@@ -122,9 +122,13 @@ func shortDate(t time.Time) string {
 
 // Server holds everything the handlers need.
 type Server struct {
-	store      Store
-	csrfToken  string
-	linkwarden linkwardenClient
+	reading         readingStore
+	feedback        feedbackStore
+	statistics      statisticsStore
+	configuration   configurationStore
+	collectionState collectionStateStore
+	csrfToken       string
+	linkwarden      linkwardenClient
 
 	// interests drive the tab bar and are the only values the interest routes
 	// accept. They come from the configuration file rather than from whatever
@@ -194,13 +198,19 @@ func newServer(store Store, interests config.Interests, csrfToken string) (*Serv
 		names = append(names, topic.Topic)
 	}
 
+	configuration, _ := any(store).(configurationStore)
+	collectionState, _ := any(store).(collectionStateStore)
 	return &Server{
-		store:      store,
-		csrfToken:  csrfToken,
-		linkwarden: linkwarden.NewClient(),
-		interests:  names,
-		threshold:  domain.RelevanceScore(interests.Threshold),
-		pages:      pages,
+		reading:         store,
+		feedback:        store,
+		statistics:      store,
+		configuration:   configuration,
+		collectionState: collectionState,
+		csrfToken:       csrfToken,
+		linkwarden:      linkwarden.NewClient(),
+		interests:       names,
+		threshold:       domain.RelevanceScore(interests.Threshold),
+		pages:           pages,
 	}, nil
 }
 
@@ -253,6 +263,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /settings/sources", s.handleSettings)
 	mux.HandleFunc("GET /settings/schedule", s.handleSettings)
 	mux.HandleFunc("GET /settings/linkwarden", s.handleSettings)
+	mux.HandleFunc("GET /settings/scoring", s.handleSettings)
+	mux.HandleFunc("GET /settings/scoring/reset", s.handleScoringReset)
+	mux.HandleFunc("POST /settings/scoring/reset", s.handleScoringReset)
 	mux.HandleFunc("POST /settings/schedule", s.handleSettingsSchedule)
 	mux.HandleFunc("POST /settings/linkwarden", s.handleSettingsLinkwarden)
 	mux.HandleFunc("GET /settings/interest/new", s.handleInterestForm)
@@ -269,7 +282,9 @@ func (s *Server) Handler() http.Handler {
 
 	// Marking read changes state, so it is a post and never a link: a crawler
 	// or a prefetching browser must not be able to empty the reading list.
-	mux.HandleFunc("POST /article/{id}/{action}", s.handleArchive)
+	mux.HandleFunc("POST /article/{id}/archive", s.handleArchive)
+	mux.HandleFunc("POST /article/{id}/unarchive", s.handleArchive)
+	mux.HandleFunc("POST /article/{id}/feedback", s.handleScoreFeedback)
 
 	mux.Handle("GET /static/", noCache(http.FileServerFS(assets)))
 

@@ -344,14 +344,14 @@ func (s *Store) SaveAnalysis(ctx context.Context, a domain.Article) error {
 		UPDATE articles
 		SET categories = $2, entities = $3, tone = $4,
 		    summary = $5, content_quality = $6, content_quality_reason = $7,
-		    score = $8, score_reason = $9, processed_at = $10,
-		    input_tokens = $11, output_tokens = $12,
+		    score = $8, base_score = $9, score_reason = $10, processed_at = $11,
+		    input_tokens = $12, output_tokens = $13,
 		    failure_count = 0, last_attempt_at = NULL,
 		    last_error = '', failed_at = NULL
 		WHERE id = $1`,
 		a.ID, a.Categories, a.Entities, a.Tone,
 		a.Summary, quality, a.ContentQualityReason,
-		int16(a.Score), a.ScoreReason, a.AnalyzedAt,
+		int16(a.Score), nullableScore(a.BaseScore, a.BaseScoreSet), a.ScoreReason, a.AnalyzedAt,
 		a.InputTokens, a.OutputTokens)
 	if err != nil {
 		return fmt.Errorf("save analysis for article %d: %w", a.ID, err)
@@ -378,4 +378,11 @@ func nullableTime(t time.Time) any {
 		return nil
 	}
 	return t
+}
+
+func nullableScore(score domain.RelevanceScore, valid bool) any {
+	if !valid {
+		return nil
+	}
+	return int16(score)
 }

@@ -1,60 +1,31 @@
 package config
 
 import (
-	"bytes"
 	"fmt"
-	"os"
 	"slices"
 	"strings"
-
-	"gopkg.in/yaml.v3"
 )
 
-// DefaultInterestsPath is where the hand-edited interests live unless
-// ZIBA_INTERESTS_FILE says otherwise.
-const DefaultInterestsPath = "config/interests.yaml"
-
-// Interests describes what is worth reading. PostgreSQL owns the live value;
-// YAML decoding remains for one-time upgrades.
+// Interests describes what is worth reading.
 type Interests struct {
 	// Threshold is the relevance score an article must reach to be summarized
 	// and to appear in the latest digest. Below it the article is still stored
 	// and browsable: the AI curates, it does not censor.
-	Threshold int `yaml:"threshold"`
+	Threshold int
 
-	Topics []Interest `yaml:"interests"`
+	Topics []Interest
 }
 
 // Interest is one topic, with as much context as the reader cares to give. The
 // notes matter: they are what turns a keyword list into a description of taste.
 type Interest struct {
-	Topic     string   `yaml:"topic"`
-	Priority  int      `yaml:"priority"`
-	Subtopics []string `yaml:"subtopics"`
-	Note      string   `yaml:"note"`
+	Topic     string
+	Priority  int
+	Subtopics []string
+	Note      string
 }
 
-// LoadInterests reads and validates the interests file.
-func LoadInterests(path string) (Interests, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return Interests{}, missingFile("interests", path, err)
-	}
-
-	var interests Interests
-	decoder := yaml.NewDecoder(bytes.NewReader(data))
-	decoder.KnownFields(true)
-	if err := decoder.Decode(&interests); err != nil {
-		return Interests{}, fmt.Errorf("parse interests file %s: %w", path, err)
-	}
-
-	if err := ValidateInterests(interests); err != nil {
-		return Interests{}, fmt.Errorf("interests file %s: %w", path, err)
-	}
-	return interests, nil
-}
-
-// ValidateInterests applies the same rules to file and web configuration.
+// ValidateInterests applies the rules used by web-managed configuration.
 func ValidateInterests(interests Interests) error {
 	if interests.Threshold < 0 || interests.Threshold > 100 {
 		return fmt.Errorf("threshold must be between 0 and 100, got %d", interests.Threshold)

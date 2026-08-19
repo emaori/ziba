@@ -115,12 +115,9 @@ func (c CollectFrom) Accepts(firstSeen, published time.Time) bool {
 // NewsletterOptions describes a mailbox of newsletters.
 //
 // Newsletters are read as link aggregators: the email is a list of links with
-// short blurbs, and the value is in the articles it points at. Environment
-// variable names remain only for importing legacy YAML configuration.
+// short blurbs, and the value is in the articles it points at.
 type NewsletterOptions struct {
-	Folder      string
-	UsernameEnv string
-	PasswordEnv string
+	Folder string
 	// Username and Password are populated from database-owned configuration.
 	// They are never rendered back into the web UI.
 	Username string
@@ -210,6 +207,21 @@ type RawItem struct {
 // interests, from 0 to 100.
 type RelevanceScore int
 
+// ScoreFeedback says whether the reader believes the model scored an article
+// too low or too high. It corrects ranking, not whether the article was liked.
+type ScoreFeedback string
+
+const (
+	FeedbackHigher ScoreFeedback = "higher"
+	FeedbackLower  ScoreFeedback = "lower"
+)
+
+// ScoreFeedbackSample is one immutable input to a batch's local calibration.
+type ScoreFeedbackSample struct {
+	Categories []string
+	Feedback   ScoreFeedback
+}
+
 // ContentQuality records whether the text retrieved for an article can support
 // an ordinary summary. It is deliberately separate from Summary: display code
 // must not guess reliability from prose written by a model.
@@ -250,8 +262,15 @@ type Article struct {
 	ContentQuality       ContentQuality
 	ContentQualityReason string
 	Score                RelevanceScore
-	ScoreReason          string
-	AnalyzedAt           time.Time
+	// BaseScore is the provider's untouched answer. Score may include the local
+	// personalization learned from feedback on earlier articles.
+	BaseScore RelevanceScore
+	// BaseScoreSet distinguishes a real provider score of zero from an article
+	// that has no provider score. Never use the numeric value as a presence flag.
+	BaseScoreSet  bool
+	ScoreReason   string
+	ScoreFeedback ScoreFeedback
+	AnalyzedAt    time.Time
 
 	// InputTokens and OutputTokens are what the analysis cost, summed over the
 	// assessment and the summary. Zero for an article analyzed offline, which
@@ -274,6 +293,9 @@ func (a Article) Archived() bool { return !a.ArchivedAt.IsZero() }
 func (a Article) LimitedOverview() bool {
 	return a.Summary != "" && a.ContentQuality != "" && a.ContentQuality != ContentComplete
 }
+
+// PersonalizedScore reports whether local feedback moved the provider's score.
+func (a Article) PersonalizedScore() bool { return a.BaseScoreSet && a.Score != a.BaseScore }
 
 // HasReadableText reports whether the stored body should be shown to a reader.
 // Mismatched text belongs to another page or an index and is more misleading

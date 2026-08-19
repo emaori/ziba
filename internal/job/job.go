@@ -276,6 +276,11 @@ func (r *Runner) analyzeBatch(ctx context.Context, batch int, before time.Time) 
 	if err != nil {
 		return 0, 0, 0, err
 	}
+	feedback, err := r.store.ScoreFeedbackSamples(ctx)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	batchPipeline := r.pipeline.WithCalibrator(pipeline.NewFeedbackCalibration(feedback))
 
 	var (
 		mu         sync.Mutex
@@ -288,7 +293,7 @@ func (r *Runner) analyzeBatch(ctx context.Context, batch int, before time.Time) 
 
 	for _, article := range articles {
 		group.Go(func() error {
-			result, err := r.pipeline.Analyze(groupCtx, article, declared[article.SourceID])
+			result, err := batchPipeline.Analyze(groupCtx, article, declared[article.SourceID])
 			if err != nil {
 				if ctx.Err() != nil {
 					return nil
@@ -309,9 +314,12 @@ func (r *Runner) analyzeBatch(ctx context.Context, batch int, before time.Time) 
 			return nil
 		})
 	}
-	_ = group.Wait()
+	groupErr := group.Wait()
 	if ctx.Err() != nil {
 		return 0, 0, failed, ctx.Err()
+	}
+	if groupErr != nil {
+		return 0, 0, failed, groupErr
 	}
 	if len(recordErrs) > 0 {
 		return 0, 0, failed, errors.Join(recordErrs...)
@@ -333,6 +341,13 @@ func (r *Runner) analyzeBatch(ctx context.Context, batch int, before time.Time) 
 // in bounded chunks. Failed rows wait for the next run, so they cannot loop
 // within the same drain.
 func (r *Runner) ScheduledCollection(ctx context.Context, batch int) error {
+	return r.runAll(ctx, batch)
+}
+
+// runAll is the one complete workflow used by unattended and manual runs.
+// batch is a chunk size, not a total limit: Drain keeps taking chunks until
+// everything eligible at the start of the run has been handled.
+func (r *Runner) runAll(ctx context.Context, batch int) error {
 	collected, err := r.Collect(ctx)
 	if err != nil {
 		return fmt.Errorf("collect: %w", err)
@@ -420,44 +435,7 @@ func (r *Runner) Threshold() domain.RelevanceScore { return r.threshold }
 // rest of the chain is still worth running, and the selection can be built from
 // whatever scores already exist.
 func (r *Runner) Daily(ctx context.Context, batch int) error {
-	collected, err := r.Collect(ctx)
-	if err != nil {
-		return fmt.Errorf("collect: %w", err)
-	}
-	r.log.Info("collection finished",
-		"sources", collected.Sources, "new", collected.New, "failed", collected.Failed)
-
-	opened, queued, err := r.Expand(ctx, batch)
-	if err != nil {
-		return fmt.Errorf("expand roundups: %w", err)
-	}
-	if opened > 0 {
-		r.log.Info("roundups finished", "issues", opened, "articles_queued", queued)
-	}
-
-	processed, created, err := r.Hydrate(ctx, batch)
-	if err != nil {
-		return fmt.Errorf("retrieve full text: %w", err)
-	}
-	r.log.Info("full text finished", "processed", processed, "articles", created)
-
-	if r.pipeline != nil {
-		analyzed, above, failed, err := r.Analyze(ctx, batch)
-		if err != nil {
-			return fmt.Errorf("analyze: %w", err)
-		}
-		r.log.Info("analysis finished", "analyzed", analyzed, "above_threshold", above, "failed", failed)
-	} else {
-		r.log.Warn("no analyzer configured, skipping analysis")
-	}
-
-	selected, err := r.Digest(ctx, time.Now())
-	if err != nil {
-		return fmt.Errorf("build digest: %w", err)
-	}
-	r.log.Info("digest finished", "articles", selected, "threshold", r.threshold)
-
-	return nil
+	return r.runAll(ctx, batch)
 }
 
 // withinCutoff drops items published before their source's cutoff.

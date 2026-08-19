@@ -349,3 +349,54 @@ func TestDrainHydratesMoreThanOneBatch(t *testing.T) {
 		t.Errorf("articles = %d, want all 5 across three chunks", count)
 	}
 }
+
+func TestManualAndScheduledRunsShareTheDrainingWorkflow(t *testing.T) {
+	entryPoints := []struct {
+		name string
+		run  func(*Runner, context.Context, int) error
+	}{
+		{"manual", func(r *Runner, ctx context.Context, batch int) error { return r.Daily(ctx, batch) }},
+		{"scheduled", func(r *Runner, ctx context.Context, batch int) error { return r.ScheduledCollection(ctx, batch) }},
+	}
+
+	for _, entry := range entryPoints {
+		t.Run(entry.name, func(t *testing.T) {
+			db := testStore(t)
+			ctx := context.Background()
+			feed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/rss+xml")
+				io.WriteString(w, `<?xml version="1.0"?><rss version="2.0"><channel><title>Empty</title><link>https://example.com</link><description>Empty test feed</description></channel></rss>`)
+			}))
+			defer feed.Close()
+
+			sourceConfig := domain.Source{Name: "Workflow feed", Type: domain.SourceTypeRSS, URL: feed.URL, Enabled: true}
+			synced, err := db.SyncSources(ctx, []domain.Source{sourceConfig})
+			if err != nil {
+				t.Fatalf("sync source: %v", err)
+			}
+			for i := range 5 {
+				if _, _, err := db.SaveArticle(ctx, domain.Article{
+					SourceID: synced[0].ID, URL: fmt.Sprintf("https://example.com/%s-%d", entry.name, i),
+					Title: "AI article", FullText: "A practical article about AI agents.",
+					CollectedAt: time.Now().Add(time.Duration(i) * time.Millisecond),
+				}); err != nil {
+					t.Fatalf("save article %d: %v", i, err)
+				}
+			}
+
+			interests := config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1, Subtopics: []string{"AI"}}}}
+			runner := New(config.Config{}, []domain.Source{sourceConfig}, interests, db,
+				slog.New(slog.NewTextHandler(io.Discard, nil)), Options{Analyzer: pipeline.NewDeterministic(interests)})
+			if err := entry.run(runner, ctx, 2); err != nil {
+				t.Fatalf("run: %v", err)
+			}
+			stats, err := db.Articles(ctx, []string{"AI"}, 60)
+			if err != nil {
+				t.Fatalf("article stats: %v", err)
+			}
+			if stats.Analyzed != 5 {
+				t.Fatalf("analyzed = %d, want all 5 across chunks", stats.Analyzed)
+			}
+		})
+	}
+}

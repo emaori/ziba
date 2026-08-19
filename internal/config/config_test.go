@@ -1,10 +1,6 @@
 package config
 
 import (
-	"errors"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -93,67 +89,5 @@ func TestParseBool(t *testing.T) {
 	}
 	if _, err := ParseBool("ZIBA_MODEL_JOURNAL", "ture"); err == nil {
 		t.Error(`ParseBool accepted "ture"; a typo must fail at startup, not read as off`)
-	}
-}
-
-// A missing configuration file is the first thing a new instance says, because
-// the image deliberately ships without one. The message therefore has to be the
-// thing that gets somebody unstuck, not a restatement of errno.
-func TestMissingConfigFileExplainsItself(t *testing.T) {
-	dir := t.TempDir()
-
-	_, err := LoadInterests(filepath.Join(dir, "interests.yaml"))
-	if err == nil {
-		t.Fatal("expected an error for an absent interests file")
-	}
-
-	var missing *MissingFileError
-	if !errors.As(err, &missing) {
-		t.Fatalf("error is %T, want *MissingFileError: callers cannot tell absent from unreadable", err)
-	}
-	if !errors.Is(err, fs.ErrNotExist) {
-		t.Error("the underlying os error was not preserved")
-	}
-
-	for _, want := range []string{
-		dir,                      // where it looked, absolutely
-		"interests.example.yaml", // what to copy, running from source
-		"/app/config",            // where to mount, running the image
-		"ZIBA_INTERESTS_FILE",    // and the way out for anything else
-	} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("the message never mentions %q:\n%s", want, err)
-		}
-	}
-
-	// Sources says the same, about itself.
-	_, err = LoadSources(filepath.Join(dir, "sources.yaml"), Interests{})
-	if !errors.As(err, &missing) {
-		t.Fatalf("sources error is %T, want *MissingFileError", err)
-	}
-	if !strings.Contains(err.Error(), "ZIBA_SOURCES_FILE") {
-		t.Errorf("the sources message names the wrong variable:\n%s", err)
-	}
-}
-
-// An unreadable file is a different problem and must not be described as an
-// absent one: "create this file" is unhelpful advice about a file that exists.
-func TestUnreadableConfigIsNotReportedAsMissing(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "interests.yaml")
-	if err := os.WriteFile(path, []byte("threshold: 60\n"), 0o000); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-	if os.Geteuid() == 0 {
-		t.Skip("running as root, which can read anything")
-	}
-
-	_, err := LoadInterests(path)
-	if err == nil {
-		t.Fatal("expected an error for an unreadable file")
-	}
-	var missing *MissingFileError
-	if errors.As(err, &missing) {
-		t.Errorf("a permission error was reported as a missing file:\n%s", err)
 	}
 }

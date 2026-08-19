@@ -32,6 +32,12 @@ Articles below the threshold keep their score and stay browsable in the archive.
 They are simply not summarized and not promoted: the AI curates, it does not
 censor.
 
+The reader can mark any score as “Should be higher” or “Should be lower”. After
+three related examples, Ziba uses those local corrections to calibrate future
+articles sharing a category. Feedback is never sent to the AI provider, the
+provider's original score is preserved, and Settings → Scoring can remove all
+feedback and restore unpersonalized scores.
+
 An offline analyzer is also available. It only matches against the configured
 interest vocabulary, so it is crude — it exists for
 debugging, not for daily use.

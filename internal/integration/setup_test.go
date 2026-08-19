@@ -37,11 +37,6 @@ import (
 // to a real archive would be unforgivable.
 const testDatabase = "ziba_integration"
 
-// configDir is where the real, hand-edited configuration lives, relative to
-// this package. The tests read the actual files rather than fixtures, because
-// "does the configured source list work" is one of the things under test.
-const configDir = "../../config"
-
 // shared is the one harness every test uses.
 //
 // Each test used to build its own and collect afresh. With six tests and four
@@ -102,6 +97,19 @@ func newHarness(t *testing.T) *harness {
 	if adminURL == "" {
 		t.Skip("ZIBA_DATABASE_URL is not set — run integration tests with `make test-integration`")
 	}
+	configuredDB, err := store.Open(ctx, adminURL)
+	if err != nil {
+		t.Fatalf("open configured database: %v", err)
+	}
+	stored, err := configuredDB.Configuration(ctx)
+	configuredDB.Close()
+	if err != nil {
+		t.Fatalf("load configured interests and sources: %v", err)
+	}
+	if !stored.Configured {
+		t.Fatal("configuration is incomplete; finish web setup first")
+	}
+	interests, sources := stored.Interests, stored.Sources
 
 	testURL := createTestDatabase(t, ctx, adminURL)
 
@@ -115,16 +123,6 @@ func newHarness(t *testing.T) *harness {
 		t.Fatalf("migrate test database: %v", err)
 	}
 	truncateAll(t, ctx, db)
-
-	// Interests first: a source's declared categories are validated against them.
-	interests, err := config.LoadInterests(configDir + "/interests.yaml")
-	if err != nil {
-		t.Fatalf("load interests: %v", err)
-	}
-	sources, err := config.LoadSources(configDir+"/sources.yaml", interests)
-	if err != nil {
-		t.Fatalf("load sources: %v", err)
-	}
 
 	analyzer, real := buildAnalyzer(t, interests)
 

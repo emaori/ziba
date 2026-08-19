@@ -59,7 +59,7 @@ func digestCmd(ctx context.Context, args []string) error {
 // scheduler does on a timer, available to run by hand.
 func runCmd(ctx context.Context, args []string) error {
 	flags := flag.NewFlagSet("run", flag.ContinueOnError)
-	batchSize := flags.Int("batch", 100, "maximum number of items to handle per stage")
+	batchSize := flags.Int("batch", 100, "items per processing chunk; the run drains all eligible chunks")
 	offline := flags.Bool("offline", false, "use the deterministic analyzer: no model, no network, no cost")
 	if err := flags.Parse(args); err != nil {
 		return err

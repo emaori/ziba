@@ -1,31 +1,19 @@
-// Package config loads infrastructure settings and the legacy YAML format used
-// only for one-time upgrades. User configuration otherwise lives in PostgreSQL.
+// Package config loads infrastructure settings. User configuration lives in
+// PostgreSQL and is managed through the web interface.
 package config
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 )
-
-// DefaultSourcesPath is the legacy source list imported on first upgraded run.
-const DefaultSourcesPath = "config/sources.yaml"
 
 // Config is the configuration the whole program needs to start.
 type Config struct {
 	// DatabaseURL is a PostgreSQL connection string, e.g.
 	// postgres://user:password@host:5432/ziba?sslmode=disable
 	DatabaseURL string
-
-	// SourcesPath points at the legacy YAML source list for one-time import.
-	SourcesPath string
-
-	// InterestsPath points at the legacy YAML interests for one-time import.
-	InterestsPath string
 
 	// Provider names which company answers the AI pipeline. Either is a
 	// complete implementation; the choice is about cost and judgement, which is
@@ -71,8 +59,6 @@ type Config struct {
 func Load() (Config, error) {
 	cfg := Config{
 		DatabaseURL:        os.Getenv("ZIBA_DATABASE_URL"),
-		SourcesPath:        envOr("ZIBA_SOURCES_FILE", DefaultSourcesPath),
-		InterestsPath:      envOr("ZIBA_INTERESTS_FILE", DefaultInterestsPath),
 		AnthropicAPIKey:    os.Getenv("ANTHROPIC_API_KEY"),
 		OpenAIAPIKey:       os.Getenv("OPENAI_API_KEY"),
 		FastModel:          os.Getenv("ZIBA_FAST_MODEL"),
@@ -113,57 +99,6 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
-}
-
-// MissingFileError explains an absent configuration file in terms of what to do
-// about it.
-//
-// The wrapped os error says "no such file or directory", which is true and
-// useless: it does not say that this file is the reader's to write, that an
-// example sits beside it in the repository, or that in a container the whole
-// directory arrives as a mount. The image deliberately ships no interests and
-// no sources — running on somebody else's would be worse than not running — so
-// this is the first thing a new instance says, and it has to be the thing that
-// gets somebody unstuck.
-type MissingFileError struct {
-	Kind string // "interests" or "sources"
-	Path string
-	Err  error
-}
-
-func (e *MissingFileError) Error() string {
-	// Absolute, because the relative form is ambiguous exactly where this
-	// message is most likely to be read: in a container, where "config/" is
-	// a mount point and not the directory the reader is looking at.
-	shown := e.Path
-	if abs, err := filepath.Abs(e.Path); err == nil {
-		shown = abs
-	}
-	return fmt.Sprintf("no %s file at %s\n"+
-		"  Ziba ships without one on purpose: what to read is yours to decide.\n"+
-		"  Running from source: cp config/%s.example.yaml config/%s.yaml\n"+
-		"  Running the image:   mount a directory containing %s.yaml at /app/config\n"+
-		"  Elsewhere entirely:  set %s to its path",
-		e.Kind, shown, e.Kind, e.Kind, e.Kind, e.variable())
-}
-
-func (e *MissingFileError) Unwrap() error { return e.Err }
-
-func (e *MissingFileError) variable() string {
-	if e.Kind == "sources" {
-		return "ZIBA_SOURCES_FILE"
-	}
-	return "ZIBA_INTERESTS_FILE"
-}
-
-// missingFile turns a read failure into the explanatory form when the file is
-// simply absent, and leaves anything else alone: a permission error or a broken
-// mount is a different problem and must not be described as a missing file.
-func missingFile(kind, path string, err error) error {
-	if errors.Is(err, fs.ErrNotExist) {
-		return &MissingFileError{Kind: kind, Path: path, Err: err}
-	}
-	return fmt.Errorf("read %s file %s: %w", kind, path, err)
 }
 
 func envOr(key, fallback string) string {

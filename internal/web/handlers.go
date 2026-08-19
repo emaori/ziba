@@ -10,6 +10,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"time"
 
@@ -24,20 +25,23 @@ import (
 // listPageSize bounds how much of an interest or the archive one page shows.
 const listPageSize = 50
 
-// Store is what the web package needs from persistence. Declaring the interface
-// here, where it is consumed, keeps the handlers testable with a fake and
-// documents exactly how much of the database this package can reach.
-type Store interface {
+type readingStore interface {
 	LatestDigest(ctx context.Context) (domain.Digest, error)
 	Article(ctx context.Context, id int64) (domain.Article, error)
 	SetArchived(ctx context.Context, id int64, archived bool) error
-
 	ArticlesByInterest(ctx context.Context, interest string, threshold domain.RelevanceScore, limit, offset int) ([]domain.Article, error)
 	ArticlesOnDay(ctx context.Context, interest string, day time.Time, interests []string) ([]domain.Article, error)
 	DayNavigation(ctx context.Context, interest string, day time.Time, interests []string) (store.DayNavigation, error)
-
 	Archive(ctx context.Context, limit, offset int, interests []string) ([]domain.Article, error)
+}
 
+type feedbackStore interface {
+	SetScoreFeedback(ctx context.Context, id int64, feedback domain.ScoreFeedback) error
+	ScoreFeedbackSummary(ctx context.Context) (store.ScoreFeedbackSummary, error)
+	ResetPersonalizedScoring(ctx context.Context) error
+}
+
+type statisticsStore interface {
 	TalliesBySource(ctx context.Context) ([]store.Tally, error)
 	TalliesByDay(ctx context.Context, limit int) ([]store.DayTally, error)
 	Articles(ctx context.Context, interests []string, threshold int) (store.ArticleStats, error)
@@ -46,6 +50,15 @@ type Store interface {
 	TokensByInterest(ctx context.Context, interests []string) ([]store.TokenTally, error)
 	TokensByDay(ctx context.Context, limit int) ([]store.TokenTally, error)
 	Backlogs(ctx context.Context) ([]store.Backlog, error)
+}
+
+// Store is the constructor contract for the web application. Handlers use the
+// narrower capabilities above; keeping their composition here preserves the
+// existing public API while the package is split gradually.
+type Store interface {
+	readingStore
+	feedbackStore
+	statisticsStore
 }
 
 type configurationStore interface {
@@ -63,68 +76,38 @@ type collectionStateStore interface {
 	CollectionState(ctx context.Context) (running bool, completed uint64, err error)
 }
 
-// page is the data every template receives. The interests appear in the tab bar
-// on every screen, so they travel with every page.
-type page struct {
-	Title     string
-	Interests []string
-	Active    string // which tab is highlighted, if any
-
-	Digest   domain.Digest
-	Article  domain.Article
-	Articles []domain.Article
-	Nav      store.DayNavigation
-	Day      time.Time
-	Interest string
-	BySource []store.Tally
-	ByDay    []store.DayTally
-	Library  store.ArticleStats
-	Unknown  int
-
-	Tokens                 store.TokenTally
-	TokensByInterest       []store.TokenTally
-	TokensByDay            []store.TokenTally
-	Backlogs               []store.Backlog
-	Offset                 int
-	PageSize               int
-	Threshold              domain.RelevanceScore
-	Configured             bool
-	Settings               store.Configuration
-	Source                 store.SourceInput
-	InterestForm           config.Interest
-	InterestIndex          int
-	EditingInterest        bool
-	EditingSource          bool
-	Error                  string
-	SetupMode              bool
-	SettingsSection        string
-	FormAction             string
-	CancelURL              string
-	InterestPresets        []interestPreset
-	SourcePresets          []sourcePreset
-	RemoveName             string
-	RemoveKind             string
-	RemoveAction           string
-	ScheduleEvery          string
-	ScheduleAt             string
-	ScheduleAmount         int
-	ScheduleUnit           string
-	CollectionRunning      bool
-	CollectionCompleted    uint64
-	NextCollection         time.Time
-	ScheduleDisabled       bool
-	LinkwardenEnabled      bool
-	LinkwardenForm         linkwarden.Configuration
-	LinkwardenCollections  []linkwarden.Collection
-	LinkwardenTags         []linkwarden.Tag
-	LinkwardenName         string
-	LinkwardenDescription  string
-	LinkwardenCollectionID int64
-	LinkwardenSelectedTags map[int64]bool
-	LinkwardenNewTags      string
-	LinkwardenTagNames     []string
-	ReturnTo               string
-	Success                string
+func (s *Server) handleScoreFeedback(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "invalid form", http.StatusBadRequest)
+		return
+	}
+	if !s.validCSRF(r) {
+		http.Error(w, "invalid CSRF token", http.StatusForbidden)
+		return
+	}
+	feedback := domain.ScoreFeedback(r.Form.Get("feedback"))
+	if feedback != "" && feedback != domain.FeedbackHigher && feedback != domain.FeedbackLower {
+		http.Error(w, "invalid feedback", http.StatusBadRequest)
+		return
+	}
+	if err := s.feedback.SetScoreFeedback(r.Context(), id, feedback); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			http.NotFound(w, r)
+			return
+		}
+		s.fail(w, r, err)
+		return
+	}
+	if r.Header.Get(asyncHeader) != "" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	http.Redirect(w, r, backTo(r), http.StatusSeeOther)
 }
 
 // handleInterest lists one interest's unread articles, most relevant first.
@@ -143,14 +126,14 @@ func (s *Server) handleInterest(w http.ResponseWriter, r *http.Request) {
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 	offset = max(offset, 0)
 
-	articles, err := s.store.ArticlesByInterest(r.Context(), interest, threshold, listPageSize, offset)
+	articles, err := s.reading.ArticlesByInterest(r.Context(), interest, threshold, listPageSize, offset)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
 
-	s.render(w, r, "interest.html", &page{
-		Title: interest, Active: interest, Interest: interest,
+	s.render(w, r, "interest.html", &readingPage{
+		layoutData: layoutData{Title: interest, Active: interest}, Interest: interest,
 		Articles: articles, Offset: offset, PageSize: listPageSize,
 	})
 }
@@ -179,30 +162,30 @@ func (s *Server) handleDay(w http.ResponseWriter, r *http.Request) {
 		day = parsed
 	}
 
-	articles, err := s.store.ArticlesOnDay(r.Context(), interest, day, interests)
+	articles, err := s.reading.ArticlesOnDay(r.Context(), interest, day, interests)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	nav, err := s.store.DayNavigation(r.Context(), interest, day, interests)
+	nav, err := s.reading.DayNavigation(r.Context(), interest, day, interests)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
 
-	s.render(w, r, "day.html", &page{
-		Title: "By day", Active: interest, Interest: interest,
+	s.render(w, r, "day.html", &readingPage{
+		layoutData: layoutData{Title: "By day", Active: interest}, Interest: interest,
 		Articles: articles, Nav: nav, Day: day,
 	})
 }
 
 func (s *Server) handleDigest(w http.ResponseWriter, r *http.Request) {
-	digest, err := s.store.LatestDigest(r.Context())
+	digest, err := s.reading.LatestDigest(r.Context())
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		s.fail(w, r, err)
 		return
 	}
-	s.render(w, r, "digest.html", &page{Title: "Last 24 hours", Digest: digest})
+	s.render(w, r, "digest.html", &readingPage{layoutData: layoutData{Title: "Last 24 hours"}, Digest: digest})
 }
 
 func (s *Server) handleArticle(w http.ResponseWriter, r *http.Request) {
@@ -212,7 +195,7 @@ func (s *Server) handleArticle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	article, err := s.store.Article(r.Context(), id)
+	article, err := s.reading.Article(r.Context(), id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		http.NotFound(w, r)
 		return
@@ -227,7 +210,7 @@ func (s *Server) handleArticle(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, configErr)
 		return
 	}
-	s.render(w, r, "article.html", &page{Title: article.Title, Article: article, LinkwardenEnabled: cfg.Linkwarden.Enabled})
+	s.render(w, r, "article.html", &readingPage{layoutData: layoutData{Title: article.Title, LinkwardenEnabled: cfg.Linkwarden.Enabled}, Article: article})
 }
 
 // handleArchive marks an article read, or puts it back.
@@ -248,6 +231,9 @@ func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	action := r.PathValue("action")
+	if action == "" {
+		action = path.Base(r.URL.Path)
+	}
 	if action != "archive" && action != "unarchive" {
 		http.NotFound(w, r)
 		return
@@ -272,7 +258,7 @@ func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	archived := action == "archive"
-	if err := s.store.SetArchived(r.Context(), id, archived); err != nil {
+	if err := s.reading.SetArchived(r.Context(), id, archived); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.NotFound(w, r)
 			return
@@ -323,14 +309,14 @@ func (s *Server) handleArchiveAll(w http.ResponseWriter, r *http.Request) {
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 	offset = max(offset, 0)
 
-	articles, err := s.store.Archive(r.Context(), listPageSize, offset, interests)
+	articles, err := s.reading.Archive(r.Context(), listPageSize, offset, interests)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
 
-	s.render(w, r, "list.html", &page{
-		Title: "Everything", Articles: articles, Offset: offset, PageSize: listPageSize,
+	s.render(w, r, "list.html", &readingPage{
+		layoutData: layoutData{Title: "Everything"}, Articles: articles, Offset: offset, PageSize: listPageSize,
 	})
 }
 
@@ -345,37 +331,37 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, r, err)
 		return
 	}
-	bySource, err := s.store.TalliesBySource(r.Context())
+	bySource, err := s.statistics.TalliesBySource(r.Context())
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	byDay, err := s.store.TalliesByDay(r.Context(), statsDays)
+	byDay, err := s.statistics.TalliesByDay(r.Context(), statsDays)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	library, err := s.store.Articles(r.Context(), interests, int(threshold))
+	library, err := s.statistics.Articles(r.Context(), interests, int(threshold))
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	tokens, err := s.store.Tokens(r.Context())
+	tokens, err := s.statistics.Tokens(r.Context())
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	tokensByInterest, err := s.store.TokensByInterest(r.Context(), interests)
+	tokensByInterest, err := s.statistics.TokensByInterest(r.Context(), interests)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	tokensByDay, err := s.store.TokensByDay(r.Context(), statsDays)
+	tokensByDay, err := s.statistics.TokensByDay(r.Context(), statsDays)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	backlogs, err := s.store.Backlogs(r.Context())
+	backlogs, err := s.statistics.Backlogs(r.Context())
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -388,8 +374,8 @@ func (s *Server) handleStats(w http.ResponseWriter, r *http.Request) {
 		unknown += tally.Unknown
 	}
 
-	s.render(w, r, "stats.html", &page{
-		Title: "Statistics", BySource: bySource, ByDay: byDay,
+	s.render(w, r, "stats.html", &statisticsPage{
+		layoutData: layoutData{Title: "Statistics"}, BySource: bySource, ByDay: byDay,
 		Library: library, Unknown: unknown,
 		Tokens: tokens, TokensByInterest: tokensByInterest, TokensByDay: tokensByDay,
 		Backlogs: backlogs,
@@ -407,30 +393,31 @@ func knownInterest(interests []string, name string) bool {
 
 // render writes the page. The tab bar is the same on every screen, so it is
 // filled in here rather than in each handler.
-func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, data *page) {
+func (s *Server) render(w http.ResponseWriter, r *http.Request, name string, data templateData) {
 	interests, threshold, err := s.currentValues(r)
 	if err != nil {
 		s.fail(w, r, err)
 		return
 	}
-	data.Interests = interests
-	data.Threshold = threshold
-	if !data.SetupMode {
+	layout := data.layout()
+	layout.Interests = interests
+	layout.Threshold = threshold
+	if !layout.SetupMode {
 		cfg, cfgErr := s.currentConfiguration(r)
 		if cfgErr != nil {
 			s.fail(w, r, cfgErr)
 			return
 		}
-		data.ScheduleDisabled = cfg.Schedule.Every <= 0
-		data.LinkwardenEnabled = cfg.Linkwarden.Enabled
-		if data.ReturnTo == "" {
-			data.ReturnTo = r.URL.RequestURI()
+		layout.ScheduleDisabled = cfg.Schedule.Every <= 0
+		layout.LinkwardenEnabled = cfg.Linkwarden.Enabled
+		if layout.ReturnTo == "" {
+			layout.ReturnTo = r.URL.RequestURI()
 		}
-		if !data.ScheduleDisabled {
-			data.NextCollection = cfg.Schedule.At.NextEvery(time.Now(), cfg.Schedule.Every)
+		if !layout.ScheduleDisabled {
+			layout.NextCollection = cfg.Schedule.At.NextEvery(time.Now(), cfg.Schedule.Every)
 		}
-		if state, ok := s.store.(collectionStateStore); ok {
-			data.CollectionRunning, data.CollectionCompleted, cfgErr = state.CollectionState(r.Context())
+		if s.collectionState != nil {
+			layout.CollectionRunning, layout.CollectionCompleted, cfgErr = s.collectionState.CollectionState(r.Context())
 			if cfgErr != nil {
 				s.fail(w, r, cfgErr)
 				return
@@ -459,8 +446,8 @@ func (s *Server) handleCollectionStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	running, completed := false, uint64(0)
-	if state, ok := s.store.(collectionStateStore); ok {
-		running, completed, err = state.CollectionState(r.Context())
+	if s.collectionState != nil {
+		running, completed, err = s.collectionState.CollectionState(r.Context())
 		if err != nil {
 			s.fail(w, r, err)
 			return

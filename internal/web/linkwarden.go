@@ -20,7 +20,7 @@ func (s *Server) handleLinkwardenArticle(w http.ResponseWriter, r *http.Request)
 		http.NotFound(w, r)
 		return
 	}
-	article, err := s.store.Article(r.Context(), id)
+	article, err := s.reading.Article(r.Context(), id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		http.NotFound(w, r)
 		return
@@ -198,13 +198,12 @@ func (s *Server) renderLinkwardenForm(w http.ResponseWriter, r *http.Request, ar
 	s.render(w, r, "linkwarden_article.html", data)
 }
 
-func (s *Server) linkwardenPage(article domain.Article, collections []linkwarden.Collection, tags []linkwarden.Tag, form linkwardenForm) *page {
-	return &page{
-		Title: "Save to Linkwarden", Article: article, LinkwardenEnabled: true,
+func (s *Server) linkwardenPage(article domain.Article, collections []linkwarden.Collection, tags []linkwarden.Tag, form linkwardenForm) *linkwardenPageData {
+	return &linkwardenPageData{
+		layoutData: layoutData{Title: "Save to Linkwarden", LinkwardenEnabled: true, ReturnTo: form.returnTo}, Article: article,
 		LinkwardenCollections: collections, LinkwardenTags: tags,
 		LinkwardenName: form.name, LinkwardenDescription: form.description,
 		LinkwardenCollectionID: form.collectionID, LinkwardenSelectedTags: form.selected,
 		LinkwardenNewTags: form.newTags, LinkwardenTagNames: form.tagNames,
-		ReturnTo: form.returnTo,
 	}
 }

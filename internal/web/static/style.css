@@ -159,6 +159,24 @@ a { color: var(--accent); }
    used to stand a few pixels taller than the links beside it. */
 form.inline { display: flex; margin: 0; }
 
+.score-feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.75rem 0 1rem;
+  color: var(--ink-soft);
+  font: 0.78rem/1.4 system-ui, sans-serif;
+}
+.score-feedback form { display: flex; margin: 0; }
+.score-feedback .button { min-height: 2.75rem; }
+.score-feedback .selected { color: var(--ink); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
+@media (max-width: 26rem) {
+  .score-feedback > span:first-child { width: 100%; }
+  .score-feedback form { flex: 1 1 100%; }
+  .score-feedback .button { width: 100%; justify-content: center; }
+}
+
 .action-error {
   align-self: center;
   margin-left: 0.5rem;
@@ -295,6 +313,17 @@ form.inline { display: flex; margin: 0; }
   background: transparent;
   color: var(--ink-soft);
   border: 1px solid var(--rule);
+}
+
+.back-to-top {
+  display: flex;
+  justify-content: flex-end;
+  margin: 1.5rem 0 0;
+}
+
+.back-to-top-link {
+  min-height: 2.75rem;
+  gap: 0.35rem;
 }
 
 /* Reader ------------------------------------------------------------------ */

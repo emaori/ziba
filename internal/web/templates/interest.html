@@ -16,10 +16,11 @@
 
   <p class="pager">
     {{if gt .Offset 0}}
-      <a class="button secondary" href="/interest/{{pathEscape .Interest}}">← Top</a>
+      <a class="button secondary" href="/interest/{{pathEscape .Interest}}">← First page</a>
     {{end}}
     {{if eq (len .Articles) .PageSize}}
       <a class="button" href="/interest/{{pathEscape .Interest}}?offset={{add .Offset .PageSize}}">More →</a>
     {{end}}
   </p>
+  {{if .Articles}}{{template "backToTop" .}}{{end}}
 {{end}}

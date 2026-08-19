@@ -82,10 +82,8 @@ capture: .env
 ## dryrun: print the API calls one article would make, without making them.
 ## Nothing reaches the provider and nothing is billed. Pick the article with
 ## ZIBA_ARTICLE_ID=775 make dryrun; the default is the newest with enough text.
-## A test runs in its own package directory, so the configuration is named
-## absolutely rather than relative to the repository root.
 dryrun: .env
-	set -a; . ./.env; ZIBA_INTERESTS_FILE=$(CURDIR)/config/interests.yaml; set +a; \
+	set -a; . ./.env; set +a; \
 	go test -tags=dryrun -count=1 -v -run TestDryRun ./internal/pipeline/
 
 ## realrun: analyze ONE article for real, against the configured provider.
@@ -93,7 +91,7 @@ dryrun: .env
 ## and writes nothing back to the database. Defaults to the longest article;
 ## choose another with ZIBA_ARTICLE_ID=762 make realrun
 realrun: .env
-	set -a; . ./.env; ZIBA_INTERESTS_FILE=$(CURDIR)/config/interests.yaml; set +a; \
+	set -a; . ./.env; set +a; \
 	go test -tags=realrun -count=1 -v -timeout 10m -run TestRealRun ./internal/pipeline/
 
 ## test-integration: run the real-data tests — real sources, real database
