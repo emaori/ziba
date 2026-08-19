@@ -56,7 +56,7 @@
 {{define "interestPresets"}}<section class="preset-box"><h2>Or start with…</h2><p class="help">Add a preconfigured interest, then adjust it to your taste.</p><div class="preset-grid">{{range .InterestPresets}}<article class="preset-card"><div><h3>{{.Label}}</h3><p>{{join .Value.Subtopics ", "}}</p></div><form method="post" action="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/interests/preset/{{.ID}}"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><button class="button secondary" type="submit">Add</button></form></article>{{end}}</div></section>{{end}}
 {{define "sourcePresets"}}<section class="preset-box"><h2>Or start with…</h2><p class="help">Add a known RSS feed, then adjust it if needed.</p><div class="preset-grid">{{range .SourcePresets}}<article class="preset-card"><div><h3>{{.Label}}</h3><p>{{.Value.URL}}</p></div><form method="post" action="{{if $.SetupMode}}/setup{{else}}/settings{{end}}/sources/preset/{{.ID}}"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><button class="button secondary" type="submit">Add</button></form></article>{{end}}</div></section>{{end}}
 
-{{define "settingsNav"}}<nav class="settings-nav"><a class="{{if eq .SettingsSection "interests"}}on{{end}}" href="/settings/interests">Interests</a><a class="{{if eq .SettingsSection "sources"}}on{{end}}" href="/settings/sources">Sources</a><a class="{{if eq .SettingsSection "schedule"}}on{{end}}" href="/settings/schedule">Schedule</a></nav>{{end}}
+{{define "settingsNav"}}<nav class="settings-nav"><a class="{{if eq .SettingsSection "interests"}}on{{end}}" href="/settings/interests">Interests</a><a class="{{if eq .SettingsSection "sources"}}on{{end}}" href="/settings/sources">Sources</a><a class="{{if eq .SettingsSection "schedule"}}on{{end}}" href="/settings/schedule">Schedule</a><a class="{{if eq .SettingsSection "linkwarden"}}on{{end}}" href="/settings/linkwarden">Linkwarden</a></nav>{{end}}
 
 {{define "setupSteps"}}<nav class="setup-steps" aria-label="Setup progress"><span class="{{if eq . "interests"}}current{{end}}" {{if eq . "interests"}}aria-current="step"{{end}}><b>1</b> Interests</span><span class="{{if eq . "sources"}}current{{end}}" {{if eq . "sources"}}aria-current="step"{{end}}><b>2</b> Sources</span><span class="{{if eq . "schedule"}}current{{end}}" {{if eq . "schedule"}}aria-current="step"{{end}}><b>3</b> Schedule</span></nav>{{end}}
 
@@ -107,6 +107,7 @@
   <div class="actions">
     <a class="button" href="/article/{{.ID}}">Read in Ziba</a>
     {{if .HasOriginal}}<a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>{{end}}
+    {{if .LinkwardenEnabled}}<a class="button secondary" href="/article/{{.ID}}/linkwarden?return_to={{urlquery .ReturnTo}}">Save to Linkwarden</a>{{end}}
     {{template "archiveButton" .}}
   </div>
 </article>

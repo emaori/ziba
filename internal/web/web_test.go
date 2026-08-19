@@ -19,6 +19,7 @@ import (
 
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
+	"github.com/emaori/ziba/internal/linkwarden"
 	"github.com/emaori/ziba/internal/store"
 )
 
@@ -41,6 +42,27 @@ type configurableFakeStore struct {
 	running       bool
 	completed     uint64
 }
+
+type fakeLinkwardenClient struct {
+	configuration linkwarden.Configuration
+	collections   []linkwarden.Collection
+	tags          []linkwarden.Tag
+	created       linkwarden.Link
+	testErr       error
+}
+
+func (f *fakeLinkwardenClient) Configure(configuration linkwarden.Configuration) {
+	f.configuration = configuration
+}
+func (f *fakeLinkwardenClient) Collections(context.Context) ([]linkwarden.Collection, error) {
+	return f.collections, nil
+}
+func (f *fakeLinkwardenClient) Tags(context.Context) ([]linkwarden.Tag, error) { return f.tags, nil }
+func (f *fakeLinkwardenClient) CreateLink(_ context.Context, link linkwarden.Link) error {
+	f.created = link
+	return nil
+}
+func (f *fakeLinkwardenClient) Test(context.Context) error { return f.testErr }
 
 func (f *configurableFakeStore) Configuration(context.Context) (store.Configuration, error) {
 	return f.configuration, nil
@@ -85,6 +107,17 @@ func (f *configurableFakeStore) DeleteSetupSource(_ context.Context, id int64) e
 
 func (f *configurableFakeStore) SaveSchedule(_ context.Context, schedule config.CollectionSchedule) error {
 	f.configuration.Schedule = schedule
+	return nil
+}
+
+func (f *configurableFakeStore) SaveLinkwarden(_ context.Context, configuration linkwarden.Configuration) error {
+	if configuration.Password == "" {
+		configuration.Password = f.configuration.Linkwarden.Password
+	}
+	if configuration.Token == "" {
+		configuration.Token = f.configuration.Linkwarden.Token
+	}
+	f.configuration.Linkwarden = configuration
 	return nil
 }
 
@@ -535,6 +568,117 @@ func TestScheduleSettingsSaveToConfiguration(t *testing.T) {
 	server.Handler().ServeHTTP(rec, req)
 	if rec.Code != http.StatusSeeOther || db.configuration.Schedule.Every != 8*time.Hour || db.configuration.Schedule.At.String() != "05:15" {
 		t.Fatalf("saved schedule = %+v, status = %d", db.configuration.Schedule, rec.Code)
+	}
+}
+
+func TestLinkwardenSettingsAreWriteOnlyAndTestedBeforeSaving(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{
+		Configured: true,
+		Interests:  config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+		Linkwarden: linkwarden.Configuration{Enabled: true, URL: "https://old.example", Auth: linkwarden.AuthCredentials, Username: "reader", Password: "stored-password", Token: "stored-token"},
+	}}
+	server, err := newServer(db, db.configuration.Interests, "token")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := &fakeLinkwardenClient{}
+	server.linkwarden = client
+	code, body := get(t, server.Handler(), "/settings/linkwarden")
+	if code != http.StatusOK || strings.Contains(body, "stored-password") || strings.Contains(body, "stored-token") {
+		t.Fatalf("settings response = %d body=%s", code, body)
+	}
+	form := url.Values{
+		"csrf_token": {"token"}, "enabled": {"on"}, "url": {"https://links.example"},
+		"auth": {"credentials"}, "username": {"new-reader"}, "password": {"new-password"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/settings/linkwarden", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || db.configuration.Linkwarden.URL != "https://links.example" {
+		t.Fatalf("save response = %d configuration=%+v body=%s", rec.Code, db.configuration.Linkwarden, rec.Body.String())
+	}
+	if client.configuration.Password != "new-password" {
+		t.Error("the connection was not tested with the submitted credentials")
+	}
+}
+
+func TestArticleCanBeSavedWithExistingAndNewLinkwardenTags(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{article: domain.Article{
+		ID: 7, URL: "https://example.com/article", Title: "Proposed title", Summary: "Proposed summary",
+	}}, configuration: store.Configuration{
+		Configured: true,
+		Interests:  config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+		Linkwarden: linkwarden.Configuration{Enabled: true, URL: "https://links.example", Auth: linkwarden.AuthToken, Token: "secret"},
+	}}
+	server, err := newServer(db, db.configuration.Interests, "token")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := &fakeLinkwardenClient{
+		collections: []linkwarden.Collection{{ID: 4, Name: "Research"}},
+		tags:        []linkwarden.Tag{{ID: 2, Name: "AI"}, {ID: 3, Name: "Go"}},
+	}
+	server.linkwarden = client
+	code, body := get(t, server.Handler(), "/article/7/linkwarden?return_to=%2Finterest%2FAI%3Foffset%3D20")
+	if code != http.StatusOK || !strings.Contains(body, `value="Proposed title"`) || !strings.Contains(body, "Proposed summary") || !strings.Contains(body, "Research") || !strings.Contains(body, `list="lw-tag-suggestions"`) || !strings.Contains(body, `value="AI"`) {
+		t.Fatalf("form response = %d body=%s", code, body)
+	}
+	for _, want := range []string{
+		`href="/interest/AI?offset=20"`,
+		`name="return_to" value="/interest/AI?offset=20"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("Linkwarden form does not preserve its origin; missing %s", want)
+		}
+	}
+	form := url.Values{
+		"csrf_token": {"token"}, "name": {"Edited title"}, "description": {"Edited summary"},
+		"collection": {"4"}, "tag_names": {"AI", "Read later"}, "return_to": {"/interest/AI?offset=20"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/article/7/linkwarden", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/interest/AI?offset=20" {
+		t.Fatalf("save response = %d %q body=%s", rec.Code, rec.Header().Get("Location"), rec.Body.String())
+	}
+	if client.created.URL != db.article.URL || client.created.CollectionID != 4 || len(client.created.Tags) != 2 {
+		t.Errorf("created link = %+v", client.created)
+	}
+	if client.created.Tags[0].ID != 2 || client.created.Tags[1].ID != 0 {
+		t.Errorf("existing and new tags were not distinguished: %+v", client.created.Tags)
+	}
+}
+
+func TestArticleCardsOfferLinkwardenAndPreserveTheListLocation(t *testing.T) {
+	article := sampleArticle()
+	db := &configurableFakeStore{fakeStore: &fakeStore{articles: []domain.Article{article}}, configuration: store.Configuration{
+		Configured: true,
+		Interests:  config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}},
+		Linkwarden: linkwarden.Configuration{Enabled: true, URL: "https://links.example", Auth: linkwarden.AuthToken, Token: "secret"},
+	}}
+	server, err := newServer(db, db.configuration.Interests, "token")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	code, body := get(t, server.Handler(), "/interest/AI?offset=20")
+	if code != http.StatusOK {
+		t.Fatalf("status = %d", code)
+	}
+	want := `/article/42/linkwarden?return_to=%2Finterest%2FAI%3Foffset%3D20`
+	if !strings.Contains(body, want) {
+		t.Errorf("article card has no Linkwarden action returning to its list; want %q", want)
+	}
+}
+
+func TestLinkwardenReturnLocationCannotLeaveZiba(t *testing.T) {
+	if got := localReturnTo("https://evil.example/path", "/article/7"); got != "/article/7" {
+		t.Errorf("external return = %q, want fallback", got)
+	}
+	if got := localReturnTo("/interest/AI?offset=20", "/article/7"); got != "/interest/AI?offset=20" {
+		t.Errorf("local return = %q", got)
 	}
 }
 

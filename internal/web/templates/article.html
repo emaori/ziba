@@ -17,6 +17,7 @@
        article, not just the one that was clicked. */}}
   <div class="actions">
     {{if .HasOriginal}}<a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>{{end}}
+    {{if $.LinkwardenEnabled}}<a class="button secondary" href="/article/{{.ID}}/linkwarden?return_to={{urlquery $.ReturnTo}}">Save to Linkwarden</a>{{end}}
     {{template "archiveButton" .}}
   </div>
 
@@ -46,6 +47,7 @@
   {{end}}
   <div class="actions">
     {{if .HasOriginal}}<a class="button secondary" href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>{{end}}
+    {{if $.LinkwardenEnabled}}<a class="button secondary" href="/article/{{.ID}}/linkwarden?return_to={{urlquery $.ReturnTo}}">Save to Linkwarden</a>{{end}}
     {{template "archiveButton" .}}
   </div>
 </article>

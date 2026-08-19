@@ -1,0 +1,39 @@
+{{define "content"}}
+<section class="settings-page linkwarden-save">
+  <p><a href="{{.ReturnTo}}">← Back</a></p>
+  <header class="config-header">
+    <h1>Save to Linkwarden</h1>
+    <p class="note">Review how “{{.Article.Title}}” will appear in your library.</p>
+  </header>
+  {{if .Error}}<p class="form-error" role="alert">{{.Error}}</p>{{end}}
+  {{if .Success}}<p class="form-success" role="status">{{.Success}}</p>{{end}}
+  <form method="post" action="/article/{{.Article.ID}}/linkwarden" class="settings-form integration-form">
+    <input type="hidden" name="csrf_token" value="{{csrfToken}}">
+    <input type="hidden" name="return_to" value="{{.ReturnTo}}">
+    <fieldset>
+      <legend>Link details</legend>
+      <label for="lw-name">Name</label>
+      <input id="lw-name" name="name" value="{{.LinkwardenName}}" maxlength="2048" required>
+      <p class="help">Ziba proposes the article title. You can change it before saving.</p>
+      <label for="lw-description">Description</label>
+      <textarea id="lw-description" name="description" rows="5" maxlength="2048">{{.LinkwardenDescription}}</textarea>
+      <p class="help">Ziba proposes the article summary.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Organize</legend>
+      <label for="lw-collection">Collection</label>
+      <select id="lw-collection" name="collection" required>
+        {{range .LinkwardenCollections}}<option value="{{.ID}}" {{if eq .ID $.LinkwardenCollectionID}}selected{{end}}>{{.Name}}</option>{{end}}
+      </select>
+      <label for="lw-tag-input">Tags</label>
+      <div class="tag-combobox" data-tag-picker>
+        <div class="selected-tags" data-selected-tags>{{range .LinkwardenTagNames}}<span class="selected-tag" data-tag="{{.}}"><span>{{.}}</span><button type="button" title="Remove {{.}}" aria-label="Remove {{.}}">×</button><input type="hidden" name="tag_names" value="{{.}}"></span>{{end}}</div>
+        <input id="lw-tag-input" name="tag_names" list="lw-tag-suggestions" data-tag-input autocomplete="off" placeholder="Start typing a tag">
+        <datalist id="lw-tag-suggestions">{{range .LinkwardenTags}}<option value="{{.Name}}"></option>{{end}}</datalist>
+      </div>
+      <p class="help">Choose an existing suggestion or enter a new tag. Press Enter or type a comma to add another. New names are created in Linkwarden.</p>
+    </fieldset>
+    <div class="form-actions"><a class="button secondary" href="{{.ReturnTo}}">Cancel</a><button class="button" type="submit">Save article</button></div>
+  </form>
+</section>
+{{end}}

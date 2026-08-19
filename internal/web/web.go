@@ -7,6 +7,7 @@
 package web
 
 import (
+	"context"
 	"crypto/rand"
 	"embed"
 	"encoding/base64"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
+	"github.com/emaori/ziba/internal/linkwarden"
 )
 
 //go:embed templates/*.html static/*
@@ -33,6 +35,7 @@ var templateFuncs = template.FuncMap{
 	"shortDate":  shortDate,
 	"join":       strings.Join,
 	"add":        func(a, b int) int { return a + b },
+	"card":       articleCard,
 
 	// Token counts run to seven figures, and an unbroken run of digits cannot
 	// be read at a glance — the difference between 1904322 and 190432 is the
@@ -53,6 +56,16 @@ var templateFuncs = template.FuncMap{
 	// halves are escaped the way each needs — and so a link cannot be built
 	// with only one of them remembered.
 	"dayLink": dayLink,
+}
+
+type cardView struct {
+	domain.Article
+	LinkwardenEnabled bool
+	ReturnTo          string
+}
+
+func articleCard(article domain.Article, linkwardenEnabled bool, returnTo string) cardView {
+	return cardView{Article: article, LinkwardenEnabled: linkwardenEnabled, ReturnTo: returnTo}
 }
 
 func age(t time.Time) string {
@@ -109,8 +122,9 @@ func shortDate(t time.Time) string {
 
 // Server holds everything the handlers need.
 type Server struct {
-	store     Store
-	csrfToken string
+	store      Store
+	csrfToken  string
+	linkwarden linkwardenClient
 
 	// interests drive the tab bar and are the only values the interest routes
 	// accept. They come from the configuration file rather than from whatever
@@ -124,6 +138,14 @@ type Server struct {
 	// "content", and in a shared set the last one parsed would silently
 	// overwrite the rest — every page would then render the same body.
 	pages map[string]*template.Template
+}
+
+type linkwardenClient interface {
+	Configure(linkwarden.Configuration)
+	Collections(context.Context) ([]linkwarden.Collection, error)
+	Tags(context.Context) ([]linkwarden.Tag, error)
+	CreateLink(context.Context, linkwarden.Link) error
+	Test(context.Context) error
 }
 
 // New parses the templates and wires the routes. Parsing at startup means a
@@ -173,11 +195,12 @@ func newServer(store Store, interests config.Interests, csrfToken string) (*Serv
 	}
 
 	return &Server{
-		store:     store,
-		csrfToken: csrfToken,
-		interests: names,
-		threshold: domain.RelevanceScore(interests.Threshold),
-		pages:     pages,
+		store:      store,
+		csrfToken:  csrfToken,
+		linkwarden: linkwarden.NewClient(),
+		interests:  names,
+		threshold:  domain.RelevanceScore(interests.Threshold),
+		pages:      pages,
 	}, nil
 }
 
@@ -200,6 +223,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /interest/{name}", s.handleInterest)
 	mux.HandleFunc("GET /day", s.handleDay)
 	mux.HandleFunc("GET /article/{id}", s.handleArticle)
+	mux.HandleFunc("GET /article/{id}/linkwarden", s.handleLinkwardenArticle)
+	mux.HandleFunc("POST /article/{id}/linkwarden", s.handleLinkwardenArticle)
 	mux.HandleFunc("GET /archive", s.handleArchiveAll)
 	mux.HandleFunc("GET /stats", s.handleStats)
 	mux.HandleFunc("GET /status", s.handleCollectionStatus)
@@ -227,7 +252,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /settings/interests", s.handleSettings)
 	mux.HandleFunc("GET /settings/sources", s.handleSettings)
 	mux.HandleFunc("GET /settings/schedule", s.handleSettings)
+	mux.HandleFunc("GET /settings/linkwarden", s.handleSettings)
 	mux.HandleFunc("POST /settings/schedule", s.handleSettingsSchedule)
+	mux.HandleFunc("POST /settings/linkwarden", s.handleSettingsLinkwarden)
 	mux.HandleFunc("GET /settings/interest/new", s.handleInterestForm)
 	mux.HandleFunc("POST /settings/interest/new", s.handleInterestForm)
 	mux.HandleFunc("GET /settings/interest/{id}", s.handleInterestForm)

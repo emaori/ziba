@@ -13,6 +13,7 @@ import (
 
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
+	"github.com/emaori/ziba/internal/linkwarden"
 )
 
 // Configuration is the complete user-owned configuration used by one run.
@@ -21,6 +22,7 @@ type Configuration struct {
 	Interests  config.Interests
 	Sources    []domain.Source
 	Schedule   config.CollectionSchedule
+	Linkwarden linkwarden.Configuration
 }
 
 // InitializeSchedule imports the retired environment settings exactly once.
@@ -119,9 +121,14 @@ func (s *Store) DeleteSetupSource(ctx context.Context, id int64) error {
 func (s *Store) Configuration(ctx context.Context) (Configuration, error) {
 	var out Configuration
 	var every, at sql.NullString
-	if err := s.pool.QueryRow(ctx,
-		`SELECT configured, threshold, collect_every, collect_at FROM app_settings WHERE singleton`).
-		Scan(&out.Configured, &out.Interests.Threshold, &every, &at); err != nil {
+	if err := s.pool.QueryRow(ctx, `
+		SELECT configured, threshold, collect_every, collect_at,
+		       linkwarden_enabled, linkwarden_url, linkwarden_auth,
+		       linkwarden_username, linkwarden_password, linkwarden_token
+		FROM app_settings WHERE singleton`).Scan(
+		&out.Configured, &out.Interests.Threshold, &every, &at,
+		&out.Linkwarden.Enabled, &out.Linkwarden.URL, &out.Linkwarden.Auth,
+		&out.Linkwarden.Username, &out.Linkwarden.Password, &out.Linkwarden.Token); err != nil {
 		return out, fmt.Errorf("read application settings: %w", err)
 	}
 	if every.Valid && at.Valid {
@@ -160,6 +167,37 @@ func (s *Store) Configuration(ctx context.Context) (Configuration, error) {
 		return out, fmt.Errorf("read configured sources: %w", err)
 	}
 	return out, nil
+}
+
+// SaveLinkwarden stores the integration independently from article collection
+// configuration. Blank secret fields preserve the existing write-only values.
+func (s *Store) SaveLinkwarden(ctx context.Context, in linkwarden.Configuration) error {
+	var password, token string
+	if err := s.pool.QueryRow(ctx, `
+		SELECT linkwarden_password, linkwarden_token
+		FROM app_settings WHERE singleton`).Scan(&password, &token); err != nil {
+		return fmt.Errorf("read Linkwarden secrets: %w", err)
+	}
+	if in.Password == "" {
+		in.Password = password
+	}
+	if in.Token == "" {
+		in.Token = token
+	}
+	if err := in.Validate(); err != nil {
+		return err
+	}
+	_, err := s.pool.Exec(ctx, `
+		UPDATE app_settings
+		SET linkwarden_enabled=$1, linkwarden_url=$2, linkwarden_auth=$3,
+		    linkwarden_username=$4, linkwarden_password=$5,
+		    linkwarden_token=$6, updated_at=now()
+		WHERE singleton`, in.Enabled, strings.TrimRight(strings.TrimSpace(in.URL), "/"),
+		in.Auth, strings.TrimSpace(in.Username), in.Password, strings.TrimSpace(in.Token))
+	if err != nil {
+		return fmt.Errorf("save Linkwarden configuration: %w", err)
+	}
+	return nil
 }
 
 func scanConfiguredSource(row pgx.CollectableRow) (domain.Source, error) {

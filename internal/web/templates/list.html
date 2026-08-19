@@ -4,7 +4,7 @@
     <span class="subtitle">{{len .Articles}} articles</span>
   </h1>
   {{if .Articles}}
-    {{range .Articles}}{{template "card" .}}{{end}}
+    {{range .Articles}}{{template "card" (card . $.LinkwardenEnabled $.ReturnTo)}}{{end}}
   {{else}}
     <p class="note">Nothing here yet.</p>
   {{end}}

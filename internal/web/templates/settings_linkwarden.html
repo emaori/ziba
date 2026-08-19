@@ -1,0 +1,39 @@
+{{define "content"}}
+<section class="settings-page">
+  <h1 class="page-title">Settings</h1>
+  {{template "settingsNav" .}}
+  <header class="config-header">
+    <h2>Linkwarden</h2>
+    <p class="note">Save articles from Ziba to your Linkwarden library.</p>
+  </header>
+  {{if eq .SettingsSection "linkwarden"}}{{if .Error}}<p class="form-error" role="alert">{{.Error}}</p>{{else if .Settings.Linkwarden.Enabled}}<p class="form-success" role="status">Linkwarden is connected.</p>{{end}}{{end}}
+  <form method="post" action="/settings/linkwarden" class="settings-form integration-form">
+    <input type="hidden" name="csrf_token" value="{{csrfToken}}">
+    <fieldset>
+      <legend>Connection</legend>
+      <label class="check"><input type="checkbox" name="enabled" {{if .LinkwardenForm.Enabled}}checked{{end}}> Enable Linkwarden</label>
+      <label for="linkwarden-url">Instance address</label>
+      <input id="linkwarden-url" type="url" name="url" value="{{.LinkwardenForm.URL}}" placeholder="https://links.example.com" required>
+      <p class="help">The address of your self-hosted Linkwarden instance, without an API path.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Authentication</legend>
+      <label for="linkwarden-auth">Method</label>
+      <select id="linkwarden-auth" name="auth" data-linkwarden-auth>
+        <option value="credentials" {{if eq .LinkwardenForm.Auth "credentials"}}selected{{end}}>Username and password</option>
+        <option value="token" {{if eq .LinkwardenForm.Auth "token"}}selected{{end}}>API token</option>
+      </select>
+      <p class="help">Username and password is the recommended choice for instances where third-party API tokens are unreliable.</p>
+      <div data-linkwarden-fields="credentials" {{if eq .LinkwardenForm.Auth "token"}}hidden{{end}}>
+        <label>Username <input name="username" value="{{.LinkwardenForm.Username}}" autocomplete="username"></label>
+        <label>Password <input type="password" name="password" autocomplete="new-password" placeholder="{{if .Settings.Linkwarden.Password}}Leave blank to keep the stored password{{else}}Linkwarden password{{end}}"></label>
+      </div>
+      <div data-linkwarden-fields="token" {{if ne .LinkwardenForm.Auth "token"}}hidden{{end}}>
+        <label>API token <input type="password" name="token" autocomplete="off" placeholder="{{if .Settings.Linkwarden.Token}}Leave blank to keep the stored token{{else}}Linkwarden API token{{end}}"></label>
+      </div>
+      <p class="help">Secrets are stored for server-side requests and are never displayed again.</p>
+    </fieldset>
+    <div class="actions"><button class="button" type="submit">Save and test connection</button></div>
+  </form>
+</section>
+{{end}}
