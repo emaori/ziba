@@ -213,6 +213,14 @@ form.inline { display: flex; margin: 0; }
 .card h2 a { color: var(--ink); text-decoration: none; }
 .card h2 a:hover { color: var(--accent); }
 .card .summary { margin: 0 0 1rem; color: var(--ink-soft); }
+.card .limited-summary { padding-left: 0.75rem; border-left: 3px solid #9a6b16; }
+.card .limited-summary p { margin: 0; }
+.summary-status {
+  font-family: system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink);
+}
 
 .meta {
   display: flex;
@@ -312,6 +320,8 @@ form.inline { display: flex; margin: 0; }
 
 .summary-box p { margin: 0 0 0.5rem; }
 .summary-box .why { font-size: 0.85rem; color: var(--ink-soft); }
+.summary-box.limited-summary { border-left-color: #9a6b16; }
+.summary-box .summary-explanation { font-size: 0.85rem; color: var(--ink-soft); }
 
 /* The reading column itself: slightly larger type, generous line height. */
 .body { font-size: 1.08rem; line-height: 1.75; }

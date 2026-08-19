@@ -17,14 +17,16 @@ const articleColumns = `
 	a.id, a.source_id, s.name, a.url, a.title, a.author,
 	COALESCE(a.published_at, a.collected_at), a.collected_at,
 	a.categories, a.entities, a.tone,
-	a.summary, COALESCE(a.score, 0), a.score_reason`
+	a.summary, a.content_quality, a.content_quality_reason,
+	COALESCE(a.score, 0), a.score_reason`
 
 func scanArticle(row pgx.CollectableRow) (domain.Article, error) {
 	var a domain.Article
 	err := row.Scan(&a.ID, &a.SourceID, &a.SourceName, &a.URL, &a.Title, &a.Author,
 		&a.PublishedAt, &a.CollectedAt,
 		&a.Categories, &a.Entities, &a.Tone,
-		&a.Summary, &a.Score, &a.ScoreReason)
+		&a.Summary, &a.ContentQuality, &a.ContentQualityReason,
+		&a.Score, &a.ScoreReason)
 	return a, err
 }
 
@@ -143,7 +145,8 @@ func (s *Store) Article(ctx context.Context, id int64) (domain.Article, error) {
 	err := row.Scan(&a.ID, &a.SourceID, &a.SourceName, &a.URL, &a.Title, &a.Author,
 		&a.PublishedAt, &a.CollectedAt,
 		&a.Categories, &a.Entities, &a.Tone,
-		&a.Summary, &a.Score, &a.ScoreReason, &a.FullText)
+		&a.Summary, &a.ContentQuality, &a.ContentQualityReason,
+		&a.Score, &a.ScoreReason, &a.FullText)
 	if err != nil {
 		return domain.Article{}, err
 	}
@@ -299,7 +302,8 @@ func collectArchivable(rows pgx.Rows, what string) ([]domain.Article, error) {
 		var archived *time.Time
 		err := row.Scan(&a.ID, &a.SourceID, &a.SourceName, &a.URL, &a.Title, &a.Author,
 			&a.PublishedAt, &a.CollectedAt, &a.Categories, &a.Entities, &a.Tone,
-			&a.Summary, &a.Score, &a.ScoreReason, &archived)
+			&a.Summary, &a.ContentQuality, &a.ContentQualityReason,
+			&a.Score, &a.ScoreReason, &archived)
 		if archived != nil {
 			a.ArchivedAt = *archived
 		}

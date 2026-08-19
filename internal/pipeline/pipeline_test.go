@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/emaori/ziba/internal/config"
@@ -222,5 +223,54 @@ func TestAnalyzeDoesNotSummarizeAnArticleWithNoText(t *testing.T) {
 				t.Errorf("score = %d, want 90: the article keeps its assessment", got.Score)
 			}
 		})
+	}
+}
+
+func TestAnalyzeMarksAndSummarizesMismatchedContentAsLimited(t *testing.T) {
+	stub := &stubAnalyzer{
+		assessment: Assessment{
+			Categories:     []string{"Economics"},
+			Score:          80,
+			ContentQuality: domain.ContentMismatched,
+			ContentReason:  "the body is an index of unrelated newsletters",
+		},
+		summary: "A cautious overview based on trustworthy metadata.",
+	}
+	p := New(stub, 60, testLogger())
+
+	got, err := p.Analyze(context.Background(), domain.Article{
+		Title:    "Effects of banking consolidation",
+		URL:      "https://example.com/banking",
+		FullText: "Latest newsletters. Cooking. Sport. Continue reading.",
+	}, nil)
+	if err != nil {
+		t.Fatalf("Analyze: %v", err)
+	}
+	if stub.summarizeCalls != 1 {
+		t.Fatalf("summarize called %d times, want 1", stub.summarizeCalls)
+	}
+	if got.ContentQuality != domain.ContentMismatched || !got.LimitedOverview() {
+		t.Errorf("quality = %q, limited = %v", got.ContentQuality, got.LimitedOverview())
+	}
+	if got.ContentQualityReason != "the body is an index of unrelated newsletters" {
+		t.Errorf("content reason = %q", got.ContentQualityReason)
+	}
+}
+
+func TestSummaryPromptExcludesMismatchedBody(t *testing.T) {
+	a := domain.Article{
+		Title:    "Effects of banking consolidation",
+		URL:      "https://example.com/banking",
+		FullText: "UNRELATED NEWSLETTER INDEX",
+	}
+	prompt := summaryArticlePrompt(a, domain.ContentMismatched)
+	if strings.Contains(prompt, a.FullText) {
+		t.Error("mismatched body was sent to the summarizer")
+	}
+	if !strings.Contains(prompt, a.Title) {
+		t.Error("trustworthy title is missing from the limited-summary prompt")
+	}
+	if got := summaryArticlePrompt(a, domain.ContentComplete); !strings.Contains(got, a.FullText) {
+		t.Error("complete body was omitted from an ordinary summary prompt")
 	}
 }

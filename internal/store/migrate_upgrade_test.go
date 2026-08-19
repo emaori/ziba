@@ -39,7 +39,7 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load migrations: %v", err)
 	}
-	var retryMigration, configurationMigration migration
+	var retryMigration, configurationMigration, contentQualityMigration migration
 	for _, migration := range migrations {
 		if migration.version == 9 {
 			retryMigration = migration
@@ -48,6 +48,9 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 		if migration.version == 10 {
 			configurationMigration = migration
 			continue
+		}
+		if migration.version == 14 {
+			contentQualityMigration = migration
 		}
 		if migration.version > 9 {
 			continue
@@ -61,6 +64,9 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	}
 	if configurationMigration.version == 0 {
 		t.Fatal("configuration migration 10 is missing")
+	}
+	if contentQualityMigration.version == 0 {
+		t.Fatal("content-quality migration 14 is missing")
 	}
 
 	var sourceID int64
@@ -83,8 +89,17 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	if err := applyMigration(ctx, conn, configurationMigration); err != nil {
 		t.Fatalf("apply configuration migration: %v", err)
 	}
+	// Apply the intervening schedule, collection-request and Linkwarden changes
+	// in their normal order before the new content-quality migration.
+	for _, migration := range migrations {
+		if migration.version > 10 && migration.version <= 14 {
+			if err := applyMigration(ctx, conn, migration); err != nil {
+				t.Fatalf("apply migration %s: %v", migration.name, err)
+			}
+		}
+	}
 
-	var rawTitle, articleTitle, summary string
+	var rawTitle, articleTitle, summary, quality string
 	var score, failures int
 	var failedAt *time.Time
 	if err := conn.QueryRow(ctx, `SELECT title, failure_count, failed_at
@@ -95,13 +110,16 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	if rawTitle != "Existing raw item" || failures != 0 || failedAt != nil {
 		t.Errorf("upgraded raw item = %q, failures %d, failed %v", rawTitle, failures, failedAt)
 	}
-	if err := conn.QueryRow(ctx, `SELECT title, summary, score, failure_count
+	if err := conn.QueryRow(ctx, `SELECT title, summary, score, failure_count, content_quality
 		FROM articles WHERE url = 'https://example.com/article'`).
-		Scan(&articleTitle, &summary, &score, &failures); err != nil {
+		Scan(&articleTitle, &summary, &score, &failures, &quality); err != nil {
 		t.Fatalf("read upgraded article: %v", err)
 	}
 	if articleTitle != "Existing article" || summary != "existing summary" || score != 88 || failures != 0 {
 		t.Errorf("existing article changed: title=%q summary=%q score=%d failures=%d",
 			articleTitle, summary, score, failures)
+	}
+	if quality != "complete" {
+		t.Errorf("existing article quality = %q, want backward-compatible complete", quality)
 	}
 }

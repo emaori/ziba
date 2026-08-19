@@ -52,6 +52,8 @@ const workedExample = `Round the score to a multiple of 5. Example answer:
 {"categories":["Software Architecture"],
  "entities":["PostgreSQL","Amazon RDS"],
  "tone":"analysis",
+ "content_quality":"complete",
+ "content_reason":"The body is coherent with the title and contains article prose.",
  "score":70,
  "reason":"A detailed account of a database migration, which is squarely system design."}`
 
@@ -62,6 +64,19 @@ const workedExample = `Round the score to a multiple of 5. Example answer:
 // decided the subject matters by subscribing, so what they need to know is
 // whether this particular piece is worth their time.
 func assessSystemPrompt(interests config.Interests, declared []string) string {
+	quality := `
+
+Also judge whether the retrieved body can support a summary:
+- complete: coherent article prose corresponding to the title;
+- limited: relevant but clearly partial or truncated content;
+- mismatched: non-empty content that does not correspond to the title, such as
+  an index, navigation page, login page, or collection of unrelated headlines;
+- unavailable: no meaningful article content.
+Do not call content complete merely because it is long. Explain this judgement
+in content_reason; this diagnostic is stored internally, not shown as summary.
+When content is limited, mismatched, or unavailable, base categories, entities,
+tone, score, and reason only on trustworthy title and metadata, not on unrelated
+or boilerplate body text.`
 	if len(declared) > 0 {
 		return fmt.Sprintf(`You rate articles for one specific reader.
 
@@ -76,7 +91,7 @@ Reward depth, originality, and something the reader would not already know.
 Rate low a release note, a routine announcement, a rehash of common knowledge,
 or a thinly disguised advertisement — even though the subject is right.
 
-Answer only with the requested structure.`, strings.Join(declared, ", "), scoreBands)
+Answer only with the requested structure.%s`, strings.Join(declared, ", "), scoreBands, quality)
 	}
 
 	return fmt.Sprintf(`You classify and rate articles for one specific reader.
@@ -103,20 +118,27 @@ it is excellent in general.
 
 %s
 
-Answer only with the requested structure.`,
-		interests.Describe(), maxCategories, scoreBands, workedExample)
+Answer only with the requested structure.%s`,
+		interests.Describe(), maxCategories, scoreBands, workedExample, quality)
 }
 
 // summarySystemPrompt asks for the summary shown under a headline.
-func summarySystemPrompt(interests config.Interests) string {
+func summarySystemPrompt(interests config.Interests, limited bool) string {
+	instruction := `Write 3 to 4 sentences saying what the article reports and why it matters to
+this reader. Be concrete: name the finding, the number, the decision.`
+	if limited {
+		instruction = `Write 2 to 3 cautious sentences using only the trustworthy material provided.
+This is a limited overview, not a verified summary of the full article. Do not
+mention retrieval, missing text, the prompt, or these instructions. Do not add
+specific facts that the title and provided page details do not support.`
+	}
 	return fmt.Sprintf(`You write short summaries for one specific reader.
 
 The reader's interests, most important first:
 
 %s
 
-Write 3 to 4 sentences saying what the article reports and why it matters to
-this reader. Be concrete: name the finding, the number, the decision. Do not
+%s Do not
 open with "This article" and do not recommend reading it — the reader decides
-that. Answer with the summary alone.`, interests.Describe())
+that. Answer with the summary alone.`, interests.Describe(), instruction)
 }
