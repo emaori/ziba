@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -260,12 +259,6 @@ func (s *Store) saveConfiguration(ctx context.Context, interests config.Interest
 		folder, username, password, days, maxMessages := "", "", "", 1, 0
 		if src.Newsletter != nil {
 			folder, username, password = src.Newsletter.Folder, src.Newsletter.Username, src.Newsletter.Password
-			if username == "" && src.Newsletter.UsernameEnv != "" {
-				username = os.Getenv(src.Newsletter.UsernameEnv)
-			}
-			if password == "" && src.Newsletter.PasswordEnv != "" {
-				password = os.Getenv(src.Newsletter.PasswordEnv)
-			}
 			days, maxMessages = src.Newsletter.LookBackDays, src.Newsletter.MaxMessages
 		}
 		categories := src.Categories
@@ -313,8 +306,8 @@ func (s *Store) saveConfiguration(ctx context.Context, interests config.Interest
 	return nil
 }
 
-// stringSlice preserves configured values while translating an omitted YAML or
-// form list into PostgreSQL's empty array rather than SQL NULL.
+// stringSlice translates an omitted form list into PostgreSQL's empty array
+// rather than SQL NULL.
 func stringSlice(values []string) []string {
 	if values == nil {
 		return []string{}

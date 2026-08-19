@@ -115,12 +115,9 @@ func (c CollectFrom) Accepts(firstSeen, published time.Time) bool {
 // NewsletterOptions describes a mailbox of newsletters.
 //
 // Newsletters are read as link aggregators: the email is a list of links with
-// short blurbs, and the value is in the articles it points at. Environment
-// variable names remain only for importing legacy YAML configuration.
+// short blurbs, and the value is in the articles it points at.
 type NewsletterOptions struct {
-	Folder      string
-	UsernameEnv string
-	PasswordEnv string
+	Folder string
 	// Username and Password are populated from database-owned configuration.
 	// They are never rendered back into the web UI.
 	Username string

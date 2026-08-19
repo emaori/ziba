@@ -44,16 +44,19 @@ func TestDryRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load the configuration: %v", err)
 	}
-	interests, err := config.LoadInterests(cfg.InterestsPath)
-	if err != nil {
-		t.Fatalf("load the interests: %v", err)
-	}
-
 	db, err := store.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
 		t.Fatalf("open the database: %v", err)
 	}
 	defer db.Close()
+	stored, err := db.Configuration(ctx)
+	if err != nil {
+		t.Fatalf("load the configuration: %v", err)
+	}
+	if !stored.Configured {
+		t.Fatal("configuration is incomplete; finish web setup first")
+	}
+	interests := stored.Interests
 
 	article, declared := pickArticle(t, ctx, db)
 

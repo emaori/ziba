@@ -6,7 +6,6 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -153,17 +152,9 @@ func (c *Newsletter) connect(src domain.Source, opts *domain.NewsletterOptions) 
 		return nil, fmt.Errorf("connect to %s: %w", host, err)
 	}
 
-	username, password := opts.Username, opts.Password
-	if username == "" {
-		username = os.Getenv(opts.UsernameEnv)
-	}
-	if password == "" {
-		password = os.Getenv(opts.PasswordEnv)
-	}
-	if err := client.Login(username, password).Wait(); err != nil {
+	if err := client.Login(opts.Username, opts.Password).Wait(); err != nil {
 		client.Close()
-		// Naming the variable, not the value: this error ends up in logs.
-		return nil, fmt.Errorf("log in as %s (from %s): %w", username, opts.UsernameEnv, err)
+		return nil, fmt.Errorf("log in as %s: %w", opts.Username, err)
 	}
 	return client, nil
 }
