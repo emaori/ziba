@@ -261,7 +261,10 @@ type Article struct {
 	Score                RelevanceScore
 	// BaseScore is the provider's untouched answer. Score may include the local
 	// personalization learned from feedback on earlier articles.
-	BaseScore     RelevanceScore
+	BaseScore RelevanceScore
+	// BaseScoreSet distinguishes a real provider score of zero from an article
+	// that has no provider score. Never use the numeric value as a presence flag.
+	BaseScoreSet  bool
 	ScoreReason   string
 	ScoreFeedback ScoreFeedback
 	AnalyzedAt    time.Time
@@ -289,7 +292,7 @@ func (a Article) LimitedOverview() bool {
 }
 
 // PersonalizedScore reports whether local feedback moved the provider's score.
-func (a Article) PersonalizedScore() bool { return a.BaseScore != 0 && a.Score != a.BaseScore }
+func (a Article) PersonalizedScore() bool { return a.BaseScoreSet && a.Score != a.BaseScore }
 
 // HasReadableText reports whether the stored body should be shown to a reader.
 // Mismatched text belongs to another page or an index and is more misleading

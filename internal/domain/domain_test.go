@@ -2,6 +2,26 @@ package domain
 
 import "testing"
 
+func TestPersonalizedScoreTreatsZeroAsARealBaseScore(t *testing.T) {
+	tests := []struct {
+		name    string
+		article Article
+		want    bool
+	}{
+		{"zero moved upward", Article{BaseScore: 0, BaseScoreSet: true, Score: 5}, true},
+		{"zero unchanged", Article{BaseScore: 0, BaseScoreSet: true, Score: 0}, false},
+		{"base absent", Article{BaseScore: 0, BaseScoreSet: false, Score: 5}, false},
+		{"nonzero moved", Article{BaseScore: 60, BaseScoreSet: true, Score: 65}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.article.PersonalizedScore(); got != tt.want {
+				t.Errorf("PersonalizedScore = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 // An essay sent by email has no external original: its address is the synthetic
 // identifier of the message, which no browser can open. The reader uses this to
 // decide whether to offer the link at all.

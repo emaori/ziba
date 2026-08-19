@@ -109,6 +109,7 @@ func (p *Pipeline) Analyze(ctx context.Context, a domain.Article, declared []str
 		return a, fmt.Errorf("assess %s: %w", a.URL, err)
 	}
 	a.BaseScore = assessment.Score
+	a.BaseScoreSet = true
 	if p.calibrator != nil {
 		assessment.Score, err = p.calibrator.CalibrateScore(ctx, assessment.Categories, a.BaseScore)
 		if err != nil {

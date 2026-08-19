@@ -98,3 +98,41 @@ func TestFeedbackLifecycleAndReset(t *testing.T) {
 		t.Fatalf("score after reset = %d, want base score 60", restored)
 	}
 }
+
+func TestZeroBaseScoreRoundTripsAndResets(t *testing.T) {
+	db := testStore(t)
+	ctx := context.Background()
+	sourceID := seedSource(t, db, "zero-base", nil)
+	id, _, err := db.SaveArticle(ctx, domain.Article{
+		SourceID: sourceID, URL: "https://example.com/zero-base", Title: "Zero base",
+		FullText: "Text", CollectedAt: time.Now(),
+	})
+	if err != nil {
+		t.Fatalf("save article: %v", err)
+	}
+	if err := db.SaveAnalysis(ctx, domain.Article{
+		ID: id, Categories: []string{"AI"}, Score: 5,
+		BaseScore: 0, BaseScoreSet: true, ScoreReason: "provider scored zero",
+		ContentQuality: domain.ContentComplete, AnalyzedAt: time.Now(),
+	}); err != nil {
+		t.Fatalf("save analysis: %v", err)
+	}
+
+	article, err := db.Article(ctx, id)
+	if err != nil {
+		t.Fatalf("read article: %v", err)
+	}
+	if !article.BaseScoreSet || article.BaseScore != 0 || !article.PersonalizedScore() {
+		t.Fatalf("read scores = base %d set %v score %d personalized %v", article.BaseScore, article.BaseScoreSet, article.Score, article.PersonalizedScore())
+	}
+	if err := db.ResetPersonalizedScoring(ctx); err != nil {
+		t.Fatalf("reset: %v", err)
+	}
+	article, err = db.Article(ctx, id)
+	if err != nil {
+		t.Fatalf("read reset article: %v", err)
+	}
+	if article.Score != 0 || !article.BaseScoreSet || article.PersonalizedScore() {
+		t.Fatalf("after reset = base %d set %v score %d personalized %v", article.BaseScore, article.BaseScoreSet, article.Score, article.PersonalizedScore())
+	}
+}

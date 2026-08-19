@@ -45,7 +45,7 @@ func TestPersonalizedScoreControlsSummaryThresholdAndPreservesBase(t *testing.T)
 	if err != nil {
 		t.Fatalf("Analyze returned error: %v", err)
 	}
-	if got.BaseScore != 55 || got.Score != 65 {
+	if !got.BaseScoreSet || got.BaseScore != 55 || got.Score != 65 {
 		t.Fatalf("scores = base %d personalized %d, want 55 and 65", got.BaseScore, got.Score)
 	}
 	if got.Summary == "" {
@@ -63,7 +63,7 @@ func TestPersonalizedScoreCanMoveArticleBelowSummaryThreshold(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.BaseScore != 65 || got.Score != 55 {
+	if !got.BaseScoreSet || got.BaseScore != 65 || got.Score != 55 {
 		t.Fatalf("scores = %d/%d, want 65/55", got.BaseScore, got.Score)
 	}
 	if analyzer.summarizeCalls != 0 || got.Summary != "" {
