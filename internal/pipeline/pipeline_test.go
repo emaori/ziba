@@ -40,7 +40,7 @@ func (f *fixedCalibrator) CalibrateScore(_ context.Context, categories []string,
 func TestPersonalizedScoreControlsSummaryThresholdAndPreservesBase(t *testing.T) {
 	analyzer := &stubAnalyzer{assessment: Assessment{Categories: []string{"AI"}, Score: 55, Reason: "close"}, summary: "Personalized summary"}
 	calibrator := &fixedCalibrator{score: 65}
-	p := NewPersonalized(analyzer, 60, slog.Default(), calibrator)
+	p := New(analyzer, 60, slog.Default()).WithCalibrator(calibrator)
 	got, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com", FullText: "text"}, nil)
 	if err != nil {
 		t.Fatalf("Analyze returned error: %v", err)
@@ -58,7 +58,7 @@ func TestPersonalizedScoreControlsSummaryThresholdAndPreservesBase(t *testing.T)
 
 func TestPersonalizedScoreCanMoveArticleBelowSummaryThreshold(t *testing.T) {
 	analyzer := &stubAnalyzer{assessment: Assessment{Categories: []string{"AI"}, Score: 65}, summary: "must not be used"}
-	p := NewPersonalized(analyzer, 60, testLogger(), &fixedCalibrator{score: 55})
+	p := New(analyzer, 60, testLogger()).WithCalibrator(&fixedCalibrator{score: 55})
 	got, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com", FullText: "text"}, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -73,7 +73,7 @@ func TestPersonalizedScoreCanMoveArticleBelowSummaryThreshold(t *testing.T) {
 
 func TestCalibrationFailureAbortsAnalysis(t *testing.T) {
 	analyzer := &stubAnalyzer{assessment: Assessment{Categories: []string{"AI"}, Score: 65}}
-	p := NewPersonalized(analyzer, 60, testLogger(), &fixedCalibrator{err: errors.New("database unavailable")})
+	p := New(analyzer, 60, testLogger()).WithCalibrator(&fixedCalibrator{err: errors.New("database unavailable")})
 	_, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com", FullText: "text"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "calibrate score") {
 		t.Fatalf("error = %v, want calibration context", err)

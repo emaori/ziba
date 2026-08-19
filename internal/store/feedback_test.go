@@ -6,35 +6,8 @@ import (
 	"time"
 
 	"github.com/emaori/ziba/internal/domain"
+	"github.com/emaori/ziba/internal/pipeline"
 )
-
-func TestCalibratedScoreLearnsConservatively(t *testing.T) {
-	tests := []struct {
-		name           string
-		base           domain.RelevanceScore
-		count, balance int
-		want           domain.RelevanceScore
-	}{
-		{"not enough feedback", 60, 2, 2, 60},
-		{"three higher", 60, 3, 3, 65},
-		{"three mostly higher rounds", 60, 3, 1, 62},
-		{"five higher confidence ramp", 60, 5, 5, 68},
-		{"ten higher", 60, 10, 10, 75},
-		{"confidence capped after ten", 60, 20, 20, 75},
-		{"ten lower", 60, 10, -10, 45},
-		{"mixed direction", 60, 10, 2, 63},
-		{"mixed cancels", 60, 10, 0, 60},
-		{"upper clamp", 95, 10, 10, 100},
-		{"lower clamp", 5, 10, -10, 0},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := calibratedScore(tt.base, tt.count, tt.balance); got != tt.want {
-				t.Errorf("score = %d, want %d", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestFeedbackLifecycleAndReset(t *testing.T) {
 	db := testStore(t)
@@ -54,10 +27,15 @@ func TestFeedbackLifecycleAndReset(t *testing.T) {
 	if err != nil || summary.Count != 3 || !summary.Active {
 		t.Fatalf("summary = %+v, err %v", summary, err)
 	}
-	if got, err := db.CalibrateScore(ctx, []string{"AI"}, 60); err != nil || got != 65 {
+	snapshot, err := db.ScoreFeedbackSamples(ctx)
+	if err != nil {
+		t.Fatalf("load snapshot: %v", err)
+	}
+	calibrator := pipeline.NewFeedbackCalibration(snapshot)
+	if got, err := calibrator.CalibrateScore(ctx, []string{"AI"}, 60); err != nil || got != 65 {
 		t.Fatalf("calibrated score = %d, err %v", got, err)
 	}
-	if got, err := db.CalibrateScore(ctx, []string{"Robotics"}, 60); err != nil || got != 60 {
+	if got, err := calibrator.CalibrateScore(ctx, []string{"Robotics"}, 60); err != nil || got != 60 {
 		t.Fatalf("unrelated category score = %d, err %v; want unchanged 60", got, err)
 	}
 	if err := db.SetScoreFeedback(ctx, ids[0], domain.FeedbackLower); err != nil {
@@ -67,7 +45,8 @@ func TestFeedbackLifecycleAndReset(t *testing.T) {
 	if summary.Count != 3 {
 		t.Fatalf("replacement created another row: count = %d", summary.Count)
 	}
-	if got, _ := db.CalibrateScore(ctx, []string{"AI"}, 60); got != 62 {
+	snapshot, _ = db.ScoreFeedbackSamples(ctx)
+	if got, _ := pipeline.NewFeedbackCalibration(snapshot).CalibrateScore(ctx, []string{"AI"}, 60); got != 62 {
 		t.Fatalf("score after replacement = %d, want 62", got)
 	}
 	if err := db.SetScoreFeedback(ctx, ids[0], ""); err != nil {

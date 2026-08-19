@@ -86,16 +86,20 @@ type Pipeline struct {
 // which is where most of the cost is saved: the expensive model only ever sees
 // what is worth reading.
 func New(analyzer Analyzer, threshold int, log *slog.Logger) *Pipeline {
-	return NewPersonalized(analyzer, threshold, log, nil)
+	return &Pipeline{
+		analyzer:  analyzer,
+		threshold: domain.RelevanceScore(threshold),
+		log:       log,
+	}
 }
 
-func NewPersonalized(analyzer Analyzer, threshold int, log *slog.Logger, calibrator ScoreCalibrator) *Pipeline {
-	return &Pipeline{
-		analyzer:   analyzer,
-		threshold:  domain.RelevanceScore(threshold),
-		log:        log,
-		calibrator: calibrator,
-	}
+// WithCalibrator returns an independent pipeline for one analysis batch. The
+// analyzer is safe for concurrent calls; the calibrator is an immutable
+// snapshot, so every article in the batch sees the same feedback state.
+func (p *Pipeline) WithCalibrator(calibrator ScoreCalibrator) *Pipeline {
+	copy := *p
+	copy.calibrator = calibrator
+	return &copy
 }
 
 // Analyze returns the article enriched with categories, entities, tone, score

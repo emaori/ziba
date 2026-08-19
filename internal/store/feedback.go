@@ -60,6 +60,28 @@ func (s *Store) ScoreFeedbackSummary(ctx context.Context) (ScoreFeedbackSummary,
 	return out, nil
 }
 
+// ScoreFeedbackSamples reads the complete immutable input for one analysis
+// batch in one query. Later feedback belongs to the next batch.
+func (s *Store) ScoreFeedbackSamples(ctx context.Context) ([]domain.ScoreFeedbackSample, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT a.categories, f.direction
+		FROM article_score_feedback f
+		JOIN articles a ON a.id = f.article_id
+		ORDER BY f.article_id`)
+	if err != nil {
+		return nil, fmt.Errorf("query score feedback snapshot: %w", err)
+	}
+	samples, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.ScoreFeedbackSample, error) {
+		var sample domain.ScoreFeedbackSample
+		err := row.Scan(&sample.Categories, &sample.Feedback)
+		return sample, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read score feedback snapshot: %w", err)
+	}
+	return samples, nil
+}
+
 // ResetPersonalizedScoring removes every correction and restores provider
 // scores on articles that had already received a local adjustment.
 func (s *Store) ResetPersonalizedScoring(ctx context.Context) error {

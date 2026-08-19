@@ -219,6 +219,12 @@ const (
 	FeedbackLower  ScoreFeedback = "lower"
 )
 
+// ScoreFeedbackSample is one immutable input to a batch's local calibration.
+type ScoreFeedbackSample struct {
+	Categories []string
+	Feedback   ScoreFeedback
+}
+
 // ContentQuality records whether the text retrieved for an article can support
 // an ordinary summary. It is deliberately separate from Summary: display code
 // must not guess reliability from prose written by a model.

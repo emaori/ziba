@@ -362,49 +362,6 @@ func (s *Store) SaveAnalysis(ctx context.Context, a domain.Article) error {
 	return nil
 }
 
-// CalibrateScore adjusts a fresh provider score using feedback on earlier
-// articles sharing at least one category. Three examples are required before
-// anything moves; confidence then grows gradually until ten examples.
-func (s *Store) CalibrateScore(ctx context.Context, categories []string, base domain.RelevanceScore) (domain.RelevanceScore, error) {
-	if len(categories) == 0 {
-		return base, nil
-	}
-	var count, balance int
-	err := s.pool.QueryRow(ctx, `
-		SELECT count(*), COALESCE(sum(CASE f.direction WHEN 'higher' THEN 1 ELSE -1 END), 0)
-		FROM article_score_feedback f
-		JOIN articles a ON a.id = f.article_id
-		WHERE a.categories && $1::text[]`, categories).Scan(&count, &balance)
-	if err != nil {
-		return base, fmt.Errorf("read score calibration: %w", err)
-	}
-	if count < 3 {
-		return base, nil
-	}
-	// At three unanimous examples the adjustment is 5 points; at ten it is
-	// 15. Mixed feedback naturally reduces or cancels it.
-	return calibratedScore(base, count, balance), nil
-}
-
-func calibratedScore(base domain.RelevanceScore, count, balance int) domain.RelevanceScore {
-	if count < 3 {
-		return base
-	}
-	confidence := min(float64(count)/10, 1)
-	adjustment := int(15*float64(balance)/float64(count)*confidence + float64(sign(balance))*0.5)
-	return domain.RelevanceScore(min(max(int(base)+adjustment, 0), 100))
-}
-
-func sign(n int) int {
-	if n < 0 {
-		return -1
-	}
-	if n > 0 {
-		return 1
-	}
-	return 0
-}
-
 // CountArticles returns how many articles are stored. Used for reporting.
 func (s *Store) CountArticles(ctx context.Context) (int64, error) {
 	var n int64
