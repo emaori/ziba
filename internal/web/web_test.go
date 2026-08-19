@@ -317,6 +317,44 @@ func TestReaderRendersParagraphs(t *testing.T) {
 	}
 }
 
+func TestLimitedOverviewIsClearlyLabelledAndHidesMismatchedText(t *testing.T) {
+	article := sampleArticle()
+	article.ContentQuality = domain.ContentMismatched
+	article.ContentQualityReason = "the body is an unrelated index"
+	article.FullText = "UNRELATED NEWSLETTER INDEX"
+
+	handler := newTestServer(t, &fakeStore{
+		digest:  domain.Digest{Date: time.Now(), Articles: []domain.Article{article}},
+		article: article,
+	})
+
+	_, card := get(t, handler, "/")
+	if !strings.Contains(card, "Limited overview") || !strings.Contains(card, `role="note"`) {
+		t.Error("card does not expose the limited overview with visible, semantic status")
+	}
+	if !strings.Contains(card, `title="The complete article text was not available`) {
+		t.Error("card limited-overview label has no explanatory tooltip")
+	}
+
+	_, reader := get(t, handler, "/article/42")
+	for _, want := range []string{"Limited overview", "complete article text was not available", "Reliable article text could not be retrieved"} {
+		if !strings.Contains(reader, want) {
+			t.Errorf("reader is missing %q", want)
+		}
+	}
+	if !strings.Contains(reader, `title="The complete article text was not available`) {
+		t.Error("reader limited-overview heading has no explanatory tooltip")
+	}
+	if strings.Contains(reader, article.FullText) {
+		t.Error("reader displayed text known to belong to a different page")
+	}
+
+	form := formFromArticle(article)
+	if !strings.HasPrefix(form.description, "Limited overview: ") {
+		t.Errorf("Linkwarden description = %q, want an explicit limited label", form.description)
+	}
+}
+
 // Stored text is plain, and the reader must escape it. A page that could inject
 // markup into the reader would be a hole straight through to every reader.
 func TestReaderEscapesArticleText(t *testing.T) {

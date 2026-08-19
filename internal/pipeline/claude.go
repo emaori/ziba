@@ -100,6 +100,15 @@ func assessmentSchema(interests config.Interests, declared []string) map[string]
 				"enum":        []string{"news", "analysis", "opinion", "tutorial", "announcement", "interview", "review"},
 				"description": "What kind of piece this is.",
 			},
+			"content_quality": map[string]any{
+				"type":        "string",
+				"enum":        []string{"complete", "limited", "mismatched", "unavailable"},
+				"description": "Whether the retrieved body is trustworthy and sufficient for summarization.",
+			},
+			"content_reason": map[string]any{
+				"type":        "string",
+				"description": "One internal sentence explaining the content-quality judgement.",
+			},
 			"score": map[string]any{
 				"type":        "integer",
 				"minimum":     0,
@@ -111,14 +120,14 @@ func assessmentSchema(interests config.Interests, declared []string) map[string]
 				"description": reasonDescription,
 			},
 		},
-		"required":             []string{"categories", "entities", "tone", "score", "reason"},
+		"required":             []string{"categories", "entities", "tone", "content_quality", "content_reason", "score", "reason"},
 		"additionalProperties": false,
 	}
 
 	if len(declared) > 0 {
 		properties := schema["properties"].(map[string]any)
 		delete(properties, "categories")
-		schema["required"] = []string{"entities", "tone", "score", "reason"}
+		schema["required"] = []string{"entities", "tone", "content_quality", "content_reason", "score", "reason"}
 	}
 	return schema
 }
@@ -130,11 +139,13 @@ func (c *Claude) Assess(ctx context.Context, a domain.Article, declared []string
 	system := assessSystemPrompt(c.interests, declared)
 
 	var result struct {
-		Categories []string `json:"categories"`
-		Entities   []string `json:"entities"`
-		Tone       string   `json:"tone"`
-		Score      int      `json:"score"`
-		Reason     string   `json:"reason"`
+		Categories     []string              `json:"categories"`
+		Entities       []string              `json:"entities"`
+		Tone           string                `json:"tone"`
+		ContentQuality domain.ContentQuality `json:"content_quality"`
+		ContentReason  string                `json:"content_reason"`
+		Score          int                   `json:"score"`
+		Reason         string                `json:"reason"`
 	}
 	used, err := c.ask(ctx, c.fastModel, 1024, system, articlePrompt(a),
 		assessmentSchema(c.interests, declared), &result)
@@ -152,26 +163,29 @@ func (c *Claude) Assess(ctx context.Context, a domain.Article, declared []string
 	score := min(max(result.Score, 0), 100)
 
 	return Assessment{
-		Categories: result.Categories,
-		Entities:   result.Entities,
-		Tone:       result.Tone,
-		Score:      domain.RelevanceScore(score),
-		Reason:     result.Reason,
-		Usage:      used,
+		Categories:     result.Categories,
+		Entities:       result.Entities,
+		Tone:           result.Tone,
+		ContentQuality: result.ContentQuality,
+		ContentReason:  result.ContentReason,
+		Score:          domain.RelevanceScore(score),
+		Reason:         result.Reason,
+		Usage:          used,
 	}, nil
 }
 
 // Summarize implements Summarizer. This is the only stage that runs on the
 // capable model, and only for articles above threshold.
-func (c *Claude) Summarize(ctx context.Context, a domain.Article, _ Assessment) (string, Usage, error) {
-	system := summarySystemPrompt(c.interests)
+func (c *Claude) Summarize(ctx context.Context, a domain.Article, as Assessment) (string, Usage, error) {
+	limited := as.ContentQuality == domain.ContentLimited || as.ContentQuality == domain.ContentMismatched
+	system := summarySystemPrompt(c.interests, limited)
 
 	message, err := c.client.Messages.New(ctx, anthropic.MessageNewParams{
 		Model:     c.capableModel,
 		MaxTokens: 512,
 		System:    []anthropic.TextBlockParam{{Text: system}},
 		Messages: []anthropic.MessageParam{
-			anthropic.NewUserMessage(anthropic.NewTextBlock(articlePrompt(a))),
+			anthropic.NewUserMessage(anthropic.NewTextBlock(summaryArticlePrompt(a, as.ContentQuality))),
 		},
 	})
 	if err != nil {
@@ -248,6 +262,19 @@ func articlePrompt(a domain.Article) string {
 	}
 	fmt.Fprintf(&b, "URL: %s\n\n%s", a.URL, text)
 	return b.String()
+}
+
+// summaryArticlePrompt excludes a body that assessment identified as belonging
+// to some other page. The title and ordinary metadata remain useful for a
+// cautious overview; sending known-bad prose would invite the same failure a
+// second time.
+func summaryArticlePrompt(a domain.Article, quality domain.ContentQuality) string {
+	if quality != domain.ContentMismatched && quality != domain.ContentUnavailable {
+		return articlePrompt(a)
+	}
+	copy := a
+	copy.FullText = ""
+	return articlePrompt(copy)
 }
 
 // clientOptions builds the SDK options, adding the journal's client when there

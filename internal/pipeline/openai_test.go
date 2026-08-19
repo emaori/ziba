@@ -96,7 +96,7 @@ func TestForStrictMode(t *testing.T) {
 	if schema["additionalProperties"] != false {
 		t.Error("additionalProperties is no longer false")
 	}
-	if len(schema["required"].([]string)) != 5 {
+	if len(schema["required"].([]string)) != len(properties) {
 		t.Errorf("required = %v, want every field", schema["required"])
 	}
 	items := categories["items"].(map[string]any)

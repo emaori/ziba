@@ -125,11 +125,13 @@ func (o *OpenAI) Assess(ctx context.Context, a domain.Article, declared []string
 	system := assessSystemPrompt(o.interests, declared)
 
 	var result struct {
-		Categories []string `json:"categories"`
-		Entities   []string `json:"entities"`
-		Tone       string   `json:"tone"`
-		Score      int      `json:"score"`
-		Reason     string   `json:"reason"`
+		Categories     []string              `json:"categories"`
+		Entities       []string              `json:"entities"`
+		Tone           string                `json:"tone"`
+		ContentQuality domain.ContentQuality `json:"content_quality"`
+		ContentReason  string                `json:"content_reason"`
+		Score          int                   `json:"score"`
+		Reason         string                `json:"reason"`
 	}
 	used, err := o.ask(ctx, o.fastModel, o.fastEffort, system, articlePrompt(a),
 		"assessment", forStrictMode(assessmentSchema(o.interests, declared)), &result)
@@ -145,17 +147,19 @@ func (o *OpenAI) Assess(ctx context.Context, a domain.Article, declared []string
 	score := min(max(result.Score, 0), 100)
 
 	return Assessment{
-		Categories: result.Categories,
-		Entities:   result.Entities,
-		Tone:       result.Tone,
-		Score:      domain.RelevanceScore(score),
-		Reason:     result.Reason,
-		Usage:      used,
+		Categories:     result.Categories,
+		Entities:       result.Entities,
+		Tone:           result.Tone,
+		ContentQuality: result.ContentQuality,
+		ContentReason:  result.ContentReason,
+		Score:          domain.RelevanceScore(score),
+		Reason:         result.Reason,
+		Usage:          used,
 	}, nil
 }
 
 // Summarize implements Summarizer, on the more capable model.
-func (o *OpenAI) Summarize(ctx context.Context, a domain.Article, _ Assessment) (string, Usage, error) {
+func (o *OpenAI) Summarize(ctx context.Context, a domain.Article, as Assessment) (string, Usage, error) {
 	if strings.TrimSpace(a.FullText) == "" {
 		return "", Usage{}, fmt.Errorf("article has no text to summarize")
 	}
@@ -163,8 +167,9 @@ func (o *OpenAI) Summarize(ctx context.Context, a domain.Article, _ Assessment) 
 	params := openai.ChatCompletionNewParams{
 		Model: o.capableModel,
 		Messages: []openai.ChatCompletionMessageParamUnion{
-			openai.SystemMessage(summarySystemPrompt(o.interests)),
-			openai.UserMessage(articlePrompt(a)),
+			openai.SystemMessage(summarySystemPrompt(o.interests,
+				as.ContentQuality == domain.ContentLimited || as.ContentQuality == domain.ContentMismatched)),
+			openai.UserMessage(summaryArticlePrompt(a, as.ContentQuality)),
 		},
 	}
 	tune(&params, o.capableModel, o.capableEffort)

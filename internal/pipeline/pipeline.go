@@ -20,12 +20,14 @@ import (
 // Assessment identifies the article and rates it against configured interests
 // in one model call.
 type Assessment struct {
-	Categories []string
-	Entities   []string
-	Tone       string
-	Score      domain.RelevanceScore
-	Reason     string
-	Usage      Usage
+	Categories     []string
+	Entities       []string
+	Tone           string
+	ContentQuality domain.ContentQuality
+	ContentReason  string
+	Score          domain.RelevanceScore
+	Reason         string
+	Usage          Usage
 }
 
 // Usage is the provider-reported token count for one or more calls.
@@ -98,6 +100,8 @@ func (p *Pipeline) Analyze(ctx context.Context, a domain.Article, declared []str
 	a.Categories = assessment.Categories
 	a.Entities = assessment.Entities
 	a.Tone = assessment.Tone
+	a.ContentQuality = normalizedContentQuality(assessment.ContentQuality, a.FullText)
+	a.ContentQualityReason = assessment.ContentReason
 	a.Score = assessment.Score
 	a.ScoreReason = assessment.Reason
 	a.AnalyzedAt = time.Now().UTC()
@@ -109,7 +113,7 @@ func (p *Pipeline) Analyze(ctx context.Context, a domain.Article, declared []str
 	spent := assessment.Usage
 
 	// Avoid a model call when retrieval produced no text.
-	if strings.TrimSpace(a.FullText) == "" {
+	if strings.TrimSpace(a.FullText) == "" || a.ContentQuality == domain.ContentUnavailable {
 		p.log.Debug("no text retrieved, not summarized", "url", a.URL)
 		a.InputTokens, a.OutputTokens = spent.Input, spent.Output
 		return a, nil
@@ -135,6 +139,16 @@ func (p *Pipeline) Analyze(ctx context.Context, a domain.Article, declared []str
 	}
 	a.Summary = summary
 	return a, nil
+}
+
+func normalizedContentQuality(quality domain.ContentQuality, text string) domain.ContentQuality {
+	if quality != "" {
+		return quality
+	}
+	if strings.TrimSpace(text) == "" {
+		return domain.ContentUnavailable
+	}
+	return domain.ContentComplete
 }
 
 // Threshold reports the score an article must reach to be summarized.

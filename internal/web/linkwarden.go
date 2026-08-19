@@ -87,7 +87,11 @@ type linkwardenForm struct {
 }
 
 func formFromArticle(article domain.Article) linkwardenForm {
-	return linkwardenForm{name: article.Title, description: article.Summary, selected: map[int64]bool{}}
+	description := article.Summary
+	if article.LimitedOverview() {
+		description = "Limited overview: " + description
+	}
+	return linkwardenForm{name: article.Title, description: description, selected: map[int64]bool{}}
 }
 
 func parseLinkwardenForm(r *http.Request) linkwardenForm {

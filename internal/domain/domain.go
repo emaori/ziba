@@ -210,6 +210,18 @@ type RawItem struct {
 // interests, from 0 to 100.
 type RelevanceScore int
 
+// ContentQuality records whether the text retrieved for an article can support
+// an ordinary summary. It is deliberately separate from Summary: display code
+// must not guess reliability from prose written by a model.
+type ContentQuality string
+
+const (
+	ContentComplete    ContentQuality = "complete"
+	ContentLimited     ContentQuality = "limited"
+	ContentMismatched  ContentQuality = "mismatched"
+	ContentUnavailable ContentQuality = "unavailable"
+)
+
 // Article is the central entity: a normalized, processed item. Its identity is
 // URL, normalized at collection time, never the title — two sources may publish
 // the same story under different headlines, and the same headline may be reused
@@ -231,13 +243,15 @@ type Article struct {
 	FullText    string
 
 	// Filled in by the AI pipeline.
-	Categories  []string
-	Entities    []string
-	Tone        string
-	Summary     string
-	Score       RelevanceScore
-	ScoreReason string
-	AnalyzedAt  time.Time
+	Categories           []string
+	Entities             []string
+	Tone                 string
+	Summary              string
+	ContentQuality       ContentQuality
+	ContentQualityReason string
+	Score                RelevanceScore
+	ScoreReason          string
+	AnalyzedAt           time.Time
 
 	// InputTokens and OutputTokens are what the analysis cost, summed over the
 	// assessment and the summary. Zero for an article analyzed offline, which
@@ -254,6 +268,20 @@ type Article struct {
 
 // Archived reports whether the reader has marked this article read.
 func (a Article) Archived() bool { return !a.ArchivedAt.IsZero() }
+
+// LimitedOverview reports whether Summary was produced without a complete,
+// trustworthy article body.
+func (a Article) LimitedOverview() bool {
+	return a.Summary != "" && a.ContentQuality != "" && a.ContentQuality != ContentComplete
+}
+
+// HasReadableText reports whether the stored body should be shown to a reader.
+// Mismatched text belongs to another page or an index and is more misleading
+// than an honest retrieval notice.
+func (a Article) HasReadableText() bool {
+	return strings.TrimSpace(a.FullText) != "" &&
+		a.ContentQuality != ContentMismatched && a.ContentQuality != ContentUnavailable
+}
 
 // HasOriginal reports whether there is somewhere else to read this.
 //

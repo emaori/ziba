@@ -102,7 +102,16 @@
 
   <h2><a href="/article/{{.ID}}">{{.Title}}</a></h2>
 
-  {{if .Summary}}<p class="summary">{{.Summary}}</p>{{end}}
+  {{if .Summary}}
+    {{if .LimitedOverview}}
+      <div class="summary limited-summary" role="note" aria-label="Limited overview">
+        <p class="summary-status" title="The complete article text was not available, so this overview uses only the title and available page details."><span aria-hidden="true">⚠</span> Limited overview</p>
+        <p>{{.Summary}}</p>
+      </div>
+    {{else}}
+      <p class="summary">{{.Summary}}</p>
+    {{end}}
+  {{end}}
 
   <div class="actions">
     <a class="button" href="/article/{{.ID}}">Read in Ziba</a>

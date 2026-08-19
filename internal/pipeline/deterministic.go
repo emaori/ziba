@@ -55,9 +55,11 @@ func (d *Deterministic) Assess(_ context.Context, a domain.Article, declared []s
 		h := fnv.New32a()
 		h.Write([]byte(a.URL))
 		return Assessment{
-			Categories: declared,
-			Entities:   []string{},
-			Tone:       "neutral",
+			Categories:     declared,
+			Entities:       []string{},
+			Tone:           "neutral",
+			ContentQuality: deterministicContentQuality(a.FullText),
+			ContentReason:  "offline analyzer: quality based only on whether text is present",
 			// No opinion to offer on how interesting a piece is: that needs a
 			// reader, or a model. A flat middling score, jittered only to break
 			// ties, is more honest than a number pretending to be a judgement.
@@ -88,12 +90,21 @@ func (d *Deterministic) Assess(_ context.Context, a domain.Article, declared []s
 	best += int(h.Sum32() % 5)
 
 	return Assessment{
-		Categories: categories,
-		Entities:   []string{},
-		Tone:       "neutral",
-		Score:      domain.RelevanceScore(min(best, 100)),
-		Reason:     fmt.Sprintf("offline analyzer: matched %s", strings.Join(categories, ", ")),
+		Categories:     categories,
+		Entities:       []string{},
+		Tone:           "neutral",
+		ContentQuality: deterministicContentQuality(a.FullText),
+		ContentReason:  "offline analyzer: quality based only on whether text is present",
+		Score:          domain.RelevanceScore(min(best, 100)),
+		Reason:         fmt.Sprintf("offline analyzer: matched %s", strings.Join(categories, ", ")),
 	}, nil
+}
+
+func deterministicContentQuality(text string) domain.ContentQuality {
+	if strings.TrimSpace(text) == "" {
+		return domain.ContentUnavailable
+	}
+	return domain.ContentComplete
 }
 
 // Summarize returns the opening of the article. It is a placeholder, and says

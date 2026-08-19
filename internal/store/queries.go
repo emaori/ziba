@@ -334,16 +334,24 @@ func (s *Store) recordFailure(ctx context.Context, table string, id int64, messa
 // processed_at is what takes the article out of the backlog, so it is written
 // in the same statement as the results: either both land or neither does.
 func (s *Store) SaveAnalysis(ctx context.Context, a domain.Article) error {
+	quality := a.ContentQuality
+	if quality == "" {
+		// Compatibility for callers compiled against the older Article shape.
+		// New pipeline results always carry an explicit value.
+		quality = domain.ContentComplete
+	}
 	tag, err := s.pool.Exec(ctx, `
 		UPDATE articles
 		SET categories = $2, entities = $3, tone = $4,
-		    summary = $5, score = $6, score_reason = $7, processed_at = $8,
-		    input_tokens = $9, output_tokens = $10,
+		    summary = $5, content_quality = $6, content_quality_reason = $7,
+		    score = $8, score_reason = $9, processed_at = $10,
+		    input_tokens = $11, output_tokens = $12,
 		    failure_count = 0, last_attempt_at = NULL,
 		    last_error = '', failed_at = NULL
 		WHERE id = $1`,
 		a.ID, a.Categories, a.Entities, a.Tone,
-		a.Summary, int16(a.Score), a.ScoreReason, a.AnalyzedAt,
+		a.Summary, quality, a.ContentQualityReason,
+		int16(a.Score), a.ScoreReason, a.AnalyzedAt,
 		a.InputTokens, a.OutputTokens)
 	if err != nil {
 		return fmt.Errorf("save analysis for article %d: %w", a.ID, err)
