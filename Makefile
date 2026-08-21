@@ -1,6 +1,7 @@
 BINARY  := ziba
 PKG     := github.com/emaori/ziba
 IMAGE   := ghcr.io/emaori/ziba
+BROWSER_IMAGE := ghcr.io/emaori/ziba-browser
 # What `ziba version` reports. Taken from the repository, so a binary can be
 # traced back to what produced it:
 #
@@ -116,9 +117,11 @@ dev: up migrate
 ## .dockerignore keeps .git out of the build context.
 image:
 	docker build --build-arg VERSION=$(VERSION) -t $(IMAGE):latest .
+	docker build -t $(BROWSER_IMAGE):latest ./browser
 
 image-dev:
 	docker build --build-arg VERSION=$(VERSION) -t $(IMAGE):latest-dev .
+	docker build -t $(BROWSER_IMAGE):latest-dev ./browser
 
 ## deploy: rebuild the image and bring the stack up (local by default)
 deploy: image up

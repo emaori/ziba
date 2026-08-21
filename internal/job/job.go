@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"sync"
 	"time"
 
@@ -36,6 +37,11 @@ const (
 
 	// maxRetries is how many scheduled attempts follow the initial failure.
 	maxRetries = 3
+
+	// browserTimeout covers the sidecar request and its Firefox navigation.
+	// It is longer than the direct HTTP timeout because a managed browser check
+	// may need a few seconds before the feed response is available.
+	browserTimeout = 70 * time.Second
 )
 
 // Runner performs the work. Build one with New and reuse it.
@@ -65,6 +71,8 @@ func New(cfg config.Config, sources []domain.Source, interests config.Interests,
 	db *store.Store, log *slog.Logger, opts Options) *Runner {
 
 	client := collect.NewHTTPClient(httpTimeout, collect.PolitenessInterval)
+	browserClient := &http.Client{Timeout: browserTimeout}
+	browserFeed := collect.NewBrowserFeed(browserClient, cfg.BrowserURL)
 
 	var p *pipeline.Pipeline
 	if opts.Analyzer != nil {
@@ -74,7 +82,7 @@ func New(cfg config.Config, sources []domain.Source, interests config.Interests,
 	return &Runner{
 		store: db,
 		registry: collect.NewRegistry(
-			collect.NewRSS(client, log),
+			collect.NewRSS(client, browserFeed, log),
 			collect.NewNewsletter(log),
 		),
 		fullText:  collect.NewFullText(client),

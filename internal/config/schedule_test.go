@@ -175,6 +175,7 @@ func TestParseCollectionScheduleRejectsBadValues(t *testing.T) {
 
 func TestLoadLegacyDigestAtAsScheduleAnchor(t *testing.T) {
 	t.Setenv("ZIBA_DATABASE_URL", "postgres://localhost/ziba")
+	t.Setenv("ZIBA_COLLECT_AT", "")
 	t.Setenv("ZIBA_DIGEST_AT", "05:30")
 
 	cfg, err := Load()

@@ -400,3 +400,34 @@ func TestManualAndScheduledRunsShareTheDrainingWorkflow(t *testing.T) {
 		})
 	}
 }
+
+func TestCollectUsesConfiguredBrowserSidecar(t *testing.T) {
+	db := testStore(t)
+	ctx := context.Background()
+	called := 0
+	sidecar := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called++
+		if r.Method != http.MethodPost || r.URL.Path != "/fetch" {
+			t.Errorf("sidecar request = %s %s, want POST /fetch", r.Method, r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/rss+xml")
+		io.WriteString(w, `<?xml version="1.0"?><rss version="2.0"><channel><title>Protected</title><link>https://publisher.example</link><description>Test</description><item><title>Article</title><link>https://publisher.example/article</link><description>Text</description></item></channel></rss>`)
+	}))
+	defer sidecar.Close()
+
+	source := domain.Source{
+		Name: "Protected feed", Type: domain.SourceTypeRSS,
+		URL: "https://publisher.example/feed", Enabled: true, BrowserFetch: true,
+	}
+	interests := config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "Systems", Priority: 1}}}
+	runner := New(config.Config{BrowserURL: sidecar.URL}, []domain.Source{source}, interests, db,
+		slog.New(slog.NewTextHandler(io.Discard, nil)), Options{})
+
+	result, err := runner.Collect(ctx)
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	if called != 1 || result.Failed != 0 || result.Found != 1 || result.New != 1 {
+		t.Fatalf("sidecar calls=%d result=%+v, want one collected item", called, result)
+	}
+}

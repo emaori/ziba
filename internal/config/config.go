@@ -4,6 +4,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -53,6 +54,11 @@ type Config struct {
 	// upgrade import. PostgreSQL owns the live schedule after that.
 	LegacyCollectEvery string
 	LegacyCollectAt    string
+
+	// BrowserURL is the internal Firefox sidecar used only by RSS sources that
+	// explicitly opt in to browser fetching. Empty keeps ordinary collection
+	// available without the optional service.
+	BrowserURL string
 }
 
 // Load reads the configuration from the environment.
@@ -66,6 +72,10 @@ func Load() (Config, error) {
 		LogDir:             envOr("ZIBA_LOG_DIR", DefaultLogDir),
 		LegacyCollectEvery: os.Getenv("ZIBA_COLLECT_EVERY"),
 		LegacyCollectAt:    os.Getenv("ZIBA_COLLECT_AT"),
+	}
+	var err error
+	if cfg.BrowserURL, err = parseServiceURL("ZIBA_BROWSER_URL", os.Getenv("ZIBA_BROWSER_URL")); err != nil {
+		return Config{}, err
 	}
 
 	// Anything other than a recognised truth is refused rather than read as
@@ -99,6 +109,23 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func parseServiceURL(variable, raw string) (string, error) {
+	if strings.TrimSpace(raw) == "" {
+		return "", nil
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("%s is not a valid URL", variable)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return "", fmt.Errorf("%s must use http or https", variable)
+	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("%s must not contain credentials, a query, or a fragment", variable)
+	}
+	return strings.TrimRight(parsed.String(), "/"), nil
 }
 
 func envOr(key, fallback string) string {

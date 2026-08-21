@@ -632,6 +632,39 @@ func TestNewsletterCredentialsAreNotRendered(t *testing.T) {
 	}
 }
 
+func TestRSSBrowserFetchSettingRoundTrips(t *testing.T) {
+	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{
+		Configured: true,
+		Interests:  config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "Systems", Priority: 1}}},
+		Sources: []domain.Source{{
+			ID: 1, Name: "Protected feed", Type: domain.SourceTypeRSS,
+			URL: "https://example.com/feed", Enabled: true, BrowserFetch: true,
+		}},
+	}}
+	server, err := newServer(db, db.configuration.Interests, "token")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	code, body := get(t, server.Handler(), "/settings/source/1")
+	if code != http.StatusOK || !strings.Contains(body, `name="browser_fetch" checked`) {
+		t.Fatalf("source form = %d body=%s", code, body)
+	}
+
+	form := url.Values{
+		"csrf_token": {"token"}, "name": {"Protected feed"}, "type": {"rss"},
+		"url": {"https://example.com/feed"}, "enabled": {"on"},
+		"browser_fetch": {"on"}, "collect_from": {"7d"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/settings/source/1", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusSeeOther || len(db.configuration.Sources) != 1 || !db.configuration.Sources[0].BrowserFetch {
+		t.Fatalf("save response = %d sources=%+v body=%s", rec.Code, db.configuration.Sources, rec.Body.String())
+	}
+}
+
 func TestScheduleSettingsSaveToConfiguration(t *testing.T) {
 	db := &configurableFakeStore{fakeStore: &fakeStore{}, configuration: store.Configuration{
 		Configured: true,

@@ -633,10 +633,10 @@ func parseSourceInput(r *http.Request, id int64) store.SourceInput {
 	_ = r.ParseForm()
 	days, _ := strconv.Atoi(r.Form.Get("days"))
 	maxMessages, _ := strconv.Atoi(r.Form.Get("max_messages"))
-	return store.SourceInput{ID: id, Name: r.Form.Get("name"), Type: r.Form.Get("type"), URL: r.Form.Get("url"), Enabled: r.Form.Get("enabled") == "on", Roundup: r.Form.Get("roundup") == "on", CollectFrom: r.Form.Get("collect_from"), Categories: splitComma(r.Form.Get("categories")), Folder: r.Form.Get("folder"), Username: r.Form.Get("username"), Password: r.Form.Get("password"), Days: days, MaxMessages: maxMessages}
+	return store.SourceInput{ID: id, Name: r.Form.Get("name"), Type: r.Form.Get("type"), URL: r.Form.Get("url"), Enabled: r.Form.Get("enabled") == "on", Roundup: r.Form.Get("roundup") == "on", BrowserFetch: r.Form.Get("browser_fetch") == "on", CollectFrom: r.Form.Get("collect_from"), Categories: splitComma(r.Form.Get("categories")), Folder: r.Form.Get("folder"), Username: r.Form.Get("username"), Password: r.Form.Get("password"), Days: days, MaxMessages: maxMessages}
 }
 func sourceInput(src domain.Source) store.SourceInput {
-	in := store.SourceInput{ID: src.ID, Name: src.Name, Type: string(src.Type), URL: src.URL, Enabled: src.Enabled, Roundup: src.Roundup, Categories: src.Categories, CollectFrom: formatCollectFrom(src.CollectFrom)}
+	in := store.SourceInput{ID: src.ID, Name: src.Name, Type: string(src.Type), URL: src.URL, Enabled: src.Enabled, Roundup: src.Roundup, BrowserFetch: src.BrowserFetch, Categories: src.Categories, CollectFrom: formatCollectFrom(src.CollectFrom)}
 	if src.Newsletter != nil {
 		in.Folder, in.Days, in.MaxMessages = src.Newsletter.Folder, src.Newsletter.LookBackDays, src.Newsletter.MaxMessages
 		suffix := "/" + url.PathEscape(src.Newsletter.Folder)

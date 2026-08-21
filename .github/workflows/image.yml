@@ -1,8 +1,8 @@
-# Publish the container image other people run.
+# Publish the application and Firefox feed-helper images.
 #
-# Pushes to ghcr.io/emaori/ziba. GHCR needs no account beyond the repository's
-# own token, which is why it is used here rather than Docker Hub: one fewer
-# secret to hold and to rotate.
+# Pushes to ghcr.io/emaori/ziba and ghcr.io/emaori/ziba-browser. GHCR needs no
+# account beyond the repository's own token, which is why it is used here
+# rather than Docker Hub: one fewer secret to hold and to rotate.
 #
 # Tags only. A push of 1.2.3 publishes 1.2.3, 1.2, 1 and latest, and nothing
 # else publishes anything — no image is built from a branch or a pull request.
@@ -93,6 +93,15 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
 
+      - id: browser_meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/ziba-browser
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
       - id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
@@ -109,6 +118,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - id: browser_build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ./browser
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.browser_meta.outputs.tags }}
+          labels: ${{ steps.browser_meta.outputs.labels }}
+          cache-from: type=gha,scope=browser
+          cache-to: type=gha,mode=max,scope=browser
+
       # Signed by digest, not by tag. A tag can later be repointed, and a
       # signature attached to a name that moved says nothing about what is
       # there now.
@@ -116,10 +136,13 @@ jobs:
       # Once, not once per tag. cosign stores a signature against the digest —
       # as <repo>:sha256-<digest>.sig — so signing 1.2.3, 1.2, 1 and latest in
       # turn writes the same object four times.
-      - name: Sign the published image
+      - name: Sign the published images
         env:
-          DIGEST: ${{ steps.build.outputs.digest }}
-        run: cosign sign --yes "ghcr.io/${{ github.repository }}@$DIGEST"
+          APP_DIGEST: ${{ steps.build.outputs.digest }}
+          BROWSER_DIGEST: ${{ steps.browser_build.outputs.digest }}
+        run: |
+          cosign sign --yes "ghcr.io/${{ github.repository }}@$APP_DIGEST"
+          cosign sign --yes "ghcr.io/${{ github.repository_owner }}/ziba-browser@$BROWSER_DIGEST"
 
   # Create the GitHub release only after the image has been published. The Git
   # tag remains 1.2.3, while the release title shown to users is v1.2.3.

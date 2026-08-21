@@ -69,6 +69,40 @@ func TestNewsletterCredentialsRoundTripInternally(t *testing.T) {
 	}
 }
 
+func TestBrowserFetchRoundTripsForRSSSource(t *testing.T) {
+	db := testStore(t)
+	ctx := context.Background()
+	interests := config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "Systems", Priority: 1}}}
+	sources := []domain.Source{{
+		Name: "Protected feed", Type: domain.SourceTypeRSS,
+		URL: "https://example.com/feed", Enabled: true, BrowserFetch: true,
+	}}
+	if err := db.SaveConfiguration(ctx, interests, sources); err != nil {
+		t.Fatalf("SaveConfiguration: %v", err)
+	}
+	got, err := db.Configuration(ctx)
+	if err != nil {
+		t.Fatalf("Configuration: %v", err)
+	}
+	if len(got.Sources) != 1 || !got.Sources[0].BrowserFetch {
+		t.Fatalf("sources = %+v, want browser fetch enabled", got.Sources)
+	}
+}
+
+func TestBrowserFetchIsRSSOnly(t *testing.T) {
+	interests := config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}}
+	src, err := ValidateSourceInput(SourceInput{
+		Name: "Mail", Type: "newsletter", URL: "imaps://mail.example",
+		Enabled: true, BrowserFetch: true, Username: "reader", Password: "secret",
+	}, interests, nil)
+	if err != nil {
+		t.Fatalf("ValidateSourceInput: %v", err)
+	}
+	if src.BrowserFetch {
+		t.Error("newsletter retained the RSS-only browser flag")
+	}
+}
+
 func TestLinkwardenSecretsArePreservedWhenFormsLeaveThemBlank(t *testing.T) {
 	db := testStore(t)
 	ctx := context.Background()
