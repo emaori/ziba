@@ -2,7 +2,6 @@ package web
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -82,7 +81,7 @@ func (s *Server) handleScoreFeedback(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if err := r.ParseForm(); err != nil {
+	if err := parseRequestForm(r); err != nil {
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
@@ -238,21 +237,11 @@ func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-	if err != nil {
+	if err := parseRequestForm(r); err != nil {
 		http.Error(w, "invalid form", http.StatusBadRequest)
 		return
 	}
-	if mediaType == "multipart/form-data" {
-		err = r.ParseMultipartForm(32 << 10)
-	} else {
-		err = r.ParseForm()
-	}
-	if err != nil {
-		http.Error(w, "invalid form", http.StatusBadRequest)
-		return
-	}
-	if subtle.ConstantTimeCompare([]byte(r.PostForm.Get("csrf_token")), []byte(s.csrfToken)) != 1 {
+	if !s.validCSRF(r) {
 		http.Error(w, "invalid CSRF token", http.StatusForbidden)
 		return
 	}
@@ -278,6 +267,20 @@ func (s *Server) handleArchive(w http.ResponseWriter, r *http.Request) {
 // Only a same-origin script can set it — a cross-site form post cannot add a
 // header — so honouring it does not widen what a hostile page can do here.
 const asyncHeader = "X-Ziba-Async"
+
+// parseRequestForm accepts both ordinary browser submissions and FormData
+// requests made by progressive JavaScript enhancements. Keeping this decision
+// in one place prevents a new async form from silently losing its CSRF field.
+func parseRequestForm(r *http.Request) error {
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		return err
+	}
+	if mediaType == "multipart/form-data" {
+		return r.ParseMultipartForm(32 << 10)
+	}
+	return r.ParseForm()
+}
 
 // backTo works out where to send the reader after they press a button.
 //

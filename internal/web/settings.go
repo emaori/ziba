@@ -666,6 +666,8 @@ func splitComma(raw string) []string {
 	return out
 }
 func (s *Server) validCSRF(r *http.Request) bool {
-	_ = r.ParseForm()
+	if err := parseRequestForm(r); err != nil {
+		return false
+	}
 	return subtle.ConstantTimeCompare([]byte(r.Form.Get("csrf_token")), []byte(s.csrfToken)) == 1
 }

@@ -873,6 +873,37 @@ func TestScoreFeedbackAsyncAndSelectedRendering(t *testing.T) {
 	}
 }
 
+func TestScoreFeedbackAsyncAcceptsBrowserFormData(t *testing.T) {
+	fake := &fakeStore{article: sampleArticle()}
+	handler := newTestServer(t, fake)
+
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	for name, value := range map[string]string{
+		"csrf_token": testCSRFToken,
+		"feedback":   "higher",
+	} {
+		if err := form.WriteField(name, value); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := form.Close(); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/article/42/feedback", &body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	req.Header.Set(asyncHeader, "1")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204; body = %q", rec.Code, rec.Body.String())
+	}
+	if fake.feedback != domain.FeedbackHigher {
+		t.Fatalf("saved feedback = %q, want %q", fake.feedback, domain.FeedbackHigher)
+	}
+}
+
 func TestScoringSettingsAndConfirmedReset(t *testing.T) {
 	fake := &fakeStore{feedbackSummary: store.ScoreFeedbackSummary{Count: 4, Active: true}}
 	handler := newTestServer(t, fake)
