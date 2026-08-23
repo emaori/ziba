@@ -103,7 +103,7 @@
     {{range .Categories}}<span class="tag">{{.}}</span>{{end}}
     <span class="source">{{.SourceName}}</span>
     <span class="date">{{shortDate .PublishedAt}}</span>
-    {{if .Score}}<span class="score" title="{{.ScoreReason}}{{if .PersonalizedScore}} Original AI score: {{.BaseScore}}.{{end}}">{{.Score}}</span>{{end}}
+    {{if .Score}}<span class="score" title="{{.ScoreReason}}{{if .PersonalizedScore}} Original provider score: {{.BaseScore}}.{{end}}">{{.Score}}</span>{{end}}
   </p>
 
   <h2><a href="/article/{{.ID}}">{{.Title}}</a></h2>

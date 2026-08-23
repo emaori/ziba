@@ -25,61 +25,21 @@ type stubAnalyzer struct {
 	declared       []string
 }
 
-type fixedCalibrator struct {
-	score      domain.RelevanceScore
-	err        error
-	categories []string
-	base       domain.RelevanceScore
-}
-
-func (f *fixedCalibrator) CalibrateScore(_ context.Context, categories []string, base domain.RelevanceScore) (domain.RelevanceScore, error) {
-	f.categories, f.base = categories, base
-	return f.score, f.err
-}
-
-func TestPersonalizedScoreControlsSummaryThresholdAndPreservesBase(t *testing.T) {
-	analyzer := &stubAnalyzer{assessment: Assessment{Categories: []string{"AI"}, Score: 55, Reason: "close"}, summary: "Personalized summary"}
-	calibrator := &fixedCalibrator{score: 65}
-	p := New(analyzer, 60, slog.Default()).WithCalibrator(calibrator)
+func TestAnalyzeKeepsProviderScoreUnadjusted(t *testing.T) {
+	analyzer := &stubAnalyzer{
+		assessment: Assessment{Categories: []string{"AI"}, Score: 65, Reason: "relevant"},
+		summary:    "Provider-scored summary",
+	}
+	p := New(analyzer, 60, slog.Default())
 	got, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com", FullText: "text"}, nil)
 	if err != nil {
 		t.Fatalf("Analyze returned error: %v", err)
 	}
-	if !got.BaseScoreSet || got.BaseScore != 55 || got.Score != 65 {
-		t.Fatalf("scores = base %d personalized %d, want 55 and 65", got.BaseScore, got.Score)
+	if !got.BaseScoreSet || got.BaseScore != 65 || got.Score != got.BaseScore {
+		t.Fatalf("scores = base %d final %d, want both provider score 65", got.BaseScore, got.Score)
 	}
 	if got.Summary == "" {
-		t.Error("personalized score crossed threshold but article was not summarized")
-	}
-	if calibrator.base != 55 || len(calibrator.categories) != 1 || calibrator.categories[0] != "AI" {
-		t.Fatalf("calibrator received base %d categories %v", calibrator.base, calibrator.categories)
-	}
-}
-
-func TestPersonalizedScoreCanMoveArticleBelowSummaryThreshold(t *testing.T) {
-	analyzer := &stubAnalyzer{assessment: Assessment{Categories: []string{"AI"}, Score: 65}, summary: "must not be used"}
-	p := New(analyzer, 60, testLogger()).WithCalibrator(&fixedCalibrator{score: 55})
-	got, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com", FullText: "text"}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !got.BaseScoreSet || got.BaseScore != 65 || got.Score != 55 {
-		t.Fatalf("scores = %d/%d, want 65/55", got.BaseScore, got.Score)
-	}
-	if analyzer.summarizeCalls != 0 || got.Summary != "" {
-		t.Fatal("downward calibration did not prevent summarization")
-	}
-}
-
-func TestCalibrationFailureAbortsAnalysis(t *testing.T) {
-	analyzer := &stubAnalyzer{assessment: Assessment{Categories: []string{"AI"}, Score: 65}}
-	p := New(analyzer, 60, testLogger()).WithCalibrator(&fixedCalibrator{err: errors.New("database unavailable")})
-	_, err := p.Analyze(context.Background(), domain.Article{URL: "https://example.com", FullText: "text"}, nil)
-	if err == nil || !strings.Contains(err.Error(), "calibrate score") {
-		t.Fatalf("error = %v, want calibration context", err)
-	}
-	if analyzer.summarizeCalls != 0 {
-		t.Fatal("summary called after calibration failure")
+		t.Error("provider score at or above threshold was not summarized")
 	}
 }
 

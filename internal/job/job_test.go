@@ -97,6 +97,21 @@ func testRunner(t *testing.T, db *store.Store) *Runner {
 	return New(config.Config{}, nil, interests, db, log, Options{})
 }
 
+type fixedScoreAnalyzer struct{}
+
+func (fixedScoreAnalyzer) Assess(context.Context, domain.Article, []string) (pipeline.Assessment, error) {
+	return pipeline.Assessment{
+		Categories:     []string{"AI"},
+		ContentQuality: domain.ContentComplete,
+		Score:          60,
+		Reason:         "fixed provider score",
+	}, nil
+}
+
+func (fixedScoreAnalyzer) Summarize(context.Context, domain.Article, pipeline.Assessment) (string, pipeline.Usage, error) {
+	return "summary", pipeline.Usage{}, nil
+}
+
 // seedSource registers one source and returns its id.
 func seedSource(t *testing.T, db *store.Store, url string) int64 {
 	t.Helper()
@@ -286,6 +301,68 @@ func TestAnalyzeAssignsDeclaredCategories(t *testing.T) {
 	}
 	if stats.Hidden != 0 {
 		t.Errorf("hidden = %d, want 0", stats.Hidden)
+	}
+}
+
+func TestAnalyzeDoesNotPropagateCategoryFeedback(t *testing.T) {
+	for _, direction := range []domain.ScoreFeedback{domain.FeedbackHigher, domain.FeedbackLower} {
+		t.Run(string(direction), func(t *testing.T) {
+			db := testStore(t)
+			ctx := context.Background()
+			source := seedSource(t, db, "https://example.com/no-category-propagation/"+string(direction))
+
+			for i := range 3 {
+				id, _, err := db.SaveArticle(ctx, domain.Article{
+					SourceID: source,
+					URL:      fmt.Sprintf("https://example.com/rated-%s-%d", direction, i),
+					Title:    "Previously rated AI article",
+					FullText: "AI article text",
+				})
+				if err != nil {
+					t.Fatalf("save rated article %d: %v", i, err)
+				}
+				if err := db.SaveAnalysis(ctx, domain.Article{
+					ID: id, Categories: []string{"AI"}, Score: 60,
+					BaseScore: 60, BaseScoreSet: true, AnalyzedAt: time.Now(),
+				}); err != nil {
+					t.Fatalf("save rated analysis %d: %v", i, err)
+				}
+				if err := db.SetScoreFeedback(ctx, id, direction); err != nil {
+					t.Fatalf("save %s feedback %d: %v", direction, i, err)
+				}
+			}
+
+			newID, _, err := db.SaveArticle(ctx, domain.Article{
+				SourceID: source,
+				URL:      "https://example.com/new-" + string(direction),
+				Title:    "New AI article",
+				FullText: "New AI article text",
+			})
+			if err != nil {
+				t.Fatalf("save new article: %v", err)
+			}
+
+			interests := config.Interests{Threshold: 60, Topics: []config.Interest{{Topic: "AI", Priority: 1}}}
+			runner := New(config.Config{}, nil, interests, db,
+				slog.New(slog.NewTextHandler(io.Discard, nil)),
+				Options{Analyzer: fixedScoreAnalyzer{}})
+			if analyzed, _, failed, err := runner.Analyze(ctx, 10); err != nil || analyzed != 1 || failed != 0 {
+				t.Fatalf("Analyze = analyzed %d, failed %d, err %v", analyzed, failed, err)
+			}
+
+			article, err := db.Article(ctx, newID)
+			if err != nil {
+				t.Fatalf("read new article: %v", err)
+			}
+			if !article.BaseScoreSet || article.BaseScore != 60 || article.Score != article.BaseScore {
+				t.Fatalf("new score = %d, base = %d (set %v); category feedback must not propagate",
+					article.Score, article.BaseScore, article.BaseScoreSet)
+			}
+			summary, err := db.ScoreFeedbackSummary(ctx)
+			if err != nil || summary.Count != 3 {
+				t.Fatalf("feedback after analysis = %+v, err %v; want all three rows retained", summary, err)
+			}
+		})
 	}
 }
 

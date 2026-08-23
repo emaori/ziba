@@ -68,18 +68,11 @@ type Analyzer interface {
 	Summarizer
 }
 
-// ScoreCalibrator personalizes a provider score from local feedback. It is
-// deliberately independent of Analyzer: no feedback is sent to an AI vendor.
-type ScoreCalibrator interface {
-	CalibrateScore(ctx context.Context, categories []string, base domain.RelevanceScore) (domain.RelevanceScore, error)
-}
-
-// Pipeline runs the three stages in order.
+// Pipeline runs the two model stages in order.
 type Pipeline struct {
-	analyzer   Analyzer
-	threshold  domain.RelevanceScore
-	log        *slog.Logger
-	calibrator ScoreCalibrator
+	analyzer  Analyzer
+	threshold domain.RelevanceScore
+	log       *slog.Logger
 }
 
 // New builds a pipeline. Articles scoring below threshold are not summarized,
@@ -91,15 +84,6 @@ func New(analyzer Analyzer, threshold int, log *slog.Logger) *Pipeline {
 		threshold: domain.RelevanceScore(threshold),
 		log:       log,
 	}
-}
-
-// WithCalibrator returns an independent pipeline for one analysis batch. The
-// analyzer is safe for concurrent calls; the calibrator is an immutable
-// snapshot, so every article in the batch sees the same feedback state.
-func (p *Pipeline) WithCalibrator(calibrator ScoreCalibrator) *Pipeline {
-	copy := *p
-	copy.calibrator = calibrator
-	return &copy
 }
 
 // Analyze returns the article enriched with categories, entities, tone, score
@@ -114,12 +98,6 @@ func (p *Pipeline) Analyze(ctx context.Context, a domain.Article, declared []str
 	}
 	a.BaseScore = assessment.Score
 	a.BaseScoreSet = true
-	if p.calibrator != nil {
-		assessment.Score, err = p.calibrator.CalibrateScore(ctx, assessment.Categories, a.BaseScore)
-		if err != nil {
-			return a, fmt.Errorf("calibrate score for %s: %w", a.URL, err)
-		}
-	}
 
 	a.Categories = assessment.Categories
 	a.Entities = assessment.Entities
