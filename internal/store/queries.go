@@ -36,13 +36,17 @@ func (s *Store) SyncSources(ctx context.Context, configured []domain.Source) ([]
 
 		// (type, url) is the natural key: it is what the user actually edits.
 		row := tx.QueryRow(ctx, `
-			INSERT INTO sources (name, type, url, enabled, categories)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO sources (name, type, url, enabled, categories, roundup, browser_fetch, collect_from)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			ON CONFLICT (type, url) DO UPDATE
 			SET name = EXCLUDED.name, enabled = EXCLUDED.enabled,
-			    categories = EXCLUDED.categories
+			    categories = EXCLUDED.categories,
+			    roundup = EXCLUDED.roundup,
+			    browser_fetch = EXCLUDED.browser_fetch,
+			    collect_from = EXCLUDED.collect_from
 			RETURNING id, created_at`,
-			src.Name, string(src.Type), src.URL, src.Enabled, categories)
+			src.Name, string(src.Type), src.URL, src.Enabled, categories,
+			src.Roundup, src.BrowserFetch, formatCollectFrom(src.CollectFrom))
 
 		// created_at is deliberately not in the UPDATE list: it records when the
 		// source was first seen, and CollectFrom anchors to it.

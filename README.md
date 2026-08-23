@@ -14,6 +14,7 @@ its source and appears in the last-24-hours digest only if it matches an interes
 scores above a configured threshold. Articles that pass are then summarized.
 
 The supported source types are:
+
 - RSS feeds
 - Email newsletters
 
@@ -47,8 +48,10 @@ debugging, not for daily use.
 
 Use the ```compose.yaml``` file available [here](compose.yaml) in the repository.
 
-The image it pulls is [`ghcr.io/emaori/ziba`](https://github.com/emaori/ziba/pkgs/container/ziba) and the
-database is Postgres.
+Compose pulls [`ghcr.io/emaori/ziba`](https://github.com/emaori/ziba/pkgs/container/ziba)
+for the application and `ghcr.io/emaori/ziba-browser` for the Firefox feed
+helper. The third service is Postgres. The browser has no published port and is
+used only by RSS sources that explicitly opt in.
 
 Fill in the variables of the compose according to the documentation in this table (and in the compose file iteself).
 
@@ -56,6 +59,7 @@ Fill in the variables of the compose according to the documentation in this tabl
 |---|---|---|
 | `POSTGRES_PASSWORD` | the database password | **change it** — anything |
 | `ZIBA_DATABASE_URL` | how Ziba reaches the database | the same password, after `ziba:` — it ships blank |
+| `ZIBA_BROWSER_URL` | how Ziba reaches the Firefox feed helper | keep the Compose value `http://ziba-browser:3000` |
 | `ZIBA_AI_PROVIDER` | which company answers | `openai` or `anthropic` |
 | `OPENAI_API_KEY` | pays for it | **your key** — or `ANTHROPIC_API_KEY`, uncommented, if you chose anthropic |
 | `ZIBA_FAST_MODEL` | scores every article | **required**, e.g. `gpt-5.6-luna` |
@@ -87,6 +91,11 @@ and passwords are never displayed again.
 Turning off collection for a source stops future collection. It does not remove
 articles that Ziba already collected.
 
+An RSS source that receives 403 responses from an ordinary HTTP client can
+enable **Fetch this feed with Firefox**. Use it only for affected feeds: it is
+slower and requires the browser service. Firefox downloads the feed XML only;
+article and roundup pages continue through Ziba's ordinary HTTP client.
+
 ### Things worth knowing
 
 **There is no login.** Ziba is single-user by design and has no accounts, no
@@ -116,7 +125,7 @@ stored username or password. Leave those fields blank while editing to keep the
 stored values. With Gmail, use an App Password and paste it without spaces.
 
 **Web collection only connects to public addresses.** RSS feeds, roundup pages,
-article pages and every redirect are refused if their hostname resolves to a
+article pages, browser-fetched feeds and every redirect are refused if their hostname resolves to a
 loopback, private, link-local or otherwise non-public address. This prevents an
 external feed or newsletter from using Ziba to reach services on the machine or
 home network. IMAP servers are explicitly configured by the operator and are

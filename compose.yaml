@@ -1,5 +1,5 @@
-# Runs Ziba from its published image: two services, the application and its
-# database.
+# Runs Ziba from its published images: the application, its Firefox feed helper,
+# and the database.
 #
 # Every setting lives in this file, documented where it is used. Fill in the
 # values below and there is nothing else to create.
@@ -25,6 +25,26 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - ziba-data
+
+  # Firefox is used only for RSS sources whose settings explicitly request it.
+  # It has no published port and cannot reach the database network.
+  ziba-browser:
+    image: ghcr.io/emaori/ziba-browser:latest
+    container_name: ziba-browser
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+      - /home/pwuser:size=64m,uid=1001,gid=1001,mode=700
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    mem_limit: 768m
+    networks:
+      - ziba-browser
 
   # Ziba itself: the web interface and the schedule, in one process.
   ziba-api:
@@ -82,6 +102,10 @@ services:
       ZIBA_FAST_EFFORT: low
       ZIBA_CAPABLE_EFFORT: low
 
+      # Internal Firefox service for the per-source "Fetch with Firefox"
+      # option. Ordinary RSS feeds never call it.
+      ZIBA_BROWSER_URL: http://ziba-browser:3000
+
       # The schedule uses local time, so the container has to know which local.
       # Without this it uses UTC and the morning run happens at the wrong hour.
       TZ: UTC
@@ -94,11 +118,11 @@ services:
       # recorded, so the API key is not in it.
       # ZIBA_MODEL_JOURNAL: "true"
 
-    volumes:
-      # Where the model journal appears when it is switched on. 
-      # Needed only if ZIBA_MODEL_JOURNAL is "true"
-      # The container runs as 'nobody', so chown 65534 is needed (chown 65534:65534 log)
-      # - ./log:/app/log
+    # Where the model journal appears when it is switched on.
+    # Needed only if ZIBA_MODEL_JOURNAL is "true". Uncomment both lines.
+    # The container runs as 'nobody', so chown 65534 is needed (chown 65534:65534 log).
+    # volumes:
+    #   - ./log:/app/log
 
     ports:
       # Defaults to 8080. The container
@@ -109,6 +133,13 @@ services:
       # a reverse proxy or a VPN. Note that a published Docker port is not
       # covered by ufw.
       - "8080:8080"
+    networks:
+      - ziba-data
+      - ziba-browser
 
 volumes:
   ziba-db-data:
+
+networks:
+  ziba-data:
+  ziba-browser:

@@ -51,6 +51,11 @@ type Source struct {
 	// It cannot be detected reliably from the feed itself, so it is configured.
 	Roundup bool
 
+	// BrowserFetch retrieves this feed through the optional Firefox sidecar.
+	// It is an explicit compatibility escape hatch for publishers that reject
+	// ordinary feed readers, and is valid only for RSS sources.
+	BrowserFetch bool
+
 	// Categories, when set, are assigned rather than inferred. Their articles
 	// bypass the relevance threshold and use the score only for ordering.
 	Categories []string

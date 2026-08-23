@@ -12,6 +12,17 @@ import (
 	"github.com/emaori/ziba/internal/domain"
 )
 
+type fakeFeedBrowser struct {
+	body  []byte
+	err   error
+	calls []string
+}
+
+func (f *fakeFeedBrowser) Fetch(_ context.Context, address string) ([]byte, error) {
+	f.calls = append(f.calls, address)
+	return f.body, f.err
+}
+
 const sampleFeed = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
@@ -50,7 +61,7 @@ func TestRSSCollect(t *testing.T) {
 	}))
 	defer server.Close()
 
-	collector := NewRSS(server.Client(), testLogger())
+	collector := NewRSS(server.Client(), nil, testLogger())
 	src := domain.Source{ID: 7, Name: "Example", Type: domain.SourceTypeRSS, URL: server.URL}
 
 	items, err := collector.Collect(context.Background(), src)
@@ -88,6 +99,35 @@ func TestRSSCollect(t *testing.T) {
 	}
 }
 
+func TestRSSCollectUsesBrowserOnlyWhenRequested(t *testing.T) {
+	directCalls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		directCalls++
+		io.WriteString(w, sampleFeed)
+	}))
+	defer server.Close()
+
+	browser := &fakeFeedBrowser{body: []byte(sampleFeed)}
+	collector := NewRSS(server.Client(), browser, testLogger())
+	src := domain.Source{ID: 7, Name: "Example", Type: domain.SourceTypeRSS, URL: server.URL, BrowserFetch: true}
+
+	items, err := collector.Collect(t.Context(), src)
+	if err != nil {
+		t.Fatalf("Collect returned error: %v", err)
+	}
+	if len(items) != 2 || len(browser.calls) != 1 || directCalls != 0 {
+		t.Fatalf("items=%d browser calls=%d direct calls=%d, want 2, 1, 0", len(items), len(browser.calls), directCalls)
+	}
+
+	src.BrowserFetch = false
+	if _, err := collector.Collect(t.Context(), src); err != nil {
+		t.Fatalf("direct Collect returned error: %v", err)
+	}
+	if len(browser.calls) != 1 || directCalls != 1 {
+		t.Fatalf("browser calls=%d direct calls=%d after direct fetch, want 1, 1", len(browser.calls), directCalls)
+	}
+}
+
 func TestRSSCollectFailures(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -109,7 +149,7 @@ func TestRSSCollectFailures(t *testing.T) {
 			server := httptest.NewServer(tt.handler)
 			defer server.Close()
 
-			collector := NewRSS(server.Client(), testLogger())
+			collector := NewRSS(server.Client(), nil, testLogger())
 			src := domain.Source{Name: "Example", Type: domain.SourceTypeRSS, URL: server.URL}
 
 			if _, err := collector.Collect(context.Background(), src); err == nil {
@@ -131,7 +171,7 @@ func TestRegistryRunIsolatesFailures(t *testing.T) {
 	}))
 	defer bad.Close()
 
-	registry := NewRegistry(NewRSS(good.Client(), testLogger()))
+	registry := NewRegistry(NewRSS(good.Client(), nil, testLogger()))
 	sources := []domain.Source{
 		{Name: "good", Type: domain.SourceTypeRSS, URL: good.URL},
 		{Name: "bad", Type: domain.SourceTypeRSS, URL: bad.URL},

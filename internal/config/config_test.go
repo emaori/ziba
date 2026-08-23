@@ -91,3 +91,25 @@ func TestParseBool(t *testing.T) {
 		t.Error(`ParseBool accepted "ture"; a typo must fail at startup, not read as off`)
 	}
 }
+
+func TestParseServiceURL(t *testing.T) {
+	tests := []struct {
+		raw     string
+		want    string
+		wantErr bool
+	}{
+		{"", "", false},
+		{"http://ziba-browser:3000/", "http://ziba-browser:3000", false},
+		{"https://browser.example", "https://browser.example", false},
+		{"ziba-browser:3000", "", true},
+		{"ftp://browser.example", "", true},
+		{"http://user:secret@browser.example", "", true},
+		{"http://browser.example?target=x", "", true},
+	}
+	for _, tt := range tests {
+		got, err := parseServiceURL("ZIBA_BROWSER_URL", tt.raw)
+		if (err != nil) != tt.wantErr || got != tt.want {
+			t.Errorf("parseServiceURL(%q) = %q, %v; want %q, error=%v", tt.raw, got, err, tt.want, tt.wantErr)
+		}
+	}
+}

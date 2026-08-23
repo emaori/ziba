@@ -1,6 +1,7 @@
 package collect
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -17,13 +18,14 @@ import (
 // of each, are handled by gofeed: parsing them by hand is a well-known way to
 // lose an afternoon.
 type RSS struct {
-	client *http.Client
-	log    *slog.Logger
+	client  *http.Client
+	browser FeedBrowser
+	log     *slog.Logger
 }
 
 // NewRSS builds the feed collector.
-func NewRSS(client *http.Client, log *slog.Logger) *RSS {
-	return &RSS{client: client, log: log}
+func NewRSS(client *http.Client, browser FeedBrowser, log *slog.Logger) *RSS {
+	return &RSS{client: client, browser: browser, log: log}
 }
 
 // Type implements domain.Collector.
@@ -33,15 +35,30 @@ func (c *RSS) Type() domain.SourceType { return domain.SourceTypeRSS }
 // item is whatever the feed carried, which is usually an excerpt — the full
 // text is retrieved later, following the link.
 func (c *RSS) Collect(ctx context.Context, src domain.Source) ([]domain.RawItem, error) {
-	resp, err := get(ctx, c.client, src.URL)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+	var feed *gofeed.Feed
+	if src.BrowserFetch {
+		if c.browser == nil {
+			return nil, fmt.Errorf("browser feed fetching is enabled but no browser client is configured")
+		}
+		body, err := c.browser.Fetch(ctx, src.URL)
+		if err != nil {
+			return nil, err
+		}
+		feed, err = gofeed.NewParser().Parse(bytes.NewReader(body))
+		if err != nil {
+			return nil, fmt.Errorf("parse browser feed %s: %w", src.URL, err)
+		}
+	} else {
+		resp, err := get(ctx, c.client, src.URL)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
 
-	feed, err := gofeed.NewParser().Parse(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("parse feed %s: %w", src.URL, err)
+		feed, err = gofeed.NewParser().Parse(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("parse feed %s: %w", src.URL, err)
+		}
 	}
 
 	now := time.Now().UTC()

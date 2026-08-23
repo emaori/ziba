@@ -185,7 +185,7 @@ func TestRoundupFeedFromTheCorpus(t *testing.T) {
 		URL: "https://dotnetketchup.com/rss", Roundup: true,
 	}
 
-	items, err := NewRSS(client, testLogger()).Collect(ctx, src)
+	items, err := NewRSS(client, nil, testLogger()).Collect(ctx, src)
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
 	}

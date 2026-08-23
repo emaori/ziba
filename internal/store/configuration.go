@@ -154,7 +154,7 @@ func (s *Store) Configuration(ctx context.Context) (Configuration, error) {
 	}
 
 	rows, err = s.pool.Query(ctx, `
-		SELECT id, name, type, url, enabled, created_at, categories, roundup,
+		SELECT id, name, type, url, enabled, created_at, categories, roundup, browser_fetch,
 		       collect_from, newsletter_folder, newsletter_username,
 		       newsletter_password, newsletter_days, newsletter_max
 		FROM sources ORDER BY name, id`)
@@ -204,7 +204,7 @@ func scanConfiguredSource(row pgx.CollectableRow) (domain.Source, error) {
 	var sourceType, collectFrom, folder, username, password string
 	var days, maxMessages int
 	err := row.Scan(&src.ID, &src.Name, &sourceType, &src.URL, &src.Enabled,
-		&src.CreatedAt, &src.Categories, &src.Roundup, &collectFrom, &folder,
+		&src.CreatedAt, &src.Categories, &src.Roundup, &src.BrowserFetch, &collectFrom, &folder,
 		&username, &password, &days, &maxMessages)
 	if err != nil {
 		return src, err
@@ -268,13 +268,14 @@ func (s *Store) saveConfiguration(ctx context.Context, interests config.Interest
 		var id int64
 		err := tx.QueryRow(ctx, `
 			INSERT INTO sources
-			    (name, type, url, enabled, categories, roundup, collect_from,
+			    (name, type, url, enabled, categories, roundup, browser_fetch, collect_from,
 			     newsletter_folder, newsletter_username, newsletter_password,
 			     newsletter_days, newsletter_max)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
 			ON CONFLICT (type, url) DO UPDATE SET
 			    name=EXCLUDED.name, enabled=EXCLUDED.enabled,
 			    categories=EXCLUDED.categories, roundup=EXCLUDED.roundup,
+			    browser_fetch=EXCLUDED.browser_fetch,
 			    collect_from=EXCLUDED.collect_from,
 			    newsletter_folder=EXCLUDED.newsletter_folder,
 			    newsletter_username=EXCLUDED.newsletter_username,
@@ -282,7 +283,7 @@ func (s *Store) saveConfiguration(ctx context.Context, interests config.Interest
 			    newsletter_days=EXCLUDED.newsletter_days,
 			    newsletter_max=EXCLUDED.newsletter_max
 			RETURNING id`, src.Name, string(src.Type), src.URL, src.Enabled,
-			categories, src.Roundup, collectFrom, folder, username, password,
+			categories, src.Roundup, src.BrowserFetch, collectFrom, folder, username, password,
 			days, maxMessages).Scan(&id)
 		if err != nil {
 			return fmt.Errorf("save source %q: %w", src.Name, err)
@@ -348,12 +349,12 @@ func formatCollectFrom(value domain.CollectFrom) string {
 
 // SourceInput is the write model used by setup and Settings forms.
 type SourceInput struct {
-	ID                           int64
-	Name, Type, URL, CollectFrom string
-	Enabled, Roundup             bool
-	Categories                   []string
-	Folder, Username, Password   string
-	Days, MaxMessages            int
+	ID                             int64
+	Name, Type, URL, CollectFrom   string
+	Enabled, Roundup, BrowserFetch bool
+	Categories                     []string
+	Folder, Username, Password     string
+	Days, MaxMessages              int
 }
 
 // ValidateSourceInput converts a form into the same domain model used by jobs.
@@ -388,7 +389,10 @@ func ValidateSourceInput(in SourceInput, interests config.Interests, existing *d
 	if in.Roundup && typ != domain.SourceTypeRSS {
 		in.Roundup = false
 	}
-	src := domain.Source{ID: in.ID, Name: strings.TrimSpace(in.Name), Type: typ, URL: address, Enabled: in.Enabled, Roundup: in.Roundup, Categories: in.Categories, CollectFrom: cf}
+	if in.BrowserFetch && typ != domain.SourceTypeRSS {
+		in.BrowserFetch = false
+	}
+	src := domain.Source{ID: in.ID, Name: strings.TrimSpace(in.Name), Type: typ, URL: address, Enabled: in.Enabled, Roundup: in.Roundup, BrowserFetch: in.BrowserFetch, Categories: in.Categories, CollectFrom: cf}
 	if typ == domain.SourceTypeNewsletter {
 		folder := strings.TrimSpace(in.Folder)
 		if folder == "" {

@@ -39,7 +39,7 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load migrations: %v", err)
 	}
-	var retryMigration, configurationMigration, contentQualityMigration, feedbackMigration migration
+	var retryMigration, configurationMigration, contentQualityMigration, feedbackMigration, browserMigration migration
 	for _, migration := range migrations {
 		if migration.version == 9 {
 			retryMigration = migration
@@ -54,6 +54,9 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 		}
 		if migration.version == 15 {
 			feedbackMigration = migration
+		}
+		if migration.version == 16 {
+			browserMigration = migration
 		}
 		if migration.version > 9 {
 			continue
@@ -73,6 +76,9 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	}
 	if feedbackMigration.version == 0 {
 		t.Fatal("score-feedback migration 15 is missing")
+	}
+	if browserMigration.version == 0 {
+		t.Fatal("browser-feed migration 16 is missing")
 	}
 
 	var sourceID int64
@@ -98,7 +104,7 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	// Apply the intervening schedule, collection-request and Linkwarden changes
 	// in their normal order before the new content-quality migration.
 	for _, migration := range migrations {
-		if migration.version > 10 && migration.version <= 15 {
+		if migration.version > 10 && migration.version <= 16 {
 			if err := applyMigration(ctx, conn, migration); err != nil {
 				t.Fatalf("apply migration %s: %v", migration.name, err)
 			}
@@ -130,5 +136,12 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	}
 	if baseScore != 88 {
 		t.Errorf("existing article base score = %d, want preserved score 88", baseScore)
+	}
+	var browserFetch bool
+	if err := conn.QueryRow(ctx, `SELECT browser_fetch FROM sources WHERE id=$1`, sourceID).Scan(&browserFetch); err != nil {
+		t.Fatalf("read upgraded source: %v", err)
+	}
+	if browserFetch {
+		t.Error("existing source unexpectedly enabled browser fetching")
 	}
 }
