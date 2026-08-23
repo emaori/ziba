@@ -221,12 +221,6 @@ const (
 	FeedbackLower  ScoreFeedback = "lower"
 )
 
-// ScoreFeedbackSample is one immutable input to a batch's local calibration.
-type ScoreFeedbackSample struct {
-	Categories []string
-	Feedback   ScoreFeedback
-}
-
 // ContentQuality records whether the text retrieved for an article can support
 // an ordinary summary. It is deliberately separate from Summary: display code
 // must not guess reliability from prose written by a model.
@@ -267,8 +261,9 @@ type Article struct {
 	ContentQuality       ContentQuality
 	ContentQualityReason string
 	Score                RelevanceScore
-	// BaseScore is the provider's untouched answer. Score may include the local
-	// personalization learned from feedback on earlier articles.
+	// BaseScore is the provider's untouched answer. Score is the value used for
+	// ranking and currently remains equal to BaseScore; keeping both makes score
+	// restoration and any future conservative calibration explicit.
 	BaseScore RelevanceScore
 	// BaseScoreSet distinguishes a real provider score of zero from an article
 	// that has no provider score. Never use the numeric value as a presence flag.

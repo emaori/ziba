@@ -938,14 +938,15 @@ func TestScoreFeedbackAsyncAcceptsBrowserFormData(t *testing.T) {
 }
 
 func TestScoringSettingsAndConfirmedReset(t *testing.T) {
-	fake := &fakeStore{feedbackSummary: store.ScoreFeedbackSummary{Count: 4, Active: true}}
+	fake := &fakeStore{feedbackSummary: store.ScoreFeedbackSummary{Count: 4}}
 	handler := newTestServer(t, fake)
 	code, body := get(t, handler, "/settings/scoring")
-	if code != http.StatusOK || !strings.Contains(body, "Personalized scoring is active, based on 4 articles") {
-		t.Fatalf("settings status=%d body missing active state", code)
+	if code != http.StatusOK || !strings.Contains(body, "Feedback collected from 4 articles") ||
+		!strings.Contains(body, "Scores are not currently adjusted from feedback") {
+		t.Fatalf("settings status=%d body missing collected, inactive state", code)
 	}
 	code, body = get(t, handler, "/settings/scoring/reset")
-	if code != http.StatusOK || !strings.Contains(body, "Reset personalized scoring?") {
+	if code != http.StatusOK || !strings.Contains(body, "Reset scoring feedback?") {
 		t.Fatalf("reset confirmation status=%d or missing copy", code)
 	}
 	rec := post(t, handler, "/settings/scoring/reset", "/settings/scoring/reset")
@@ -954,26 +955,26 @@ func TestScoringSettingsAndConfirmedReset(t *testing.T) {
 	}
 }
 
-func TestScoringSettingsLearningStates(t *testing.T) {
+func TestScoringSettingsCollectionStates(t *testing.T) {
 	for _, tt := range []struct {
-		count  int
-		active bool
-		text   string
+		count int
+		text  string
 	}{
-		{0, false, "No feedback yet"},
-		{2, false, "Learning from 2 articles"},
-		{3, true, "Personalized scoring is active, based on 3 articles"},
+		{0, "No feedback yet"},
+		{2, "Feedback collected from 2 articles"},
+		{3, "Feedback collected from 3 articles"},
 	} {
-		handler := newTestServer(t, &fakeStore{feedbackSummary: store.ScoreFeedbackSummary{Count: tt.count, Active: tt.active}})
+		handler := newTestServer(t, &fakeStore{feedbackSummary: store.ScoreFeedbackSummary{Count: tt.count}})
 		code, body := get(t, handler, "/settings/scoring")
-		if code != http.StatusOK || !strings.Contains(body, tt.text) {
+		if code != http.StatusOK || !strings.Contains(body, tt.text) ||
+			strings.Contains(body, "learning") || strings.Contains(body, "is active") {
 			t.Errorf("count %d: status=%d missing %q", tt.count, code, tt.text)
 		}
 	}
 }
 
 func TestScoringResetRequiresCSRF(t *testing.T) {
-	fake := &fakeStore{feedbackSummary: store.ScoreFeedbackSummary{Count: 3, Active: true}}
+	fake := &fakeStore{feedbackSummary: store.ScoreFeedbackSummary{Count: 3}}
 	handler := newTestServer(t, fake)
 	form := url.Values{"csrf_token": {"wrong"}}
 	req := httptest.NewRequest(http.MethodPost, "/settings/scoring/reset", strings.NewReader(form.Encode()))

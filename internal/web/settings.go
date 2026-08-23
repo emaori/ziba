@@ -197,7 +197,7 @@ func (s *Server) handleScoringReset(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/settings/scoring?success=reset", http.StatusSeeOther)
 		return
 	}
-	s.render(w, r, "reset_scoring.html", &settingsPage{layoutData: layoutData{Title: "Reset personalized scoring"}, SettingsSection: "scoring", ScoreFeedbackSummary: summary})
+	s.render(w, r, "reset_scoring.html", &settingsPage{layoutData: layoutData{Title: "Reset scoring feedback"}, SettingsSection: "scoring", ScoreFeedbackSummary: summary})
 }
 
 func (s *Server) handleSettingsLinkwarden(w http.ResponseWriter, r *http.Request) {

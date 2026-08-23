@@ -39,7 +39,7 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load migrations: %v", err)
 	}
-	var retryMigration, configurationMigration, contentQualityMigration, feedbackMigration, browserMigration migration
+	var retryMigration, configurationMigration, contentQualityMigration, feedbackMigration, browserMigration, scoreRestorationMigration migration
 	for _, migration := range migrations {
 		if migration.version == 9 {
 			retryMigration = migration
@@ -57,6 +57,9 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 		}
 		if migration.version == 16 {
 			browserMigration = migration
+		}
+		if migration.version == 17 {
+			scoreRestorationMigration = migration
 		}
 		if migration.version > 9 {
 			continue
@@ -79,6 +82,9 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	}
 	if browserMigration.version == 0 {
 		t.Fatal("browser-feed migration 16 is missing")
+	}
+	if scoreRestorationMigration.version == 0 {
+		t.Fatal("score-restoration migration 17 is missing")
 	}
 
 	var sourceID int64
@@ -110,6 +116,15 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 			}
 		}
 	}
+	if _, err := conn.Exec(ctx, `
+		UPDATE articles SET score=73 WHERE url='https://example.com/article';
+		INSERT INTO article_score_feedback (article_id, direction)
+		SELECT id, 'higher' FROM articles WHERE url='https://example.com/article'`); err != nil {
+		t.Fatalf("seed personalized score and feedback: %v", err)
+	}
+	if err := applyMigration(ctx, conn, scoreRestorationMigration); err != nil {
+		t.Fatalf("apply score restoration migration: %v", err)
+	}
 
 	var rawTitle, articleTitle, summary, quality string
 	var score, baseScore, failures int
@@ -136,6 +151,13 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	}
 	if baseScore != 88 {
 		t.Errorf("existing article base score = %d, want preserved score 88", baseScore)
+	}
+	var feedbackCount int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM article_score_feedback`).Scan(&feedbackCount); err != nil {
+		t.Fatalf("count preserved score feedback: %v", err)
+	}
+	if feedbackCount != 1 {
+		t.Errorf("feedback rows after score restoration = %d, want 1", feedbackCount)
 	}
 	var browserFetch bool
 	if err := conn.QueryRow(ctx, `SELECT browser_fetch FROM sources WHERE id=$1`, sourceID).Scan(&browserFetch); err != nil {

@@ -1,8 +1,8 @@
 {{define "content"}}
-<h1 class="page-title">Reset personalized scoring?</h1>
+<h1 class="page-title">Reset scoring feedback?</h1>
 <section class="settings-section">
-  <p>This removes feedback from {{.ScoreFeedbackSummary.Count}} articles and every calibration learned from it.</p>
-  <p>Your articles, interests, sources, and original AI scores will not be removed.</p>
-  <form method="post" action="/settings/scoring/reset"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><div class="actions"><button class="button danger" type="submit">Reset scoring</button><a class="button secondary" href="/settings/scoring">Cancel</a></div></form>
+  <p>This removes feedback from {{.ScoreFeedbackSummary.Count}} articles and restores every score from its preserved provider score.</p>
+  <p>Your articles, interests, sources, summaries, and provider assessment reasons will not be removed.</p>
+  <form method="post" action="/settings/scoring/reset"><input type="hidden" name="csrf_token" value="{{csrfToken}}"><div class="actions"><button class="button danger" type="submit">Reset feedback</button><a class="button secondary" href="/settings/scoring">Cancel</a></div></form>
 </section>
 {{end}}

@@ -9,11 +9,10 @@ import (
 	"github.com/emaori/ziba/internal/domain"
 )
 
-// ScoreFeedbackSummary describes the personalization data without exposing
+// ScoreFeedbackSummary describes the collected corrections without exposing
 // individual reading choices on the settings page.
 type ScoreFeedbackSummary struct {
-	Count  int
-	Active bool
+	Count int
 }
 
 // SetScoreFeedback creates, changes, or clears the one correction for an article.
@@ -56,30 +55,7 @@ func (s *Store) ScoreFeedbackSummary(ctx context.Context) (ScoreFeedbackSummary,
 	if err := s.pool.QueryRow(ctx, `SELECT count(*) FROM article_score_feedback`).Scan(&out.Count); err != nil {
 		return out, fmt.Errorf("count score feedback: %w", err)
 	}
-	out.Active = out.Count >= 3
 	return out, nil
-}
-
-// ScoreFeedbackSamples reads the complete immutable input for one analysis
-// batch in one query. Later feedback belongs to the next batch.
-func (s *Store) ScoreFeedbackSamples(ctx context.Context) ([]domain.ScoreFeedbackSample, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT a.categories, f.direction
-		FROM article_score_feedback f
-		JOIN articles a ON a.id = f.article_id
-		ORDER BY f.article_id`)
-	if err != nil {
-		return nil, fmt.Errorf("query score feedback snapshot: %w", err)
-	}
-	samples, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (domain.ScoreFeedbackSample, error) {
-		var sample domain.ScoreFeedbackSample
-		err := row.Scan(&sample.Categories, &sample.Feedback)
-		return sample, err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("read score feedback snapshot: %w", err)
-	}
-	return samples, nil
 }
 
 // ResetPersonalizedScoring removes every correction and restores provider

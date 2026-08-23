@@ -284,12 +284,6 @@ func (r *Runner) analyzeBatch(ctx context.Context, batch int, before time.Time) 
 	if err != nil {
 		return 0, 0, 0, err
 	}
-	feedback, err := r.store.ScoreFeedbackSamples(ctx)
-	if err != nil {
-		return 0, 0, 0, err
-	}
-	batchPipeline := r.pipeline.WithCalibrator(pipeline.NewFeedbackCalibration(feedback))
-
 	var (
 		mu         sync.Mutex
 		results    []domain.Article
@@ -301,7 +295,7 @@ func (r *Runner) analyzeBatch(ctx context.Context, batch int, before time.Time) 
 
 	for _, article := range articles {
 		group.Go(func() error {
-			result, err := batchPipeline.Analyze(groupCtx, article, declared[article.SourceID])
+			result, err := r.pipeline.Analyze(groupCtx, article, declared[article.SourceID])
 			if err != nil {
 				if ctx.Err() != nil {
 					return nil

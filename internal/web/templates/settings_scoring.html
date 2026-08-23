@@ -2,16 +2,14 @@
 <h1 class="page-title">Settings</h1>
 {{template "settingsNav" .}}
 <section class="settings-section">
-  <h2>Personalized scoring</h2>
-  {{if eq .Success "reset"}}<p class="success" role="status">Personalized scoring reset.</p>{{end}}
+  <h2>Scoring feedback</h2>
+  {{if eq .Success "reset"}}<p class="success" role="status">Scoring feedback reset.</p>{{end}}
   {{if eq .ScoreFeedbackSummary.Count 0}}
-    <p>No feedback yet. Tell Ziba when a score feels too high or too low; it will use this for new articles.</p>
-  {{else if .ScoreFeedbackSummary.Active}}
-    <p>Personalized scoring is active, based on {{.ScoreFeedbackSummary.Count}} articles.</p>
+    <p>No feedback yet. Tell Ziba when a score feels too high or too low.</p>
   {{else}}
-    <p>Learning from {{.ScoreFeedbackSummary.Count}} articles. Original AI scores are still used.</p>
+    <p>Feedback collected from {{.ScoreFeedbackSummary.Count}} articles.</p>
   {{end}}
-  <p class="help">Feedback changes scores only for articles analyzed in the future. The provider's original score is always preserved.</p>
-  {{if gt .ScoreFeedbackSummary.Count 0}}<p><a class="text-action danger-text" href="/settings/scoring/reset">Reset personalized scoring</a></p>{{end}}
+  <p class="help">Scores are not currently adjusted from feedback. Ziba keeps these corrections for a future, more precise calibration method and always preserves the provider's original score.</p>
+  {{if gt .ScoreFeedbackSummary.Count 0}}<p><a class="text-action danger-text" href="/settings/scoring/reset">Reset scoring feedback</a></p>{{end}}
 </section>
 {{end}}

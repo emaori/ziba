@@ -26,7 +26,7 @@
       <h2{{if .LimitedOverview}} title="The complete article text was not available, so this overview uses only the title and available page details."{{end}}>{{if .LimitedOverview}}<span aria-hidden="true">⚠</span> Limited overview{{else}}Summary{{end}}</h2>
       <p>{{.Summary}}</p>
       {{if .LimitedOverview}}<p class="summary-explanation">The complete article text was not available, so this overview uses the title and available page details.</p>{{end}}
-      {{if .ScoreReason}}<p class="why">Scored {{.Score}}{{if .PersonalizedScore}} (personalized from {{.BaseScore}}){{end}} — {{.ScoreReason}}</p>{{end}}
+      {{if .ScoreReason}}<p class="why">Scored {{.Score}}{{if .PersonalizedScore}} (adjusted from {{.BaseScore}}){{end}} — {{.ScoreReason}}</p>{{end}}
       {{template "scoreFeedback" .}}
     </aside>
   {{end}}
