@@ -1,4 +1,8 @@
-FROM mcr.microsoft.com/playwright:v1.62.0-noble
+# syntax=docker/dockerfile:1
+
+ARG PLAYWRIGHT_VERSION=v1.62.0
+
+FROM mcr.microsoft.com/playwright:${PLAYWRIGHT_VERSION}-noble
 
 WORKDIR /app
 
