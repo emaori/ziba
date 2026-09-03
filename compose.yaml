@@ -6,7 +6,7 @@
 #
 services:
   ziba-db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: ziba-db
     restart: unless-stopped
     environment:
