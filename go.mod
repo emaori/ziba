@@ -3,13 +3,13 @@ module github.com/emaori/ziba
 go 1.26.2
 
 require (
-	github.com/anthropics/anthropic-sdk-go v1.66.0
+	github.com/anthropics/anthropic-sdk-go v1.71.0
 	github.com/emersion/go-imap/v2 v2.0.0-beta.8
 	github.com/emersion/go-message v0.18.2
 	github.com/go-shiori/go-readability v0.0.0-20251205110129-5db1dc9836f0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/mmcdole/gofeed v1.4.2
-	github.com/openai/openai-go/v3 v3.52.0
+	github.com/openai/openai-go/v3 v3.56.0
 	golang.org/x/net v0.58.0
 	golang.org/x/sync v0.22.0
 )
