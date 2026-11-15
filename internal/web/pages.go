@@ -60,28 +60,26 @@ func (p *statisticsPage) layout() *layoutData { return &p.layoutData }
 
 type settingsPage struct {
 	layoutData
-	Settings             store.Configuration
-	Source               store.SourceInput
-	InterestForm         config.Interest
-	InterestIndex        int
-	EditingInterest      bool
-	EditingSource        bool
-	Error                string
-	SettingsSection      string
-	FormAction           string
-	CancelURL            string
-	InterestPresets      []interestPreset
-	SourcePresets        []sourcePreset
-	RemoveName           string
-	RemoveKind           string
-	RemoveAction         string
-	ScheduleEvery        string
-	ScheduleAt           string
-	ScheduleAmount       int
-	ScheduleUnit         string
-	LinkwardenForm       linkwarden.Configuration
-	Success              string
-	ScoreFeedbackSummary store.ScoreFeedbackSummary
+	Settings        store.Configuration
+	Source          store.SourceInput
+	InterestForm    config.Interest
+	InterestIndex   int
+	EditingInterest bool
+	EditingSource   bool
+	Error           string
+	SettingsSection string
+	FormAction      string
+	CancelURL       string
+	InterestPresets []interestPreset
+	SourcePresets   []sourcePreset
+	RemoveName      string
+	RemoveKind      string
+	RemoveAction    string
+	ScheduleEvery   string
+	ScheduleAt      string
+	ScheduleAmount  int
+	ScheduleUnit    string
+	LinkwardenForm  linkwarden.Configuration
 }
 
 func (p *settingsPage) layout() *layoutData { return &p.layoutData }

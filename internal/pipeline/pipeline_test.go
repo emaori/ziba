@@ -35,8 +35,8 @@ func TestAnalyzeKeepsProviderScoreUnadjusted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Analyze returned error: %v", err)
 	}
-	if !got.BaseScoreSet || got.BaseScore != 65 || got.Score != got.BaseScore {
-		t.Fatalf("scores = base %d final %d, want both provider score 65", got.BaseScore, got.Score)
+	if got.Score != 65 {
+		t.Fatalf("score = %d, want provider score 65", got.Score)
 	}
 	if got.Summary == "" {
 		t.Error("provider score at or above threshold was not summarized")

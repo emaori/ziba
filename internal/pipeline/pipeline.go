@@ -96,9 +96,6 @@ func (p *Pipeline) Analyze(ctx context.Context, a domain.Article, declared []str
 	if err != nil {
 		return a, fmt.Errorf("assess %s: %w", a.URL, err)
 	}
-	a.BaseScore = assessment.Score
-	a.BaseScoreSet = true
-
 	a.Categories = assessment.Categories
 	a.Entities = assessment.Entities
 	a.Tone = assessment.Tone
