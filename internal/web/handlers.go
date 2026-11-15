@@ -34,12 +34,6 @@ type readingStore interface {
 	Archive(ctx context.Context, limit, offset int, interests []string) ([]domain.Article, error)
 }
 
-type feedbackStore interface {
-	SetScoreFeedback(ctx context.Context, id int64, feedback domain.ScoreFeedback) error
-	ScoreFeedbackSummary(ctx context.Context) (store.ScoreFeedbackSummary, error)
-	ResetPersonalizedScoring(ctx context.Context) error
-}
-
 type statisticsStore interface {
 	TalliesBySource(ctx context.Context) ([]store.Tally, error)
 	TalliesByDay(ctx context.Context, limit int) ([]store.DayTally, error)
@@ -56,7 +50,6 @@ type statisticsStore interface {
 // existing public API while the package is split gradually.
 type Store interface {
 	readingStore
-	feedbackStore
 	statisticsStore
 }
 
@@ -73,40 +66,6 @@ type configurationStore interface {
 
 type collectionStateStore interface {
 	CollectionState(ctx context.Context) (running bool, completed uint64, err error)
-}
-
-func (s *Server) handleScoreFeedback(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	if err := parseRequestForm(r); err != nil {
-		http.Error(w, "invalid form", http.StatusBadRequest)
-		return
-	}
-	if !s.validCSRF(r) {
-		http.Error(w, "invalid CSRF token", http.StatusForbidden)
-		return
-	}
-	feedback := domain.ScoreFeedback(r.Form.Get("feedback"))
-	if feedback != "" && feedback != domain.FeedbackHigher && feedback != domain.FeedbackLower {
-		http.Error(w, "invalid feedback", http.StatusBadRequest)
-		return
-	}
-	if err := s.feedback.SetScoreFeedback(r.Context(), id, feedback); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			http.NotFound(w, r)
-			return
-		}
-		s.fail(w, r, err)
-		return
-	}
-	if r.Header.Get(asyncHeader) != "" {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-	http.Redirect(w, r, backTo(r), http.StatusSeeOther)
 }
 
 // handleInterest lists one interest's unread articles, most relevant first.

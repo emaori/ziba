@@ -94,7 +94,10 @@ func TestConfigurationMigrationPreservesExistingData(t *testing.T) {
 	}
 	if _, err := conn.Exec(ctx, `
 		INSERT INTO raw_items (source_id, title, url, text, kind)
-		VALUES ($1, 'Existing raw item', 'https://example.com/raw', 'raw text', 'article');
+		VALUES ($1, 'Existing raw item', 'https://example.com/raw', 'raw text', 'article')`, sourceID); err != nil {
+		t.Fatalf("seed old raw item: %v", err)
+	}
+	if _, err := conn.Exec(ctx, `
 		INSERT INTO articles (source_id, url, title, full_text, categories, summary, score, processed_at)
 		VALUES ($1, 'https://example.com/article', 'Existing article', 'article text',
 		        ARRAY['AI'], 'existing summary', 88, now())`, sourceID); err != nil {
