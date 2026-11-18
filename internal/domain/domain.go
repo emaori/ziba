@@ -16,18 +16,9 @@ type SourceType string
 const (
 	SourceTypeRSS        SourceType = "rss"
 	SourceTypeNewsletter SourceType = "newsletter"
-	SourceTypePDF        SourceType = "pdf"
-
-	// SourceTypeWebsite is retired. Scraping was removed: it needed a bespoke
-	// selector per site and broke whenever one was redesigned, while almost
-	// every worthwhile source publishes a feed or a newsletter. The constant
-	// remains only so configuration can reject it with an explanation, and so
-	// rows collected before the removal still describe themselves.
-	SourceTypeWebsite SourceType = "website"
 )
 
-// Source is a configured origin of content: a feed, a website, a mailbox, a
-// folder of PDF magazines.
+// Source is a configured origin of content: an RSS feed or a newsletter mailbox.
 type Source struct {
 	ID      int64
 	Name    string
