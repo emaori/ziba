@@ -37,7 +37,7 @@ func addressFor(sourceType domain.SourceType, raw string) (string, error) {
 	}
 	if parsed.User != nil {
 		return "", fmt.Errorf("mailbox address %q must not contain credentials — "+
-			"name environment variables with username_env and password_env instead", raw)
+			"enter the username and password in the source form instead", raw)
 	}
 	return parsed.String(), nil
 }

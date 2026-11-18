@@ -60,10 +60,8 @@ type Source struct {
 	// bypass the relevance threshold and use the score only for ordering.
 	Categories []string
 
-	// Newsletter carries the settings only a mailbox needs, and is nil
-	// otherwise. Settings live here rather than in the database because the
-	// configuration file is their source of truth; storing them would give them
-	// two.
+	// Newsletter carries the database-owned settings only a mailbox needs,
+	// and is nil otherwise.
 	Newsletter *NewsletterOptions
 }
 

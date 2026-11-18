@@ -21,7 +21,7 @@ const JournalFile = "modelJournal.txt"
 //
 // It exists for the question that cannot be answered from the outside: not
 // "what did the model say" — that is in the database — but "what exactly was it
-// asked". A prompt is assembled from the interests file, the article, a schema
+// asked". A prompt is assembled from the configured interests, the article, a schema
 // and a handful of rules about declared categories, and when the answer is
 // surprising the assembled result is the thing to read. Reconstructing it by
 // eye from four source files is how the wrong conclusion gets reached.

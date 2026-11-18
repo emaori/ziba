@@ -42,8 +42,8 @@ WORKDIR /app
 COPY --from=build /out/ziba /usr/local/bin/ziba
 
 # log/ takes the model journal when ZIBA_MODEL_JOURNAL is on.
-RUN mkdir -p /app/config /app/log \
- && chown nobody /app/config /app/log
+RUN mkdir -p /app/log \
+ && chown nobody /app/log
 
 VOLUME ["/app/log"]
 
