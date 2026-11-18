@@ -175,7 +175,7 @@ func TestRegistryRunIsolatesFailures(t *testing.T) {
 	sources := []domain.Source{
 		{Name: "good", Type: domain.SourceTypeRSS, URL: good.URL},
 		{Name: "bad", Type: domain.SourceTypeRSS, URL: bad.URL},
-		{Name: "unsupported", Type: domain.SourceTypePDF, URL: "https://example.com/magazine.pdf"},
+		{Name: "unsupported", Type: "unsupported", URL: "https://example.com/unsupported"},
 	}
 
 	results := registry.Run(context.Background(), testLogger(), sources)

@@ -157,7 +157,7 @@ func (s *Store) Configuration(ctx context.Context) (Configuration, error) {
 		SELECT id, name, type, url, enabled, created_at, categories, roundup, browser_fetch,
 		       collect_from, newsletter_folder, newsletter_username,
 		       newsletter_password, newsletter_days, newsletter_max
-		FROM sources ORDER BY name, id`)
+		FROM sources WHERE type IN ('rss', 'newsletter') ORDER BY name, id`)
 	if err != nil {
 		return out, fmt.Errorf("query configured sources: %w", err)
 	}
@@ -291,7 +291,7 @@ func (s *Store) saveConfiguration(ctx context.Context, interests config.Interest
 		keep = append(keep, id)
 	}
 	if len(keep) > 0 {
-		if _, err := tx.Exec(ctx, `UPDATE sources SET enabled=FALSE WHERE NOT (id=ANY($1))`, keep); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE sources SET enabled=FALSE WHERE enabled AND NOT (id=ANY($1))`, keep); err != nil {
 			return fmt.Errorf("disable removed sources: %w", err)
 		}
 	}

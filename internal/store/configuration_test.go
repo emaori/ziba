@@ -103,6 +103,32 @@ func TestBrowserFetchIsRSSOnly(t *testing.T) {
 	}
 }
 
+func TestSourceInputRejectsUnsupportedTypes(t *testing.T) {
+	for _, typ := range []string{"pdf", "website", "unsupported", ""} {
+		t.Run(typ, func(t *testing.T) {
+			_, err := ValidateSourceInput(SourceInput{
+				Name: "Unsupported", Type: typ, URL: "https://example.com/source",
+			}, config.Interests{}, nil)
+			if err == nil || err.Error() != "type must be RSS or newsletter" {
+				t.Fatalf("ValidateSourceInput type %q: got %v, want type validation error", typ, err)
+			}
+		})
+	}
+}
+
+func TestFreshDatabaseRejectsUnsupportedSourceTypes(t *testing.T) {
+	db := testStore(t)
+	for _, typ := range []string{"pdf", "website", "unsupported"} {
+		for _, enabled := range []bool{true, false} {
+			if _, err := db.pool.Exec(context.Background(), `
+				INSERT INTO sources (name, type, url, enabled)
+				VALUES ('Invalid', $1, 'https://example.com/source', $2)`, typ, enabled); err == nil {
+				t.Errorf("database accepted type %q with enabled=%v", typ, enabled)
+			}
+		}
+	}
+}
+
 func TestLinkwardenSecretsArePreservedWhenFormsLeaveThemBlank(t *testing.T) {
 	db := testStore(t)
 	ctx := context.Background()
