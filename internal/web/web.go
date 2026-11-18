@@ -130,9 +130,9 @@ type Server struct {
 	linkwarden      linkwardenClient
 
 	// interests drive the tab bar and are the only values the interest routes
-	// accept. They come from the configuration file rather than from whatever
-	// categories happen to be in the database, so the tabs are stable and are
-	// the reader's own subjects rather than the model's invention.
+	// accept. They come from the reader's configured interests in PostgreSQL,
+	// so the tabs reflect the reader's own subjects rather than categories
+	// invented by the model.
 	interests []string
 	threshold domain.RelevanceScore
 

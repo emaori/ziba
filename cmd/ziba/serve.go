@@ -50,7 +50,7 @@ func digestCmd(ctx context.Context, args []string) error {
 	fmt.Printf("24-hour digest ending %s: %d articles (threshold %d, not applied to sources that declare their categories)\n",
 		date.Format(time.DateOnly), selected, s.runner.Threshold())
 	if selected == 0 {
-		fmt.Println("nothing cleared the threshold — lower it in the interests file, or collect more")
+		fmt.Println("nothing cleared the threshold — lower it in Settings > Interests, or collect more")
 	}
 	return nil
 }

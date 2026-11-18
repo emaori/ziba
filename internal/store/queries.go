@@ -190,10 +190,8 @@ func (s *Store) RecordRawItemFailure(ctx context.Context, id int64, message stri
 // DeclaredCategories returns, per source id, the categories that source
 // declares. Sources that declare none are absent from the map.
 //
-// The analysis stage needs this to assign categories instead of inferring them,
-// and it comes from the database rather than the configuration because the two
-// are kept in step by SyncSources — the file remains the truth, and this is a
-// copy written from it on every run.
+// The analysis stage reads these database-owned settings to assign categories
+// instead of inferring them.
 func (s *Store) DeclaredCategories(ctx context.Context) (map[int64][]string, error) {
 	rows, err := s.pool.Query(ctx,
 		`SELECT id, categories FROM sources WHERE cardinality(categories) > 0`)

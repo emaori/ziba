@@ -9,7 +9,8 @@ Ziba is a self-hosted personal content aggregator. It collects articles from
 configured sources, processes them with AI, and presents them as a personalized
 magazine.
 
-Sources and interests are both configured by hand. An article is collected from
+Sources and interests are configured through the setup wizard and Settings,
+and stored in PostgreSQL. An article is collected from
 its source and appears in the last-24-hours digest only if it matches an interest and
 scores above a configured threshold. Articles that pass are then summarized.
 
