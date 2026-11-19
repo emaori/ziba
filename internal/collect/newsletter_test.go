@@ -1,6 +1,8 @@
 package collect
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -32,8 +34,7 @@ func message(subject, sender, html string) *imapclient.FetchMessageBuffer {
 
 var mailbox = domain.Source{ID: 3, Name: "Newsletters", Type: domain.SourceTypeNewsletter}
 
-// A roundup email yields its links, plus the email itself as provenance which
-// is never shown.
+// A digest retains its email separately from the extracted links.
 func TestItemsFromRoundupMessage(t *testing.T) {
 	html := `<html><body>
 	  <h2><a href="https://spectrum.ieee.org/quantum-milestone">Quantum error correction hits a milestone</a></h2>
@@ -41,24 +42,22 @@ func TestItemsFromRoundupMessage(t *testing.T) {
 	  <p><a href="https://example.com/unsubscribe">Unsubscribe from this list</a></p>
 	</body></html>`
 
-	items, err := new(Newsletter).itemsFromMessage(mailbox, message("Weekly roundup", "Editor", html))
+	retained, err := new(Newsletter).itemsFromMessage(mailbox, message("Weekly roundup", "Editor", html))
 	if err != nil {
 		t.Fatalf("itemsFromMessage: %v", err)
 	}
-	if len(items) != 3 {
+	items := retained.Items
+	if len(items) != 2 {
 		for _, i := range items {
 			t.Logf("%s %s — %q", i.Kind, i.URL, i.Title)
 		}
-		t.Fatalf("got %d items, want 3 (provenance plus two links)", len(items))
+		t.Fatalf("got %d items, want two article candidates", len(items))
 	}
 
-	if items[0].Kind != domain.ItemKindProvenance {
-		t.Errorf("first item is %q, want provenance", items[0].Kind)
+	if retained.Key != "id:Weekly roundup@example.com" || retained.Title != "Weekly roundup" || retained.Text == "" {
+		t.Errorf("retained email = %+v", retained)
 	}
-	if !strings.HasPrefix(items[0].URL, "imap://") {
-		t.Errorf("provenance address = %q, want a synthetic imap one", items[0].URL)
-	}
-	for _, link := range items[1:] {
+	for _, link := range items {
 		if link.Kind != domain.ItemKindArticle {
 			t.Errorf("%s is %q, want an article", link.URL, link.Kind)
 		}
@@ -77,10 +76,11 @@ func TestItemsFromEssayMessage(t *testing.T) {
 	  with <a href="https://nytimes.com/oracle">lots of details on Oracle's investments in AI</a>.
 	</p></body></html>`
 
-	items, err := new(Newsletter).itemsFromMessage(mailbox, message("Fragments: August 4", "Martin Fowler", html))
+	retained, err := new(Newsletter).itemsFromMessage(mailbox, message("Fragments: August 4", "Martin Fowler", html))
 	if err != nil {
 		t.Fatalf("itemsFromMessage: %v", err)
 	}
+	items := retained.Items
 
 	if len(items) != 1 {
 		for _, i := range items {
@@ -102,5 +102,42 @@ func TestItemsFromEssayMessage(t *testing.T) {
 	// No external original: the reader renders it inline.
 	if (domain.Article{URL: essay.URL}).HasOriginal() {
 		t.Errorf("URL = %q, which the reader would offer to open", essay.URL)
+	}
+}
+
+type completedMessages map[string]bool
+
+func (h completedMessages) NewsletterMessageExtracted(_ context.Context, sourceID int64, key string) (bool, error) {
+	return h[fmt.Sprintf("%d:%s", sourceID, key)], nil
+}
+
+func TestNewsletterSkipsCommittedExtractionBeforeParsing(t *testing.T) {
+	// No body: parsing this buffer would fail. A committed Message-ID must
+	// bypass extraction even after the source has been renamed.
+	msg := &imapclient.FetchMessageBuffer{Envelope: &imap.Envelope{MessageID: "<known@example.com>"}}
+	src := mailbox
+	src.Name = "Renamed mailbox"
+	collector := NewNewsletter(testLogger(), completedMessages{"3:id:known@example.com": true})
+	if got, err := collector.collectMessage(t.Context(), src, msg); err != nil || got != nil {
+		t.Fatalf("got=%+v err=%v", got, err)
+	}
+	src.ID = 4
+	if _, err := collector.collectMessage(t.Context(), src, msg); err == nil {
+		t.Fatal("a different source incorrectly skipped extraction")
+	}
+}
+
+func TestNewsletterIdentityWithoutMessageID(t *testing.T) {
+	a := message("Same subject", "Editor", "First body")
+	a.Envelope.MessageID = ""
+	b := message("Same subject", "Editor", "Different body")
+	b.Envelope.MessageID = ""
+	if messageKey(a) == messageKey(b) {
+		t.Fatal("different bodies without Message-ID collided")
+	}
+	key := messageKey(a)
+	a.Envelope.Subject = "Changed metadata"
+	if messageKey(a) != key {
+		t.Fatal("fallback identity changed without a body change")
 	}
 }

@@ -115,7 +115,8 @@ func TestRSSCollectMarksRoundupEntries(t *testing.T) {
 	for _, roundup := range []bool{false, true} {
 		src := domain.Source{ID: 7, Type: domain.SourceTypeRSS, URL: server.URL, Roundup: roundup}
 
-		items, err := NewRSS(server.Client(), nil, testLogger()).Collect(context.Background(), src)
+		collected, err := NewRSS(server.Client(), nil, testLogger()).Collect(context.Background(), src)
+		items := collected.Items
 		if err != nil {
 			t.Fatalf("roundup=%v: Collect returned error: %v", roundup, err)
 		}

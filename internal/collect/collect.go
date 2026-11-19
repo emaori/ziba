@@ -73,8 +73,8 @@ func (r *Registry) For(t domain.SourceType) (domain.Collector, bool) {
 // Result is what one source produced.
 type Result struct {
 	Source domain.Source
-	Items  []domain.RawItem
-	Err    error
+	domain.Collection
+	Err error
 }
 
 // Run collects from every source in parallel and returns one Result each, in
@@ -94,11 +94,11 @@ func (r *Registry) Run(ctx context.Context, log *slog.Logger, sources []domain.S
 
 	for _, src := range sources {
 		group.Go(func() error {
-			items, err := r.collectOne(ctx, log, src)
+			collected, err := r.collectOne(ctx, log, src)
 
 			mu.Lock()
 			defer mu.Unlock()
-			results = append(results, Result{Source: src, Items: items, Err: err})
+			results = append(results, Result{Source: src, Collection: collected, Err: err})
 
 			// Always nil: errors travel in the Result, so one bad source never
 			// cancels the group.
@@ -110,16 +110,16 @@ func (r *Registry) Run(ctx context.Context, log *slog.Logger, sources []domain.S
 	return results
 }
 
-func (r *Registry) collectOne(ctx context.Context, log *slog.Logger, src domain.Source) ([]domain.RawItem, error) {
+func (r *Registry) collectOne(ctx context.Context, log *slog.Logger, src domain.Source) (domain.Collection, error) {
 	collector, ok := r.For(src.Type)
 	if !ok {
-		return nil, fmt.Errorf("no collector for source type %q", src.Type)
+		return domain.Collection{}, fmt.Errorf("no collector for source type %q", src.Type)
 	}
 
 	log.Debug("collecting", "source", src.Name, "type", src.Type)
 	items, err := collector.Collect(ctx, src)
 	if err != nil {
-		return nil, err
+		return domain.Collection{}, err
 	}
 	return items, nil
 }

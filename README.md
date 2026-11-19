@@ -86,6 +86,16 @@ and passwords are never displayed again.
 Turning off collection for a source stops future collection. It does not remove
 articles that Ziba already collected.
 
+Newsletter emails are retained separately from article processing inputs. Ziba
+records which emails supplied each collected link and which article each input
+became, including when another source already stored that article. Essays retain
+their email and become one article themselves. Completed email extraction is
+skipped on later collection runs; the IMAP window is still fetched.
+
+The companion [database reference](https://github.com/emaori/ziba-docs/blob/main/DATABASE.md)
+describes the schema, transaction boundaries, migration and provenance queries.
+Historical email-to-article associations are not reconstructed during upgrade.
+
 An RSS source that receives 403 responses from an ordinary HTTP client can
 enable **Fetch this feed with Firefox**. Use it only for affected feeds: it is
 slower and requires the browser service. Firefox downloads the feed XML only;

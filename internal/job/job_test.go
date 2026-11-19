@@ -5,15 +5,21 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/emersion/go-imap/v2"
+	"github.com/emersion/go-imap/v2/imapserver"
+	"github.com/emersion/go-imap/v2/imapserver/imapmemserver"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/emaori/ziba/internal/collect"
 	"github.com/emaori/ziba/internal/config"
 	"github.com/emaori/ziba/internal/domain"
 	"github.com/emaori/ziba/internal/pipeline"
@@ -94,7 +100,13 @@ func testRunner(t *testing.T, db *store.Store) *Runner {
 		Topics:    []config.Interest{{Topic: "AI", Priority: 1}},
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return New(config.Config{}, nil, interests, db, log, Options{})
+	runner := New(config.Config{}, nil, interests, db, log, Options{})
+	// These fixtures intentionally serve local HTTP. Production uses the public
+	// address policy; fixture retrieval must use the test server's transport.
+	client := &http.Client{Timeout: 5 * time.Second}
+	runner.fullText = collect.NewFullText(client)
+	runner.roundup = collect.NewRoundup(client)
+	return runner
 }
 
 // seedSource registers one source and returns its id.
@@ -430,4 +442,109 @@ func TestCollectUsesConfiguredBrowserSidecar(t *testing.T) {
 	if called != 1 || result.Failed != 0 || result.Found != 1 || result.New != 1 {
 		t.Fatalf("sidecar calls=%d result=%+v, want one collected item", called, result)
 	}
+}
+
+func TestNewsletterCollectionRetainsMessagesAndArticleOrigins(t *testing.T) {
+	db := testStore(t)
+	ctx := t.Context()
+	memory := imapmemserver.New()
+	user := imapmemserver.NewUser("reader", "test-password")
+	if err := user.Create("INBOX", nil); err != nil {
+		t.Fatal(err)
+	}
+	memory.AddUser(user)
+	server := imapserver.New(&imapserver.Options{
+		InsecureAuth: true,
+		NewSession: func(*imapserver.Conn) (imapserver.Session, *imapserver.GreetingData, error) {
+			return memory.NewSession(), nil, nil
+		},
+	})
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	go server.Serve(listener)
+	t.Cleanup(func() { server.Close() })
+	for _, entry := range []struct{ id, body string }{
+		{"weekly-42", `<a href="https://example.com/story">A useful article with a full headline</a>`},
+		{"weekly-43", `<a href="https://example.com/story">The same article from another newsletter</a>`},
+		{"essay", strings.Repeat("An essay about software and its design. ", 60)},
+	} {
+		raw := "From: Editor <editor@example.com>\r\nSubject: " + entry.id + "\r\nMessage-ID: <" + entry.id + "@example.com>\r\nDate: " + time.Now().Format(time.RFC1123Z) + "\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=utf-8\r\n\r\n" + entry.body
+		if _, err := user.Append("INBOX", strings.NewReader(raw), &imap.AppendOptions{Time: time.Now()}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	runner := testRunner(t, db)
+	feed := seedSource(t, db, "https://example.com/feed")
+	now := time.Now()
+	if _, err := db.SaveRawItems(ctx, []domain.RawItem{{SourceID: feed, URL: "https://example.com/story", Text: "Feed text", CollectedAt: now}}); err != nil {
+		t.Fatal(err)
+	}
+	// An RSS article exists before either email mentions it.
+	var feedRaw int64
+	if err := db.Pool().QueryRow(ctx, `SELECT id FROM raw_items`).Scan(&feedRaw); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.SaveRetrievedArticle(ctx, feedRaw, domain.Article{SourceID: feed, URL: "https://example.com/story", Title: "Story", FullText: "Feed text", CollectedAt: now}); err != nil {
+		t.Fatal(err)
+	}
+	runner.sources = []domain.Source{{Name: "Newsletters", Type: domain.SourceTypeNewsletter, URL: "imap://" + listener.Addr().String(), Enabled: true,
+		Newsletter: &domain.NewsletterOptions{Folder: "INBOX", Username: "reader", Password: "test-password"}}}
+	result, err := runner.Collect(ctx)
+	if err != nil || result.New != 5 || result.Failed != 0 {
+		t.Fatalf("collection=%+v err=%v", result, err)
+	}
+	// Use a deterministic local page for the external-link candidate.
+	page := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		io.WriteString(w, "<html><body><article><p>Article text.</p></article></body></html>")
+	}))
+	defer page.Close()
+	runner.fullText = collect.NewFullText(&http.Client{Transport: rewriteArticleTransport{target: page.URL, base: page.Client().Transport}})
+	processed, created, err := runner.Hydrate(ctx, 10)
+	if err != nil || processed != 2 || created != 1 {
+		t.Fatalf("hydration processed=%d created=%d err=%v", processed, created, err)
+	}
+	for query, want := range map[string]int{
+		`SELECT count(*) FROM articles`:                                           2,
+		`SELECT count(*) FROM newsletter_messages WHERE extracted_at IS NOT NULL`: 3,
+		`SELECT count(*) FROM newsletter_message_items`:                           3,
+		`SELECT count(*) FROM article_origins`:                                    3,
+		`SELECT count(*) FROM newsletter_messages m JOIN newsletter_message_items mi ON mi.message_id=m.id JOIN article_origins o ON o.raw_item_id=mi.raw_item_id JOIN articles a ON a.id=o.article_id WHERE a.url='https://example.com/story'`: 2,
+		`SELECT count(*) FROM articles WHERE processed_at IS NULL`: 2,
+	} {
+		var got int
+		if err := db.Pool().QueryRow(ctx, query).Scan(&got); err != nil || got != want {
+			t.Fatalf("%s: got=%d want=%d err=%v", query, got, want, err)
+		}
+	}
+	runner.sources[0].Name = "Renamed newsletters"
+	result, err = runner.Collect(ctx)
+	if err != nil || result.New != 0 || result.Found != 0 {
+		t.Fatalf("recollection=%+v err=%v", result, err)
+	}
+}
+
+// Keep the requested URL as article identity while serving a local fixture.
+type rewriteArticleTransport struct {
+	target string
+	base   http.RoundTripper
+}
+
+func (r rewriteArticleTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	local := req.Clone(req.Context())
+	target, err := url.Parse(r.target)
+	if err != nil {
+		return nil, err
+	}
+	local.URL = target
+	transport := r.base
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
+	resp, err := transport.RoundTrip(local)
+	if resp != nil {
+		resp.Request = req
+	}
+	return resp, err
 }

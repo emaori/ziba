@@ -2,6 +2,7 @@ package collect
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"log/slog"
@@ -24,45 +25,44 @@ const defaultMaxMessages = 50
 // and links; anything larger is attachments, which are not what we are here for.
 const maxMessageBytes = 4 << 20 // 4 MiB
 
-// Newsletter collects from a mailbox.
-//
-// A mailbox holds two kinds of newsletter, and they need opposite treatment.
-// Most are lists of links with short blurbs: the collector returns the links,
-// which go through the same pipeline as everything else, and keeps the email as
-// provenance so that "where did this come from" has an answer. Some are a piece
-// of writing sent by email, whose links are citations inside its sentences; for
-// those the email is the article and the links are left alone. Which is which
-// is decided by isEssay.
+// MessageHistory reports whether a message's extraction was committed.
+type MessageHistory interface {
+	NewsletterMessageExtracted(ctx context.Context, sourceID int64, key string) (bool, error)
+}
+
+// Newsletter collects email messages and their article candidates. Digests
+// yield editorial links; essays yield the email itself as reading material.
 type Newsletter struct {
-	log *slog.Logger
+	history MessageHistory
+	log     *slog.Logger
 }
 
 // NewNewsletter builds the mailbox collector.
-func NewNewsletter(log *slog.Logger) *Newsletter {
-	return &Newsletter{log: log}
+func NewNewsletter(log *slog.Logger, history MessageHistory) *Newsletter {
+	return &Newsletter{log: log, history: history}
 }
 
 // Type implements domain.Collector.
 func (c *Newsletter) Type() domain.SourceType { return domain.SourceTypeNewsletter }
 
 // Collect reads the mailbox and returns, for each email, either its editorial
-// links plus the email as provenance, or the email itself as an article.
-func (c *Newsletter) Collect(ctx context.Context, src domain.Source) ([]domain.RawItem, error) {
+// links or the essay itself, together with the retained email.
+func (c *Newsletter) Collect(ctx context.Context, src domain.Source) (domain.Collection, error) {
 	opts := src.Newsletter
 	if opts == nil {
-		return nil, fmt.Errorf("source %q has no newsletter settings", src.Name)
+		return domain.Collection{}, fmt.Errorf("source %q has no newsletter settings", src.Name)
 	}
 
 	client, err := c.connect(src, opts)
 	if err != nil {
-		return nil, err
+		return domain.Collection{}, err
 	}
 	// Logout is the polite close; the deferred Close covers the case where it
 	// fails and the connection has to go anyway.
 	defer client.Close()
 
 	if _, err := client.Select(opts.Folder, &imap.SelectOptions{ReadOnly: true}).Wait(); err != nil {
-		return nil, fmt.Errorf("select folder %q: %w", opts.Folder, err)
+		return domain.Collection{}, fmt.Errorf("select folder %q: %w", opts.Folder, err)
 	}
 
 	// A recent window, the way a feed is read — not the unread flag. That flag
@@ -80,12 +80,12 @@ func (c *Newsletter) Collect(ctx context.Context, src domain.Source) ([]domain.R
 
 	found, err := client.Search(criteria, nil).Wait()
 	if err != nil {
-		return nil, fmt.Errorf("search mailbox: %w", err)
+		return domain.Collection{}, fmt.Errorf("search mailbox: %w", err)
 	}
 
 	seqNums := found.AllSeqNums()
 	if len(seqNums) == 0 {
-		return nil, nil
+		return domain.Collection{}, nil
 	}
 
 	limit := opts.MaxMessages
@@ -106,23 +106,25 @@ func (c *Newsletter) Collect(ctx context.Context, src domain.Source) ([]domain.R
 		BodySection: []*imap.FetchItemBodySection{{}},
 	}).Collect()
 	if err != nil {
-		return nil, fmt.Errorf("fetch messages: %w", err)
+		return domain.Collection{}, fmt.Errorf("fetch messages: %w", err)
 	}
 
-	var items []domain.RawItem
+	var collected domain.Collection
 	for _, message := range messages {
 		if ctx.Err() != nil {
 			break
 		}
-		found, err := c.itemsFromMessage(src, message)
+		found, err := c.collectMessage(ctx, src, message)
 		if err != nil {
 			// One unreadable email must not cost the rest of the mailbox.
 			c.log.Warn("skipping message", "source", src.Name, "error", err)
 			continue
 		}
-		items = append(items, found...)
+		if found != nil {
+			collected.Messages = append(collected.Messages, *found)
+		}
 	}
-	return items, nil
+	return collected, ctx.Err()
 }
 
 func (c *Newsletter) connect(src domain.Source, opts *domain.NewsletterOptions) (*imapclient.Client, error) {
@@ -159,63 +161,63 @@ func (c *Newsletter) connect(src domain.Source, opts *domain.NewsletterOptions) 
 	return client, nil
 }
 
-// itemsFromMessage turns one email into either a provenance item plus its
-// links, or a single article when the email is itself the writing.
-func (c *Newsletter) itemsFromMessage(src domain.Source, msg *imapclient.FetchMessageBuffer) ([]domain.RawItem, error) {
-	var body []byte
-	for _, section := range msg.BodySection {
-		body = section.Bytes
-		break
+// collectMessage skips extraction only after the complete result was committed.
+func (c *Newsletter) collectMessage(ctx context.Context, src domain.Source, msg *imapclient.FetchMessageBuffer) (*domain.NewsletterMessage, error) {
+	key := messageKey(msg)
+	if c.history != nil {
+		extracted, err := c.history.NewsletterMessageExtracted(ctx, src.ID, key)
+		if err != nil {
+			return nil, fmt.Errorf("check newsletter message: %w", err)
+		}
+		if extracted {
+			return nil, nil
+		}
 	}
-	if len(body) == 0 {
-		return nil, fmt.Errorf("message has no body")
-	}
-
-	subject, sender, sent := envelopeOf(msg)
-	text, links, err := readMessage(body)
+	message, err := c.itemsFromMessage(src, msg)
 	if err != nil {
 		return nil, err
 	}
+	return &message, nil
+}
 
+// itemsFromMessage retains the email and extracts article candidates from it.
+func (c *Newsletter) itemsFromMessage(src domain.Source, msg *imapclient.FetchMessageBuffer) (domain.NewsletterMessage, error) {
+	body := messageBody(msg)
+	if len(body) == 0 {
+		return domain.NewsletterMessage{}, fmt.Errorf("message has no body")
+	}
+	subject, sender, sent := envelopeOf(msg)
+	text, links, err := readMessage(body)
+	if err != nil {
+		return domain.NewsletterMessage{}, err
+	}
 	now := time.Now().UTC()
-
-	// The email itself. Its address is synthetic because a message has none: it
-	// exists to make the item unique, not to be followed.
-	item := domain.RawItem{
-		SourceID:    src.ID,
-		Kind:        domain.ItemKindProvenance,
-		Title:       subject,
-		URL:         messageAddress(src, msg, subject, sent),
-		Author:      sender,
-		PublishedAt: sent,
-		CollectedAt: now,
-		Text:        text,
+	message := domain.NewsletterMessage{
+		SourceID: src.ID, Key: messageKey(msg), Title: subject, Author: sender,
+		PublishedAt: sent, CollectedAt: now, Text: text,
 	}
-
-	// An essay is the article, and its links are citations rather than
-	// recommendations. Collecting them turns one piece of writing into a dozen
-	// entries titled with fragments of its own sentences — "Simon Wilison
-	// concluded", "irrational exuberance" — while the writing itself is never
-	// shown at all.
 	if isEssay(text, links) {
-		item.Kind = domain.ItemKindArticle
-		return []domain.RawItem{item}, nil
+		message.Items = []domain.RawItem{{
+			SourceID: src.ID, Kind: domain.ItemKindArticle, Title: subject,
+			URL:    fmt.Sprintf("imap://source/%d/%s", src.ID, url.PathEscape(message.Key)),
+			Author: sender, PublishedAt: sent, CollectedAt: now, Text: text,
+		}}
+	} else {
+		for _, link := range links {
+			message.Items = append(message.Items, domain.RawItem{
+				SourceID: src.ID, Kind: domain.ItemKindArticle, Title: link.text,
+				URL: link.url, PublishedAt: sent, CollectedAt: now,
+			})
+		}
 	}
+	return message, nil
+}
 
-	items := make([]domain.RawItem, 0, len(links)+1)
-	items = append(items, item)
-
-	for _, link := range links {
-		items = append(items, domain.RawItem{
-			SourceID:    src.ID,
-			Kind:        domain.ItemKindArticle,
-			Title:       link.text,
-			URL:         link.url,
-			PublishedAt: sent,
-			CollectedAt: now,
-		})
+func messageBody(msg *imapclient.FetchMessageBuffer) []byte {
+	for _, section := range msg.BodySection {
+		return section.Bytes
 	}
-	return items, nil
+	return nil
 }
 
 func envelopeOf(msg *imapclient.FetchMessageBuffer) (subject, sender string, sent time.Time) {
@@ -236,18 +238,14 @@ func envelopeOf(msg *imapclient.FetchMessageBuffer) (subject, sender string, sen
 	return subject, sender, sent
 }
 
-// messageAddress builds the synthetic address that identifies one email.
-// Message identifiers are the natural key, and the date and subject stand in
-// for the senders that omit one.
-func messageAddress(src domain.Source, msg *imapclient.FetchMessageBuffer, subject string, sent time.Time) string {
-	id := ""
+// messageKey prefers Message-ID; a raw-message hash identifies mail that omits it.
+func messageKey(msg *imapclient.FetchMessageBuffer) string {
 	if msg.Envelope != nil {
-		id = strings.Trim(msg.Envelope.MessageID, "<>")
+		if id := strings.Trim(strings.TrimSpace(msg.Envelope.MessageID), "<>"); id != "" {
+			return "id:" + id
+		}
 	}
-	if id == "" {
-		id = fmt.Sprintf("%d-%s", sent.Unix(), subject)
-	}
-	return "imap://" + url.PathEscape(src.Name) + "/" + url.PathEscape(id)
+	return fmt.Sprintf("sha256:%x", sha256.Sum256(messageBody(msg)))
 }
 
 // readMessage walks a message's parts, returning its readable text and the

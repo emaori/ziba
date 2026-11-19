@@ -101,25 +101,27 @@ func TestNewslettersFromTheCorpus(t *testing.T) {
 			}
 
 			// And the whole message, through the collector.
-			items, err := new(Newsletter).itemsFromMessage(
+			retained, err := new(Newsletter).itemsFromMessage(
 				domain.Source{ID: 1, Name: "Newsletters", Type: domain.SourceTypeNewsletter},
 				fixtureMessage(body))
 			if err != nil {
 				t.Fatalf("itemsFromMessage: %v", err)
 			}
 
+			items := retained.Items
+			if retained.Text == "" {
+				t.Error("email text was not retained")
+			}
 			if tt.essay {
 				if len(items) != 1 || items[0].Kind != domain.ItemKindArticle {
 					t.Errorf("an essay produced %d items, want one article", len(items))
 				}
 				return
 			}
-			if got := len(items); got != tt.kept+1 {
-				t.Errorf("produced %d items, want %d links plus one provenance", got, tt.kept)
+			if got := len(items); got != tt.kept {
+				t.Errorf("produced %d items, want %d links", got, tt.kept)
 			}
-			if items[0].Kind != domain.ItemKindProvenance {
-				t.Errorf("first item is %q, want provenance", items[0].Kind)
-			}
+
 		})
 	}
 }
@@ -185,7 +187,8 @@ func TestRoundupFeedFromTheCorpus(t *testing.T) {
 		URL: "https://dotnetketchup.com/rss", Roundup: true,
 	}
 
-	items, err := NewRSS(client, nil, testLogger()).Collect(ctx, src)
+	collected, err := NewRSS(client, nil, testLogger()).Collect(ctx, src)
+	items := collected.Items
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
 	}

@@ -83,7 +83,7 @@ func New(cfg config.Config, sources []domain.Source, interests config.Interests,
 		store: db,
 		registry: collect.NewRegistry(
 			collect.NewRSS(client, browserFeed, log),
-			collect.NewNewsletter(log),
+			collect.NewNewsletter(log, db),
 		),
 		fullText:  collect.NewFullText(client),
 		roundup:   collect.NewRoundup(client),
@@ -139,12 +139,23 @@ func (r *Runner) Collect(ctx context.Context) (CollectResult, error) {
 		if err != nil {
 			return result, err
 		}
-		result.Found += len(res.Items)
+		found := len(res.Items)
+		for _, message := range res.Messages {
+			found += 1 + len(message.Items)
+			var excluded int
+			message.Items, excluded = withinCutoff(res.Source, message.Items)
+			tooOld += excluded
+			count, err := r.store.SaveNewsletterMessage(ctx, message)
+			if err != nil {
+				return result, err
+			}
+			inserted += count
+		}
+		result.Found += found
 		result.New += inserted
 		result.TooOld += tooOld
-
 		r.log.Info("collected", "source", res.Source.Name,
-			"found", len(res.Items), "new", inserted, "too_old", tooOld)
+			"found", found, "new", inserted, "too_old", tooOld)
 	}
 	return result, nil
 }
@@ -240,18 +251,14 @@ func (r *Runner) Hydrate(ctx context.Context, batch int) (processed, created int
 			r.log.Warn("full text unavailable", "url", item.URL, "error", err)
 		}
 
-		_, isNew, err := r.store.SaveArticle(ctx, article)
+		isNew, err := r.store.SaveRetrievedArticle(ctx, item.ID, article)
 		if err != nil {
 			return processed, created, err
 		}
 		if isNew {
 			created++
-			finish(domain.OutcomeStored, item.ID)
-		} else {
-			// The same address was already stored, usually because another
-			// source published the same link first.
-			finish(domain.OutcomeDuplicate, item.ID)
 		}
+		processed++
 	}
 
 	if err := r.store.MarkRawItemsProcessed(ctx, done); err != nil {
@@ -452,11 +459,7 @@ func withinCutoff(src domain.Source, items []domain.RawItem) (recent []domain.Ra
 
 	recent = make([]domain.RawItem, 0, len(items))
 	for _, item := range items {
-		// Provenance items carry the date of the email that produced them and
-		// are the record of where a link came from; dropping one would orphan
-		// links that were themselves accepted.
-		if item.Kind == domain.ItemKindProvenance ||
-			src.CollectFrom.Accepts(src.CreatedAt, item.PublishedAt) {
+		if src.CollectFrom.Accepts(src.CreatedAt, item.PublishedAt) {
 			recent = append(recent, item)
 			continue
 		}

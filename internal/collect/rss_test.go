@@ -64,7 +64,8 @@ func TestRSSCollect(t *testing.T) {
 	collector := NewRSS(server.Client(), nil, testLogger())
 	src := domain.Source{ID: 7, Name: "Example", Type: domain.SourceTypeRSS, URL: server.URL}
 
-	items, err := collector.Collect(context.Background(), src)
+	collected, err := collector.Collect(context.Background(), src)
+	items := collected.Items
 	if err != nil {
 		t.Fatalf("Collect returned error: %v", err)
 	}
@@ -111,7 +112,8 @@ func TestRSSCollectUsesBrowserOnlyWhenRequested(t *testing.T) {
 	collector := NewRSS(server.Client(), browser, testLogger())
 	src := domain.Source{ID: 7, Name: "Example", Type: domain.SourceTypeRSS, URL: server.URL, BrowserFetch: true}
 
-	items, err := collector.Collect(t.Context(), src)
+	collected, err := collector.Collect(t.Context(), src)
+	items := collected.Items
 	if err != nil {
 		t.Fatalf("Collect returned error: %v", err)
 	}
