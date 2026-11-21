@@ -92,8 +92,6 @@ became, including when another source already stored that article. Essays retain
 their email and become one article themselves. Completed email extraction is
 skipped on later collection runs; the IMAP window is still fetched.
 
-The companion [database reference](https://github.com/emaori/ziba-docs/blob/main/DATABASE.md)
-describes the schema, transaction boundaries, migration and provenance queries.
 Historical email-to-article associations are not reconstructed during upgrade.
 
 An RSS source that receives 403 responses from an ordinary HTTP client can
