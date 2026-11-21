@@ -19,9 +19,9 @@ type Tally struct {
 	Source string // empty on a by-day row
 	Day    time.Time
 
-	Provenance int // emails kept for the record, never destined to be articles
-	Roundups   int // issues of a link digest, opened for the links they hold
-	Links      int // everything else: an item meant to become an article
+	Messages int // retained newsletter messages, including essays
+	Roundups int // issues of a link digest, opened for the links they hold
+	Links    int // everything else: an item meant to become an article
 
 	Stored    int // became an article that did not exist before
 	Duplicate int // the same address was already stored, often by another source
@@ -31,34 +31,42 @@ type Tally struct {
 }
 
 // Collected is everything that reached the database from this source or day.
-func (t Tally) Collected() int { return t.Provenance + t.Roundups + t.Links }
+func (t Tally) Collected() int { return t.Messages + t.Roundups + t.Links }
 
 // Discarded is the links that produced no article, for a reason we can name.
 func (t Tally) Discarded() int { return t.Duplicate + t.Skipped }
 
+// collectionRecords counts retained messages independently from processing work.
+// A message-only day or source must remain visible even when it has no links.
+const collectionRecords = `collected AS (
+    SELECT source_id,collected_at,kind,outcome,processed_at,failed_at FROM raw_items
+    UNION ALL
+    SELECT source_id,collected_at,'message',NULL,NULL,NULL FROM newsletter_messages
+)`
+
 // statsColumns is the same projection for both groupings.
 const statsColumns = `
-	count(*) FILTER (WHERE r.kind = 'provenance'),
+	count(*) FILTER (WHERE r.kind = 'message'),
 	count(*) FILTER (WHERE r.kind = 'roundup'),
 	count(*) FILTER (WHERE r.kind = 'article'),
 	count(*) FILTER (WHERE r.outcome = 'stored'),
 	count(*) FILTER (WHERE r.outcome = 'duplicate'),
 	count(*) FILTER (WHERE r.outcome = 'skipped'),
-	count(*) FILTER (WHERE r.processed_at IS NULL AND r.failed_at IS NULL AND r.kind <> 'provenance'),
+	count(*) FILTER (WHERE r.processed_at IS NULL AND r.failed_at IS NULL AND r.kind <> 'message'),
 	count(*) FILTER (WHERE r.processed_at IS NOT NULL AND r.outcome IS NULL)`
 
 func scanTally(row pgx.CollectableRow, t *Tally, lead ...any) error {
 	dest := append(lead,
-		&t.Provenance, &t.Roundups, &t.Links,
+		&t.Messages, &t.Roundups, &t.Links,
 		&t.Stored, &t.Duplicate, &t.Skipped, &t.Pending, &t.Unknown)
 	return row.Scan(dest...)
 }
 
 // TalliesBySource reports what each source has contributed, busiest first.
 func (s *Store) TalliesBySource(ctx context.Context) ([]Tally, error) {
-	rows, err := s.pool.Query(ctx, `
+	rows, err := s.pool.Query(ctx, `WITH `+collectionRecords+`
 		SELECT s.name,`+statsColumns+`
-		FROM raw_items r JOIN sources s ON s.id = r.source_id
+		FROM collected r JOIN sources s ON s.id = r.source_id
 		GROUP BY s.name
 		ORDER BY count(*) DESC, s.name`)
 	if err != nil {
@@ -93,14 +101,14 @@ type DayTally struct {
 // query and no chance of the two disagreeing.
 func (s *Store) TalliesByDay(ctx context.Context, limit int) ([]DayTally, error) {
 	rows, err := s.pool.Query(ctx, `
-		WITH recent AS (
+		WITH `+collectionRecords+`, recent AS (
 			SELECT DISTINCT collected_at::date AS day
-			FROM raw_items
+			FROM collected
 			ORDER BY day DESC
 			LIMIT $1
 		)
 		SELECT r.collected_at::date, s.name,`+statsColumns+`
-		FROM raw_items r
+		FROM collected r
 		JOIN sources s ON s.id = r.source_id
 		WHERE r.collected_at::date IN (SELECT day FROM recent)
 		GROUP BY 1, 2
@@ -131,7 +139,7 @@ func (s *Store) TalliesByDay(ctx context.Context, limit int) ([]DayTally, error)
 
 // add folds one source's figures into a running total.
 func (t *Tally) add(other Tally) {
-	t.Provenance += other.Provenance
+	t.Messages += other.Messages
 	t.Roundups += other.Roundups
 	t.Links += other.Links
 	t.Stored += other.Stored

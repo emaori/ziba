@@ -132,16 +132,9 @@ const (
 	// ItemKindArticle is the default: the item becomes an Article.
 	ItemKindArticle ItemKind = "article"
 
-	// ItemKindProvenance is kept for the record but never becomes an Article.
-	// A newsletter is the case this exists for: what belongs in Ziba are the
-	// articles it links to, while the email itself only answers "where did this
-	// come from".
-	ItemKindProvenance ItemKind = "provenance"
-
 	// ItemKindRoundup is a page that lists other people's articles: one issue of
-	// a link digest. It is not reading material either, but unlike provenance it
-	// still has work to do — it is fetched once so the links can be pulled out
-	// of it, and becomes provenance in spirit thereafter.
+	// a link digest. It is fetched once so its links can become article
+	// candidates, and the issue is retained after expansion.
 	ItemKindRoundup ItemKind = "roundup"
 )
 
@@ -184,17 +177,33 @@ type RawItem struct {
 	//   - a feed gives whatever it chose to publish, as markup. That ranges from
 	//     one sentence to the entire post — measured across the configured
 	//     feeds, from about 50 characters to 27,000.
-	//   - a newsletter's provenance row holds the email body, already reduced to
-	//     plain text.
+	//   - a newsletter essay carries the email body as plain text.
 	//   - a link extracted from a newsletter has none: only the page it points
 	//     at can supply the text.
 	//
-	// It serves two quite different purposes depending on Kind. For an article
-	// it is a *fallback*, read once when the article's own page is fetched and
+	// For an article it is a fallback, read when the article's page is fetched and
 	// used only if that fetch fails — which is what keeps a blocked publisher
-	// from costing an entry entirely. For a provenance row it is the *record*:
-	// the only copy of the email Ziba keeps, and never replaced by anything.
+	// from costing an entry entirely. Newsletter messages are retained separately.
 	Text string
+}
+
+// NewsletterMessage is a retained email and the article candidates extracted from it.
+// Key is scoped to SourceID and does not depend on the source's display name.
+type NewsletterMessage struct {
+	SourceID    int64
+	Key         string
+	Title       string
+	Author      string
+	PublishedAt time.Time
+	CollectedAt time.Time
+	Text        string
+	Items       []RawItem
+}
+
+// Collection keeps processing inputs separate from retained email messages.
+type Collection struct {
+	Items    []RawItem
+	Messages []NewsletterMessage
 }
 
 // RelevanceScore expresses how relevant an article is to the configured
@@ -302,5 +311,5 @@ type Collector interface {
 
 	// Collect reads the source and returns what it found. Returning zero items
 	// with a nil error is normal: it means nothing new was published.
-	Collect(ctx context.Context, src Source) ([]RawItem, error)
+	Collect(ctx context.Context, src Source) (Collection, error)
 }

@@ -45,15 +45,18 @@ func TestTalliesCountEveryOutcome(t *testing.T) {
 		{SourceID: source, Kind: domain.ItemKindArticle, URL: "https://example.com/2", CollectedAt: now},
 		{SourceID: source, Kind: domain.ItemKindArticle, URL: "https://example.com/3", CollectedAt: now},
 		{SourceID: source, Kind: domain.ItemKindArticle, URL: "https://example.com/4", CollectedAt: now},
-		{SourceID: source, Kind: domain.ItemKindProvenance, URL: "imap://feed/one", CollectedAt: now},
 		{SourceID: source, Kind: domain.ItemKindRoundup, URL: "https://example.com/week-1", CollectedAt: now},
 	})
+
+	if _, err := db.SaveNewsletterMessage(ctx, domain.NewsletterMessage{SourceID: source, Key: "id:one", CollectedAt: now}); err != nil {
+		t.Fatal(err)
+	}
 
 	err := db.MarkRawItemsProcessed(ctx, map[domain.Outcome][]int64{
 		domain.OutcomeStored:    {ids[0], ids[1]},
 		domain.OutcomeDuplicate: {ids[2]},
 		domain.OutcomeSkipped:   {ids[3]},
-		domain.OutcomeExpanded:  {ids[5]},
+		domain.OutcomeExpanded:  {ids[4]},
 	})
 	if err != nil {
 		t.Fatalf("MarkRawItemsProcessed: %v", err)
@@ -69,18 +72,18 @@ func TestTalliesCountEveryOutcome(t *testing.T) {
 
 	got := bySource[0]
 	want := Tally{
-		Source: "feed", Provenance: 1, Roundups: 1, Links: 4,
+		Source: "feed", Messages: 1, Roundups: 1, Links: 4,
 		Stored: 2, Duplicate: 1, Skipped: 1,
 	}
-	if got.Provenance != want.Provenance || got.Roundups != want.Roundups || got.Links != want.Links {
-		t.Errorf("kinds = provenance %d, roundups %d, links %d; want 1, 1, 4",
-			got.Provenance, got.Roundups, got.Links)
+	if got.Messages != want.Messages || got.Roundups != want.Roundups || got.Links != want.Links {
+		t.Errorf("kinds = messages %d, roundups %d, links %d; want 1, 1, 4",
+			got.Messages, got.Roundups, got.Links)
 	}
 	if got.Stored != 2 || got.Duplicate != 1 || got.Skipped != 1 {
 		t.Errorf("outcomes = stored %d, duplicate %d, skipped %d; want 2, 1, 1",
 			got.Stored, got.Duplicate, got.Skipped)
 	}
-	// Provenance is never processed and must not be counted as work waiting.
+	// Messages is never processed and must not be counted as work waiting.
 	if got.Pending != 0 {
 		t.Errorf("pending = %d, want 0", got.Pending)
 	}

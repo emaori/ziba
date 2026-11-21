@@ -196,10 +196,10 @@ func (f *fakeStore) TalliesBySource(context.Context) ([]store.Tally, error) {
 
 func (f *fakeStore) TalliesByDay(context.Context, int) ([]store.DayTally, error) {
 	return []store.DayTally{{
-		Tally: store.Tally{Day: date(2026, 8, 8), Links: 12, Stored: 11, Duplicate: 1, Provenance: 3},
+		Tally: store.Tally{Day: date(2026, 8, 8), Links: 12, Stored: 11, Duplicate: 1, Messages: 3},
 		Sources: []store.Tally{
 			{Source: "Il Post", Links: 9, Stored: 9},
-			{Source: "Newsletters", Links: 3, Stored: 2, Duplicate: 1, Provenance: 3},
+			{Source: "Newsletters", Links: 3, Stored: 2, Duplicate: 1, Messages: 3},
 		},
 	}}, nil
 }
@@ -1400,13 +1400,13 @@ func TestStatsPage(t *testing.T) {
 	}
 
 	// Collected is a derived figure and easy to get wrong: 30 links, no
-	// provenance, no roundups.
+	// messages, no roundups.
 	if !strings.Contains(body, ">30<") {
 		t.Error("the by-source row does not show its collected total")
 	}
-	// And on the day row: 12 links plus 3 provenance.
+	// And on the day row: 12 links plus 3 messages.
 	if !strings.Contains(body, ">15<") {
-		t.Error("the by-day row does not add provenance into its collected total")
+		t.Error("the by-day row does not add messages into its collected total")
 	}
 
 	// Each day is broken down by the sources that made it up.

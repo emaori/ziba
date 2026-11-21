@@ -52,7 +52,7 @@
           <th class="n" title="Became an article that did not exist before">Stored</th>
           <th class="n" title="The same address was already stored, often from another source">Duplicate</th>
           <th class="n" title="Led somewhere deliberately not stored, such as a video">Skipped</th>
-          <th class="n" title="Emails and roundup issues, never destined to be articles">Not articles</th>
+          <th class="n" title="Retained newsletter messages (including essays) and roundup issues">Messages / issues</th>
           <th class="n" title="Collected but not yet processed">Pending</th>
         </tr>
       </thead>
@@ -65,7 +65,7 @@
             <td class="n">{{.Stored}}</td>
             <td class="n {{if .Duplicate}}note-cell{{end}}">{{.Duplicate}}</td>
             <td class="n {{if .Skipped}}note-cell{{end}}">{{.Skipped}}</td>
-            <td class="n">{{add .Provenance .Roundups}}</td>
+            <td class="n">{{add .Messages .Roundups}}</td>
             <td class="n">{{.Pending}}</td>
           </tr>
         {{else}}
@@ -87,7 +87,7 @@
           <th class="n">Stored</th>
           <th class="n">Duplicate</th>
           <th class="n">Skipped</th>
-          <th class="n">Not articles</th>
+          <th class="n">Messages / issues</th>
           <th class="n">Pending</th>
         </tr>
       </thead>
@@ -103,7 +103,7 @@
             <td class="n">{{.Stored}}</td>
             <td class="n {{if .Duplicate}}note-cell{{end}}">{{.Duplicate}}</td>
             <td class="n {{if .Skipped}}note-cell{{end}}">{{.Skipped}}</td>
-            <td class="n">{{add .Provenance .Roundups}}</td>
+            <td class="n">{{add .Messages .Roundups}}</td>
             <td class="n">{{.Pending}}</td>
           </tr>
           {{range .Sources}}
@@ -114,7 +114,7 @@
               <td class="n">{{.Stored}}</td>
               <td class="n {{if .Duplicate}}note-cell{{end}}">{{.Duplicate}}</td>
               <td class="n {{if .Skipped}}note-cell{{end}}">{{.Skipped}}</td>
-              <td class="n">{{add .Provenance .Roundups}}</td>
+              <td class="n">{{add .Messages .Roundups}}</td>
               <td class="n">{{.Pending}}</td>
             </tr>
           {{end}}

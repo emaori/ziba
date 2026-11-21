@@ -110,9 +110,7 @@ func (s *Store) SaveRawItems(ctx context.Context, items []domain.RawItem) (int, 
 // UnprocessedRawItems returns items that have not yet become articles, oldest
 // first, up to limit.
 //
-// Provenance items are excluded: a newsletter is kept so that a link has an
-// origin, but it is not itself reading material and must never reach the
-// archive as an article.
+// Retained newsletter messages live separately from these processing inputs.
 func (s *Store) UnprocessedRawItems(ctx context.Context, limit int) ([]domain.RawItem, error) {
 	return s.queueOf(ctx, domain.ItemKindArticle, limit, time.Now())
 }
@@ -216,7 +214,15 @@ func (s *Store) DeclaredCategories(ctx context.Context) (map[int64][]string, err
 // already known under the same normalized URL is left untouched: identity is
 // the URL, so this is the same article arriving from a second source.
 func (s *Store) SaveArticle(ctx context.Context, a domain.Article) (id int64, created bool, err error) {
-	row := s.pool.QueryRow(ctx, `
+	return saveArticle(ctx, s.pool, a)
+}
+
+type rowQuerier interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+func saveArticle(ctx context.Context, db rowQuerier, a domain.Article) (id int64, created bool, err error) {
+	row := db.QueryRow(ctx, `
 		INSERT INTO articles (source_id, url, title, author, published_at, collected_at, full_text)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (url) DO NOTHING
@@ -229,7 +235,7 @@ func (s *Store) SaveArticle(ctx context.Context, a domain.Article) (id int64, cr
 		return id, true, nil
 	case errors.Is(err, pgx.ErrNoRows):
 		// DO NOTHING returns no row; look up the article that won.
-		if err := s.pool.QueryRow(ctx, `SELECT id FROM articles WHERE url = $1`, a.URL).Scan(&id); err != nil {
+		if err := db.QueryRow(ctx, `SELECT id FROM articles WHERE url = $1`, a.URL).Scan(&id); err != nil {
 			return 0, false, fmt.Errorf("find existing article %s: %w", a.URL, err)
 		}
 		return id, false, nil

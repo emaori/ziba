@@ -34,30 +34,30 @@ func (c *RSS) Type() domain.SourceType { return domain.SourceTypeRSS }
 // Collect fetches the feed and returns one raw item per entry. The text of each
 // item is whatever the feed carried, which is usually an excerpt — the full
 // text is retrieved later, following the link.
-func (c *RSS) Collect(ctx context.Context, src domain.Source) ([]domain.RawItem, error) {
+func (c *RSS) Collect(ctx context.Context, src domain.Source) (domain.Collection, error) {
 	var feed *gofeed.Feed
 	if src.BrowserFetch {
 		if c.browser == nil {
-			return nil, fmt.Errorf("browser feed fetching is enabled but no browser client is configured")
+			return domain.Collection{}, fmt.Errorf("browser feed fetching is enabled but no browser client is configured")
 		}
 		body, err := c.browser.Fetch(ctx, src.URL)
 		if err != nil {
-			return nil, err
+			return domain.Collection{}, err
 		}
 		feed, err = gofeed.NewParser().Parse(bytes.NewReader(body))
 		if err != nil {
-			return nil, fmt.Errorf("parse browser feed %s: %w", src.URL, err)
+			return domain.Collection{}, fmt.Errorf("parse browser feed %s: %w", src.URL, err)
 		}
 	} else {
 		resp, err := get(ctx, c.client, src.URL)
 		if err != nil {
-			return nil, err
+			return domain.Collection{}, err
 		}
 		defer resp.Body.Close()
 
 		feed, err = gofeed.NewParser().Parse(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("parse feed %s: %w", src.URL, err)
+			return domain.Collection{}, fmt.Errorf("parse feed %s: %w", src.URL, err)
 		}
 	}
 
@@ -73,7 +73,7 @@ func (c *RSS) Collect(ctx context.Context, src domain.Source) ([]domain.RawItem,
 		}
 		items = append(items, item)
 	}
-	return items, nil
+	return domain.Collection{Items: items}, nil
 }
 
 func (c *RSS) toRawItem(src domain.Source, entry *gofeed.Item, now time.Time) (domain.RawItem, error) {
