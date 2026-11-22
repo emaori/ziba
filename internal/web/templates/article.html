@@ -31,15 +31,16 @@
   {{end}}
   <div class="body">
     {{if .HasReadableText}}{{range paragraphs .FullText}}<p>{{.}}</p>{{end}}{{end}}
-    {{/* A page behind a paywall, or one that refused the request, leaves the
-         article with nothing to read. Saying so beats a blank column: the
-         article is still worth knowing about, and the original still opens. */}}
     {{if not .HasReadableText}}
       <p class="note">
+        {{if .HasOriginal}}
         Reliable article text could not be retrieved — the page may be behind
         a paywall, may have refused the request, or may have returned a different page. Use
         <a href="{{.URL}}" rel="noreferrer noopener" target="_blank">Open original ↗</a>
         to read it at the source.
+        {{else}}
+        Readable text is unavailable for this article.
+        {{end}}
       </p>
     {{end}}
   </div>

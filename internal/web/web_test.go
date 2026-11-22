@@ -1355,22 +1355,75 @@ func TestMarkReadSitsWhereItShould(t *testing.T) {
 	}
 }
 
-// An article whose page could not be fetched — paywalled, or refusing the
-// request — must say so rather than showing an empty reading column.
 func TestReaderExplainsMissingText(t *testing.T) {
-	article := sampleArticle()
-	article.FullText = ""
-	handler := newTestServer(t, &fakeStore{article: article})
+	for _, original := range []struct {
+		name string
+		url  string
+		web  bool
+	}{
+		{"email essay", "imap://source/7/message-key", false},
+		{"no original", "", false},
+		{"http", "http://publisher.example/article", true},
+		{"https", "https://publisher.example/article", true},
+	} {
+		for _, content := range []struct {
+			name     string
+			text     string
+			quality  domain.ContentQuality
+			readable bool
+		}{
+			{name: "empty"},
+			{name: "whitespace", text: " \n\t"},
+			{name: "mismatched", text: "UNRELATED PAGE", quality: domain.ContentMismatched},
+			{name: "unavailable", text: "LOGIN PAGE", quality: domain.ContentUnavailable},
+			{name: "readable", text: "The article body.", quality: domain.ContentComplete, readable: true},
+		} {
+			t.Run(original.name+"/"+content.name, func(t *testing.T) {
+				article := sampleArticle()
+				article.URL = original.url
+				article.FullText = content.text
+				article.ContentQuality = content.quality
+				handler := newTestServer(t, &fakeStore{article: article})
 
-	_, body := get(t, handler, "/article/42")
+				code, body := get(t, handler, "/article/42")
+				if code != http.StatusOK {
+					t.Fatalf("status = %d, want 200", code)
+				}
 
-	if !strings.Contains(body, "could not be retrieved") {
-		t.Error("an article with no text renders a blank column with no explanation")
-	}
-	// And an article that does have text must not be told it has none.
-	handler = newTestServer(t, &fakeStore{article: sampleArticle()})
-	if _, body := get(t, handler, "/article/42"); strings.Contains(body, "could not be retrieved") {
-		t.Error("an article with text claims its text is missing")
+				const noOriginalNotice = "Readable text is unavailable for this article."
+				const webNotice = "Reliable article text could not be retrieved"
+				if content.readable {
+					if !strings.Contains(body, content.text) {
+						t.Error("readable article text is missing")
+					}
+					if strings.Contains(body, noOriginalNotice) || strings.Contains(body, webNotice) {
+						t.Error("an article with readable text claims its text is missing")
+					}
+				} else {
+					if strings.TrimSpace(content.text) != "" && strings.Contains(body, content.text) {
+						t.Error("reader displayed text known to be unreliable")
+					}
+					if original.web {
+						if !strings.Contains(body, webNotice) {
+							t.Error("missing web article text has no retrieval explanation")
+						}
+						link := fmt.Sprintf(`<a href="%s" rel="noreferrer noopener" target="_blank">Open original ↗</a>`, original.url)
+						if !strings.Contains(body, link) {
+							t.Error("missing-text fallback does not link to the publisher in a new tab")
+						}
+					} else if !strings.Contains(body, noOriginalNotice) {
+						t.Error("missing text without a web original has no appropriate explanation")
+					}
+				}
+				if !original.web {
+					for _, unwanted := range []string{"Open original", "imap://", "paywall", "refused the request", "different page", webNotice} {
+						if strings.Contains(body, unwanted) {
+							t.Errorf("reader without a web original contains %q", unwanted)
+						}
+					}
+				}
+			})
+		}
 	}
 }
 
